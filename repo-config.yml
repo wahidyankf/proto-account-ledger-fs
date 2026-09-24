@@ -320,6 +320,13 @@ gates:
             { literal: validate },
           ]
       run-on: { pre-push: {}, pull-request: {}, main: {} }
+    - id: harness-adapters
+      type: check
+      command:
+        executable: ./rhino
+        args:
+          [{ literal: harness }, { literal: adapters }, { literal: validate }]
+      run-on: { pre-push: {}, pull-request: {}, main: {} }
     - id: internal-link
       type: check
       command:
