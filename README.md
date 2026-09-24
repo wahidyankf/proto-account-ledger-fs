@@ -34,15 +34,23 @@ npm run check:hygiene                           # every repository gate Rhino de
 
 ## Repository Map
 
-| Path                                          | Holds                                                           |
-| --------------------------------------------- | --------------------------------------------------------------- |
-| [apps/](apps/)                                | runnable applications, starting with `account-ledger-cli`       |
-| [libs/](libs/README.md)                       | reusable libraries (none yet)                                   |
-| [specs/](specs/README.md)                     | Gherkin behaviours and architecture, shared by every test level |
-| [docs/](docs/README.md)                       | documentation for people                                        |
-| [plans/](plans/README.md)                     | delivery plans                                                  |
-| [repo-governance/](repo-governance/README.md) | principles, conventions, standards, and workflows               |
-| [AGENTS.md](AGENTS.md)                        | instructions for coding agents                                  |
+| Path                                                       | Holds                                                  |
+| ---------------------------------------------------------- | ------------------------------------------------------ |
+| [apps/](apps/)                                             | runnable applications, such as `account-ledger-cli`    |
+| [libs/](libs/README.md)                                    | reusable libraries (none yet)                          |
+| [specs/](specs/README.md)                                  | behaviours and architecture shared by every test level |
+| [docs/](docs/README.md)                                    | documentation for people                               |
+| [plans/](plans/README.md)                                  | delivery plans                                         |
+| [repo-governance/](repo-governance/README.md)              | principles, conventions, standards, and workflows      |
+| [AGENTS.md](AGENTS.md)                                     | instructions for coding agents                         |
+| [challenge-raw.md](challenge-raw.md)                       | the assessment brief, verbatim                         |
+| [AMBIGUITIES.md](AMBIGUITIES.md)                           | every ambiguity in the brief and how it is resolved    |
+| [NUMBERS.md](NUMBERS.md)                                   | every constant and why it has that value               |
+| [REJECTED.md](REJECTED.md)                                 | refused acceptance criteria and abandoned approaches   |
+| [WORKLOG.md](WORKLOG.md)                                   | timestamped record of the work                         |
+| [MOVEMENT.md](MOVEMENT.md)                                 | each day's movement per account, fully analysed        |
+| [OUTPUT_TARGET.md](OUTPUT_TARGET.md)                       | the exact text the CLI must print                      |
+| [ACCEPTANCE_CRITERIA.feature](ACCEPTANCE_CRITERIA.feature) | the brief's acceptance criteria as draft Gherkin       |
 
 ## Working Agreement
 

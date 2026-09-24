@@ -199,6 +199,9 @@ policies:
         - "AMBIGUITIES.md"
         - "REJECTED.md"
         - "WORKLOG.md"
+        # Working assessment docs named in the same upper-case style as the ones above.
+        - "MOVEMENT.md"
+        - "OUTPUT_TARGET.md"
     internal-link:
       exclude-sources: ["specs/fixtures/**"]
   governance:
