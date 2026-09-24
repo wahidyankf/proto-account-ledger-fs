@@ -171,8 +171,19 @@ policies:
         - { glob: ".agents/agents/*.md", schema: agent }
         - { glob: ".agents/**/README.md", schema: governance }
     heading-hierarchy:
+      # Authored Markdown only: CLAUDE.md and the generated harness adapters
+      # are routing stubs with no headings of their own.
       surfaces:
-        - { glob: "**/*.md" }
+        - { glob: "AGENTS.md" }
+        - { glob: "README.md" }
+        - { glob: ".agents/**/*.md" }
+        - { glob: "apps/**/*.md" }
+        - { glob: "docs/**/*.md" }
+        - { glob: "libs/**/*.md" }
+        - { glob: "plans/**/*.md" }
+        - { glob: "repo-governance/**/*.md" }
+        - { glob: "scripts/**/*.md" }
+        - { glob: "specs/**/*.md" }
       single-h1: true
       max-level-jump: 1
     naming:
