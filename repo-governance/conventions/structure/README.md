@@ -49,7 +49,7 @@ mechanically.
 - [Plan Specification Changes](plan-specification-changes.md)
 - [Plan Migrations](plan-migrations.md)
 - [Plan Migrations Modules](plan-migrations/README.md) — the source inventory and contracts, then transition and
-  recovery corpus
+  recovery
 - [Command-Line Interface](command-line-interface.md)
 - [Command-Line Interface Modules](command-line-interface-details/README.md) — the seven interface modules
 - [Directory Indexes](directory-indexes.md)
@@ -59,4 +59,3 @@ mechanically.
 - [Related Repositories](related-repositories.md)
 - [Specification Tree](specification-tree.md) — corpus placement, required files, and as-built architecture
 - [Temporary Files](temporary-files.md) — designated directories, collision-free names, and progressive reports
-  composition, and execution

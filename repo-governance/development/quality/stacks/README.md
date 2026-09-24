@@ -15,11 +15,5 @@ standard only when it uses that stack, and the stack's programming skill defers 
 
 ## Directory Map
 
-the long-term-support runtime line, shared build files, and asynchronous and failure defaults
-
 - [F# Standards](fsharp-standards.md) — F# formatter and warnings gates, dependency-ordered compilation, a functional
-  core, F# domain and failure types, and the adopter's framework choices gates, and Java rules for data, injection,
-  contracts, and failures components at interactive leaves, declared caching, validated server actions, and loading and
-  error states markers state in its narrowest home with server data in a query cache, logic outside components, and
-  client-side security async runtime and serialization framework, and typed errors, with the edition floor left to the
-  adopter assertions, Result values for expected failures, and the type check, lint, and format gates
+  core, F# domain and failure types, and the adopter's framework choices

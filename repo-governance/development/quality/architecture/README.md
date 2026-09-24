@@ -15,9 +15,7 @@ others rely on is declared and kept compatible.
 
 ## Directory Map
 
-in sync discipline styles ubiquitous language language and tests
-
 - [Finite-State Machines](finite-state-machines.md) — when a lifecycle needs a declared machine, and what it declares
   and records
 - [Functional Core, Imperative Shell](functional-core-imperative-shell.md) — a pure decision core, a thin effect shell,
-  one-way imports roots testing, application shapes untouched
+  one-way imports

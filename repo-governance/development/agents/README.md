@@ -15,8 +15,6 @@ holds for how an agent works: how it plans, delegates, asks, tracks, and reviews
 
 ## Directory Map
 
-multi-step work
-
 - [Capability Forms](capability-forms.md) — the four capability forms and the responsibility each holds
 - [Harness Adapters](harness-adapters.md) — generating harness-specific files from canonical artifacts
 - [Harness Adapters Modules](harness-adapters/README.md) — the one instruction body, vendor notes, and harness
@@ -24,7 +22,6 @@ multi-step work
 - [Last-Resort Questions](last-resort-questions.md) — when an agent may ask the user, and how little it asks
 - [Planning Capabilities](planning-capabilities.md) — the planning roster a repository exposes and its uniform contract
 - [Planning Capabilities Modules](planning-capabilities/README.md) — rosters, decision gates, executor authority,
-  delivery seams, verification, and review the plan-document route results result handling
+  delivery seams, verification, and review
 - [Task Tracking](task-tracking.md) — the task list kept before and during every task
-- [Task Tracking Modules](task-tracking/README.md) — list lifecycle, direction and continuity, and bindings while
-  planning
+- [Task Tracking Modules](task-tracking/README.md) — list lifecycle, direction and continuity, and bindings

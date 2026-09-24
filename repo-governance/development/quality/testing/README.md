@@ -16,7 +16,7 @@ Testing standards. They answer which test proves a behaviour, where it runs, and
 - [Behaviour-Driven Development](behaviour-driven-development.md) — Gherkin corpora, scenario-first changes, strict
   bindings, scoped exemptions
 - [Behaviour-Driven Development Modules](behaviour-driven-development/README.md) — discovery, layers, bindings and
-  exemptions, compliance cleanup
+  exemptions, compliance
 - [Test Boundaries and Gates](test-boundaries-and-gates.md) — what each test boundary excludes, separate suites, gates
   composed from named targets, the fast gate, and gating coverage
 - [Test-Driven Development](test-driven-development.md) — test-first red, green, and refactor cycles for behaviour

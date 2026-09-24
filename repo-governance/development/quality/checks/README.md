@@ -17,5 +17,4 @@ Check and gate standards. They answer which automated check runs where, how stri
 - [Deterministic and Judgement Validation](deterministic-and-judgement-validation.md) — one owning layer per category,
   and the handoff between layers
 - [Lint Strictness](lint-strictness.md) — failing at warning severity, cleaning a backlog before a gate goes live,
-  documented waivers, and reviewed autofixes governs, anchored and escaped patterns, file-relative paths, recorded edge
-  cases, and documented checks superficial satisfaction, and nothing inspected is no pass
+  documented waivers, and reviewed autofixes

@@ -32,9 +32,8 @@ inside it, how it is formatted, and how it stays true.
 - [Emoji Usage](emoji-usage.md)
 - [Internal Links](internal-links.md)
 - [Markdown Indentation](markdown-indentation.md)
-- [Markdown Prose Wrap](markdown-prose-wrap.md) severity and action items.
+- [Markdown Prose Wrap](markdown-prose-wrap.md)
 - [README Quality](readme-quality.md)
 - [README Quality Modules](readme-quality/README.md) — the modules on navigation, plain language, and required sections.
-  conduct, the security policy, licensing, and changelog, and decision records.
-- [Rule Definition](rule-definition.md) Example shapes. progression.
+- [Rule Definition](rule-definition.md)
 - [Vendor-Neutral Governance](vendor-neutral-governance.md)
