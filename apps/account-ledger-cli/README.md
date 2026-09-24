@@ -25,7 +25,7 @@ both levels. `Suite.fs` turns each embedded scenario into one xUnit theory row.
 npx nx run account-ledger-cli:run               # prints "Hello, world!"
 npx nx run account-ledger-cli:typecheck         # dotnet build, warnings as errors
 npx nx run account-ledger-cli:lint              # Fantomas check + FSharpLint
-npx nx run account-ledger-cli:test:unit         # unit suite, 99% line coverage gate (Program.fs excluded)
+npx nx run account-ledger-cli:test:unit         # unit suite, 80% line coverage gate (Program.fs excluded)
 npx nx run account-ledger-cli:test:integration  # integration suite
 npx nx run account-ledger-cli:test:quick        # typecheck, lint, test:unit in order
 npx nx run account-ledger-cli:build             # dotnet publish to dist/

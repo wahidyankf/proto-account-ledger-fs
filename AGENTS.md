@@ -70,7 +70,7 @@ columns. Diagrams are plain-text ASCII only, never Mermaid; see
 Specify behaviour as Gherkin in `specs/` and implement it test-first, one scenario per red-green-refactor cycle; see
 [test-driven development](repo-governance/development/quality/testing/test-driven-development.md) and
 [behaviour-driven development](repo-governance/development/quality/testing/behaviour-driven-development.md). `test:unit`
-runs in-process with every OS-facing dependency injected and enforces 99% line coverage; `test:integration` uses real,
+runs in-process with every OS-facing dependency injected and enforces 80% line coverage; `test:integration` uses real,
 isolated local resources and never the network. Both consume the same feature files. Never skip a test.
 
 ## Commits and Integration

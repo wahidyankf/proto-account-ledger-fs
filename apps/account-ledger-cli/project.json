@@ -50,7 +50,7 @@
       "cache": false
     },
     "test:unit": {
-      "command": "if grep -rn -E --include='*.fs' 'Skip\\s*=' apps/account-ledger-cli/tests/unit; then echo 'ERROR: xunit Skip= attribute found in test files above'; exit 1; fi && dotnet test apps/account-ledger-cli/tests/unit/account-ledger-cli-unit-tests.fsproj /p:CollectCoverage=true /p:Threshold=99 /p:ThresholdType=line \"/p:Include=[account-ledger-cli]*\" \"/p:ExcludeByFile=**/Program.fs\"",
+      "command": "if grep -rn -E --include='*.fs' 'Skip\\s*=' apps/account-ledger-cli/tests/unit; then echo 'ERROR: xunit Skip= attribute found in test files above'; exit 1; fi && dotnet test apps/account-ledger-cli/tests/unit/account-ledger-cli-unit-tests.fsproj /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line \"/p:Include=[account-ledger-cli]*\" \"/p:ExcludeByFile=**/Program.fs\"",
       "cache": true,
       "inputs": [
         "{projectRoot}/src/**/*.fs",

@@ -25,7 +25,7 @@ dotnet tool restore    # installs the pinned F# formatter and linter
 
 ```bash
 npx nx run account-ledger-cli:run               # run the CLI
-npx nx run account-ledger-cli:test:quick        # typecheck, lint, unit tests (99% line coverage gate)
+npx nx run account-ledger-cli:test:quick        # typecheck, lint, unit tests (80% line coverage gate)
 npx nx run account-ledger-cli:test:integration  # integration tests
 npm run check:hygiene                           # every repository gate Rhino declares for main
 ```
