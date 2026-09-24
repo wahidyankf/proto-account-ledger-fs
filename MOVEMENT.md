@@ -51,20 +51,32 @@ Non-negotiable rules:
 
 ## Acceptance Criteria
 
-Quoted from the brief, numbered in its order. The brief states that some of them are wrong; each verdict belongs in
-[REJECTED](REJECTED.md), which so far refuses C5; no other is assumed right or wrong here. The same criteria as draft
-Gherkin are in [ACCEPTANCE_CRITERIA.feature](ACCEPTANCE_CRITERIA.feature). No figure below rests on a criterion alone.
+Quoted from the brief, numbered in its order. The brief states that some of them are wrong; a refused criterion is
+recorded in [REJECTED](REJECTED.md), and each criterion below states its verdict. The same criteria as draft Gherkin are
+in [ACCEPTANCE_CRITERIA.feature](ACCEPTANCE_CRITERIA.feature). No figure below rests on a criterion alone.
 
 - **C1.** The Day 2 closing ledger balance, evaluated at end of Day 5 and before any fee is assessed, is AED −370.00.
-  _Ambiguities: AMB-016, AMB-022._
+  _Ambiguities: AMB-016, AMB-022._ **Accepted:** 1,200.00 − 950.00 − 620.00 = −370.00, as Day 5 restates it; the fees
+  are value-dated Day 5 (AMB-003) and interest joins no balance before capitalization (AMB-007), so the figure is the
+  same before or after the fees.
 - **C2.** E7 causes exactly one overdraft fee to be assessed, on Day 2. _Ambiguities: AMB-002, AMB-003, AMB-016._
-- **C3.** The Day 4 settlement of Auth-A must be accepted. _Ambiguities: AMB-013._
+  **Refused**, in [REJECTED](REJECTED.md): E7 causes three fees, for Days 2, 4, and 5, all value-dated Day 5.
+- **C3.** The Day 4 settlement of Auth-A must be accepted. _Ambiguities: AMB-013._ **Accepted:** Auth-A is approved on
+  arrival on Day 2 against 250.00 (AMB-009), and E5's 185.00 settles within its hold of 200.00, releasing all of it
+  (AMB-013); E7, arriving on Day 5, restates Day 2 but never reopens a decision already in the log (AMB-024).
 - **C4.** Any settlement referencing an authorization ID not present in the ledger must be rejected and the funds must
-  not leave the account. _Ambiguities: AMB-012, AMB-029._
+  not leave the account. _Ambiguities: AMB-012, AMB-029._ **Refused**, in [REJECTED](REJECTED.md): E6 is honoured as a
+  force-post.
 - **C5.** If Auth-B is approved, its hold reduces available balance but not ledger balance. _Ambiguities: AMB-021._
-- **C6.** After E9, all balances and fees return to their pre-E7 values. _Ambiguities: AMB-004, AMB-005._
-- **C7.** The three BHD instalments in E10 must each be BHD 3.334. _Ambiguities: AMB-020._
+  **Refused**, in [REJECTED](REJECTED.md).
+- **C6.** After E9, all balances and fees return to their pre-E7 values. _Ambiguities: AMB-004, AMB-005._ **Refused**,
+  in [REJECTED](REJECTED.md): Days 2 to 4 and the net fees return, but Day 5 closes at 210.00, interest totals 0.76, not
+  0.79, and Day 6 closes at 285.76, not 285.79.
+- **C7.** The three BHD instalments in E10 must each be BHD 3.334. _Ambiguities: AMB-020._ **Refused**, in
+  [REJECTED](REJECTED.md): 3 × 3.334 = 10.002; the ledger posts 3.333, 3.333, and 3.334.
 - **C8.** If the rounded daily interest accruals do not sum to the capitalized total, the remainder is discarded.
+  _Ambiguities: AMB-006, AMB-023._ **Refused**, in [REJECTED](REJECTED.md): each capitalization is the sum of its
+  rounded interest events, so no remainder exists.
 
 ## Accounts
 

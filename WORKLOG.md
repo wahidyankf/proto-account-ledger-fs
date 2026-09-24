@@ -6,6 +6,13 @@ and file creation times; no earlier work is claimed.
 
 | When             | What                                                                                           |
 | ---------------- | ---------------------------------------------------------------------------------------------- |
+| 2026-09-24 21:59 | Refused C8: capitalization sums the rounded interest events, so no remainder exists            |
+| 2026-09-24 21:58 | Refused C7: three instalments of 3.334 sum to 10.002; E10 posts 3.333, 3.333, 3.334            |
+| 2026-09-24 21:57 | Refused C6: Day 5 stays 210.00 and interest 0.76, so Day 6 closes 285.76, not 285.79           |
+| 2026-09-24 21:56 | Refused C4: E6 is honoured as a force-post; a bad settlement goes to chargeback                |
+| 2026-09-24 21:55 | Accepted C3: Auth-A was approved on arrival, and E7 arriving later never reopens it            |
+| 2026-09-24 21:54 | Refused C2: E7 causes three fees, for Days 2, 4, and 5, all value-dated Day 5                  |
+| 2026-09-24 21:51 | Accepted C1: Day 2 closes at −370.00 at end of Day 5, before or after the fees                 |
 | 2026-09-24 21:38 | Allowed strict xfail in every test target; TDD rule gains the design-weakness exception        |
 | 2026-09-24 21:32 | Aligned the assessment docs with every resolution; no entry is worded as open any more         |
 | 2026-09-24 21:27 | Listed WORKLOG newest first; new rows go on top, and no row is edited or removed               |

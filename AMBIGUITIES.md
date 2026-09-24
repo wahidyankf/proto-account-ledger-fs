@@ -97,7 +97,7 @@ day)", so a backdated event that turns a past day negative makes that day liable
 today, or only the value date and today, leaves Day 2 or Day 4 negative with no fee, which the rule does not allow.
 "Once per day per account" keeps a day from being charged twice when it is re-evaluated again, and naming the day each
 fee is for keeps that visible though AMB-003 dates all three on Day 5. Day 5 is negative at its own close under every
-option, so none gives criterion 2's "exactly one overdraft fee"; its verdict is decided separately.
+option, so none gives criterion 2's "exactly one overdraft fee", which [REJECTED](REJECTED.md) refuses.
 
 ## AMB-003 — The value date of a retroactive fee
 
@@ -170,8 +170,8 @@ production ledger fires it at end of day. E9 still restates Days 2 to 5, because
 rule reads value-dated closings, which after E9 are non-negative, so keeping the fees would leave charges the rule no
 longer supports. The cost is accepted: Day 5's value-dated closing stays at 210.00, with its fees on Day 5 and their
 refunds on Day 6, and interest (AMB-005) totals 0.76 instead of 0.79, so criterion 6's "all balances and fees return to
-their pre-E7 values" holds for Day 6's closing and the net fees but not for Day 5 or the interest; its verdict is
-decided separately.
+their pre-E7 values" holds for Day 6's closing and the net fees but not for Day 5 or the interest, so
+[REJECTED](REJECTED.md) refuses it.
 
 ## AMB-005 — Which balance daily interest accrues on
 
@@ -389,7 +389,7 @@ was never authorized, and releases no hold. Day 4 closes at 285.00, and no error
 **Rationale.** In production a settlement can arrive with no authorization in the ledger, such as an offline purchase on
 a flight, a toll, or a capture after its authorization lapsed, and card scheme rules have the issuer post it and pursue
 any dispute through a chargeback rather than refuse it; the model follows production. The cost is accepted: criterion
-4's "must be rejected and the funds must not leave the account" cannot hold, so its verdict is decided separately, and
+4's "must be rejected and the funds must not leave the account" cannot hold, so [REJECTED](REJECTED.md) refuses it, and
 the model has no chargeback, so a force-post that should not have been honoured stays until a later event reverses it.
 
 ## AMB-013 — A settlement smaller than its hold
@@ -608,7 +608,7 @@ the currency's precision, and adds what remains to the last one. E10's BHD 10.00
 **Rationale.** No three-decimal amount divides 10.000 into three, so exact instalments need one to differ. Rounding down
 and giving the last the remainder keeps the sum at exactly 10.000, invents no money, and works for any N and precision;
 rounding down, rather than half-even (AMB-006), keeps the remainder from ever being negative. Criterion 7's 3.334 each
-sums to 10.002, crediting 0.002 BHD that E10 never posted, so it cannot hold; its verdict is decided separately.
+sums to 10.002, crediting 0.002 BHD that E10 never posted, so it cannot hold, and [REJECTED](REJECTED.md) refuses it.
 
 ## AMB-021 — Auth-B: declined, yet "never settled"
 
