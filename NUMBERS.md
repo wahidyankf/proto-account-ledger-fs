@@ -29,8 +29,8 @@ Both are listed, as AMB-032 resolves.
 
 | Constant                    | Value                                | Status            |
 | --------------------------- | ------------------------------------ | ----------------- |
-| Rate literal                | `Decimal("0.0004")`                  | proposed          |
-| Decimal working precision   | 28 significant digits                | proposed          |
+| Rate literal                | `Decimal("0.0004")`                  | in place          |
+| Decimal working precision   | 28 significant digits                | in place          |
 | Rounding mode               | half-even                            | resolved, AMB-006 |
 | Instalment split            | 3.333, 3.333, 3.334                  | resolved, AMB-020 |
 | Hold released on settlement | the full hold, on a final settlement | resolved, AMB-013 |

@@ -71,7 +71,8 @@
         "{projectRoot}/uv.lock",
         "{projectRoot}/.python-version",
         "{projectRoot}/tests/support/**/*.py",
-        "{projectRoot}/tests/unit/**/*.py"
+        "{projectRoot}/tests/unit/**/*.py",
+        "{projectRoot}/streams/**/*.csv"
       ]
     },
     "test:integration": {
@@ -87,7 +88,8 @@
         "{projectRoot}/uv.lock",
         "{projectRoot}/.python-version",
         "{projectRoot}/tests/support/**/*.py",
-        "{projectRoot}/tests/integration/**/*.py"
+        "{projectRoot}/tests/integration/**/*.py",
+        "{projectRoot}/streams/**/*.csv"
       ]
     },
     "test:integration:watch": {
@@ -111,7 +113,8 @@
         "{projectRoot}/uv.lock",
         "{projectRoot}/.python-version",
         "{projectRoot}/tests/support/**/*.py",
-        "{projectRoot}/tests/e2e/**/*.py"
+        "{projectRoot}/tests/e2e/**/*.py",
+        "{projectRoot}/streams/**/*.csv"
       ]
     },
     "test:e2e:watch": {
@@ -138,7 +141,8 @@
         "{projectRoot}/pyproject.toml",
         "{projectRoot}/uv.lock",
         "{projectRoot}/.python-version",
-        "{projectRoot}/tests/**/*.py"
+        "{projectRoot}/tests/**/*.py",
+        "{projectRoot}/streams/**/*.csv"
       ]
     },
     "test:quick:watch": {

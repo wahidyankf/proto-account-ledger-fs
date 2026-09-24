@@ -13,6 +13,10 @@ first.
   passed: Phase 1. Next: Phase 2.
 - Phase 2 (04:17–04:22): R2 and R3 applied; python-standards records returned result values and the domain shapes, 011
   and plan-execution record the delivery options. Last gate passed: Phase 2. Next: Phase 3, Cycle 3.1.
+- Cycle 3.16 passed on arrival: the reader built in 3.14 already refused malformed IDs; its mutation proof is recorded
+  under its RED.
+- Phase 3 (04:21–04:42): 24 cycles green, one (3.16) passing on arrival with its mutation proof; the type gate proven to
+  fail on an AED plus BHD sum. Last gate passed: Phase 3. Next: Phase 4, Cycle 4.1.
 
 ## Execution Checkout
 
@@ -248,9 +252,10 @@ Rule changes R2 and R3: the Python choices (S3, D8, D14 to D18) and the delivery
 - [x] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
       Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
   - Result: entry "Plan execution, Phase 2".
-- [ ] [AI] Commit the phase as `docs(governance): record the ledger's Python and delivery choices`, then push to
+- [x] [AI] Commit the phase as `docs(governance): record the ledger's Python and delivery choices`, then push to
       `origin/main`; the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof: the
       commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-29.
+  - Result: ad8daaf, pushed 6daf504..ad8daaf; the pre-push hook ran every test layer.
 
 Pause safety: the phase leaves every choice this plan made recorded where later work will read it. Re-verify with
 `npx nx run account-ledger-cli:test:quick`.
@@ -262,175 +267,271 @@ The domain types and the parser, bottom-up ([domain model](tech-docs/001-domain-
 
 ### Cycle 3.1 — AED and BHD keep their places
 
-- [ ] [AI] RED: write `test_aed_refuses_more_than_two_places` in `tests/unit/test_money.py`, with the smallest stub it
+- [x] [AI] RED: write `test_aed_refuses_more_than_two_places` in `tests/unit/test_money.py`, with the smallest stub it
       imports, and run it; it fails on its assertion because the stub `Aed` accepts `12.345`. Command:
       `pytest tests/unit/test_money.py`. Proof: the failure message, recorded here. Acceptance: AC-34.
-- [ ] [AI] GREEN: Write `Aed`, `Bhd`, and `Money` in `src/account_ledger/money.py`, each checking its places on
+  - Result: with a stub `Aed.parse` returning `Aed(Decimal(text))`, it failed on its assertion:
+    `assert Aed(value=Decimal('12.345')) == TooManyPlaces(text='12.345', places=2, currency='AED')` (2 failed, with
+    `test_bhd_refuses_more_than_three_places` beside it). A first run without `Bhd` in the stub was an import error and
+    did not count.
+- [x] [AI] GREEN: Write `Aed`, `Bhd`, and `Money` in `src/account_ledger/money.py`, each checking its places on
       construction, with `parse` returning `MoneyFault`. Command: `pytest tests/unit/test_money.py`, then
       `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance: AC-34.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: `Aed` and `Bhd` check their places in `__post_init__` (`ValueError`); `parse` returns `NotADecimal` or
+    `TooManyPlaces`, joined as `MoneyFault`. `pytest tests/unit/test_money.py` 2 passed; `pytest tests/unit` 3 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-34.
+  - Result: ruff UP037 removed the quoted return annotations. `test:quick` exit 0, coverage 96%.
 
 ### Cycle 3.2 — an amount is above zero
 
-- [ ] [AI] RED: write `test_an_amount_must_be_above_zero` in `tests/unit/test_money.py`, with the smallest stub it
+- [x] [AI] RED: write `test_an_amount_must_be_above_zero` in `tests/unit/test_money.py`, with the smallest stub it
       imports, and run it; it fails on its assertion because the stub `Amount.of` accepts `Aed("0.00")`. Command:
       `pytest tests/unit/test_money.py`. Proof: the failure message, recorded here. Acceptance: AC-34.
-- [ ] [AI] GREEN: Write `Amount[M]` and `Amount.of` returning `NotPositive`. Command: `pytest tests/unit/test_money.py`,
+  - Result: with a stub `Amount.of` returning `Amount(money)`, it failed on its assertion:
+    `assert Amount(money=Aed(value=Decimal('0.00'))) == NotPositive(text='0.00')` (1 failed, 2 passed).
+- [x] [AI] GREEN: Write `Amount[M]` and `Amount.of` returning `NotPositive`. Command: `pytest tests/unit/test_money.py`,
       then `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance: AC-34.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: `Amount[M: (Aed, Bhd)]` raises `ValueError` at or below zero; `Amount.of` returns `NotPositive`. 3 passed;
+    `pytest tests/unit` 4 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-34.
+  - Result: the test helper `aed` moved to `tests/support/values.py`, beside `bhd`. `test:quick` exit 0, coverage 97%.
 
 ### Cycle 3.3 — AED and BHD never combine
 
-- [ ] [AI] RED: write `test_aed_and_bhd_values_never_combine` in `tests/unit/test_money.py`, with the smallest stub it
+- [x] [AI] RED: write `test_aed_and_bhd_values_never_combine` in `tests/unit/test_money.py`, with the smallest stub it
       imports, and run it; it fails on its assertion because the stub `same_as` returns its second argument for a `Bhd`
       against an `Aed`. Command: `pytest tests/unit/test_money.py`. Proof: the failure message, recorded here.
       Acceptance: AC-34.
-- [ ] [AI] GREEN: Write the same-type operators, the constrained type variable, and `same_as` returning
+  - Result: with a stub `same_as` returning its second argument, it failed on its assertion:
+    `assert Bhd(value=Decimal('1.000')) == CurrencyMismatch(expected='AED', found='BHD')` (1 failed, 3 passed).
+- [x] [AI] GREEN: Write the same-type operators, the constrained type variable, and `same_as` returning
       `CurrencyMismatch`. Command: `pytest tests/unit/test_money.py`, then `pytest tests/unit`. Proof: both passing
       runs, recorded here. Acceptance: AC-34.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: `+`, `-`, and unary `-` per currency, each returning `NotImplemented` for another type; `order=True` gives
+    same-type comparison; `currency` and `same_as[M: (Aed, Bhd)]` returning `CurrencyMismatch`. 4 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-34.
-- [ ] [AI] Prove the type gate can fail: add a line summing an `Aed` and a `Bhd` to a scratch test, run
+  - Result: the runtime mix checks carry a narrow pyright suppression stating the reason (strict pyright rejected a bare
+    expression and `operator.add` alike, since the mix is a type error). `test:quick` exit 0, coverage 93%.
+- [x] [AI] Prove the type gate can fail: add a line summing an `Aed` and a `Bhd` to a scratch test, run
       `npx nx run account-ledger-cli:typecheck`, watch it fail naming the line, remove it. Proof: the failing run's
       head. Acceptance: AC-34.
+  - Result: a scratch `tests/unit/test_scratch_mix.py` summing `aed("1.00") + bhd("1.000")` made `typecheck` exit 1:
+    `error: Operator "+" not supported for types "Aed" and "Bhd" (reportOperatorIssue)`; removed, `typecheck` exit 0.
 
 ### Cycle 3.4 — daily interest rounds half-even
 
-- [ ] [AI] RED: write `test_amb_006_daily_interest_rounds_half_even` in `tests/unit/test_money.py`, with the smallest
+- [x] [AI] RED: write `test_amb_006_daily_interest_rounds_half_even` in `tests/unit/test_money.py`, with the smallest
       stub it imports, and run it; it fails on its assertion because the stub's `daily_interest` rounds AED 312.50 ×
       0.0004 = 0.125 up to 0.13 instead of 0.12. Command: `pytest tests/unit/test_money.py`. Proof: the failure message,
       recorded here. Acceptance: AC-13.
-- [ ] [AI] GREEN: Write `daily_interest` at 0.0004 in `money.py`, rounding half-even to the currency's places. Command:
+  - Result: with a stub rounding half-up, it failed on its assertion:
+    `assert Aed(value=Decimal('0.13')) == Aed(value=Decimal('0.12'))` for AED 312.50 (1 failed, 4 passed). A first run
+    was a NameError from a missed import edit and did not count.
+- [x] [AI] GREEN: Write `daily_interest` at 0.0004 in `money.py`, rounding half-even to the currency's places. Command:
       `pytest tests/unit/test_money.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance:
       AC-13.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: `daily_interest` multiplies by `DAILY_RATE = Decimal("0.0004")`, zero unless the balance is above zero,
+    rounded half-even by `_round`. 5 passed; `pytest tests/unit` 6 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-13.
+  - Result: rounding reads the minor unit from the currency type, since strict pyright rejected the exponent union.
+    `test:quick` exit 0, coverage 94%.
 
 ### Cycle 3.5 — an amount splits with the remainder last
 
-- [ ] [AI] RED: write `test_amb_020_ten_bhd_splits_3_333_3_333_3_334` in `tests/unit/test_money.py`, with the smallest
+- [x] [AI] RED: write `test_amb_020_ten_bhd_splits_3_333_3_333_3_334` in `tests/unit/test_money.py`, with the smallest
       stub it imports, and run it; it fails on its assertion because `split` returns equal parts that sum to `10.002`.
       Command: `pytest tests/unit/test_money.py`. Proof: the failure message, recorded here. Acceptance: AC-12.
-- [ ] [AI] GREEN: Write `split`: round each part down, add the remainder to the last, and return `TooManyInstalments`
+  - Result: with a stub rounding each part up, it failed on its assertion:
+    `At index 0 diff: Amount(money=Bhd(value=Decimal('3.334'))) != Amount(money=Bhd(value=Decimal('3.333')))`, three
+    parts of 3.334 summing to 10.002 (1 failed, 5 passed). `InstalmentCount` arrived in `ids.py` without its check,
+    which Cycle 3.11 adds.
+- [x] [AI] GREEN: Write `split`: round each part down, add the remainder to the last, and return `TooManyInstalments`
       when a part would fall below one minor unit. Command: `pytest tests/unit/test_money.py`, then `pytest tests/unit`.
       Proof: both passing runs, recorded here. Acceptance: AC-12.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: parts rounded down, the remainder on the last, `TooManyInstalments` when a part is below one minor unit (BHD
+    0.002 in 3). 6 passed; `pytest tests/unit` 7 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-12.
+  - Result: nothing to tidy beyond a docstring. `test:quick` exit 0, coverage 95%.
 
 ### Cycle 3.6 — the BHD fee is derived from the AED fee
 
-- [ ] [AI] RED: write `test_amb_027_the_bhd_fee_is_2_560` in `tests/unit/test_money.py`, with the smallest stub it
+- [x] [AI] RED: write `test_amb_027_the_bhd_fee_is_2_560` in `tests/unit/test_money.py`, with the smallest stub it
       imports, and run it; it fails on its assertion because the stub's BHD fee is the AED figure `25.000`. Command:
       `pytest tests/unit/test_money.py`. Proof: the failure message, recorded here. Acceptance: AC-22.
-- [ ] [AI] GREEN: Write `overdraft_fee` as AED 25.00 and, for BHD, 25.00 × 0.10238257 rounded half-even. Command:
+  - Result: with a stub charging 25 in each currency, it failed on its assertion:
+    `assert Amount(money=...al('25.000'))) == Amount(money=...mal('2.560')))` (1 failed, 6 passed). A first stub raised
+    `AttributeError` and did not count.
+- [x] [AI] GREEN: Write `overdraft_fee` as AED 25.00 and, for BHD, 25.00 × 0.10238257 rounded half-even. Command:
       `pytest tests/unit/test_money.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance:
       AC-22.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: `overdraft_fee` matches the currency: AED 25.00, BHD 25.00 × 0.10238257 = 2.55956425 → 2.560 half-even. 7
+    passed; `pytest tests/unit` 8 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-22.
+  - Result: the constants are named `AED_FEE` and `AED_TO_BHD`. `test:quick` exit 0, coverage 95%.
 
 ### Cycle 3.7 — a day refuses a malformed value
 
-- [ ] [AI] RED: write `test_day_refuses_a_malformed_value` in `tests/unit/test_ids.py`, with the smallest stub it
+- [x] [AI] RED: write `test_day_refuses_a_malformed_value` in `tests/unit/test_ids.py`, with the smallest stub it
       imports, and run it; it fails on its assertion because the stub accepts `Day.parse("-1")`. Command:
       `pytest tests/unit/test_ids.py`. Proof: the failure message, recorded here. Acceptance: AC-34.
-- [ ] [AI] GREEN: Write its type in `src/account_ledger/ids.py`, with the constructor check and `parse`. Command:
+  - Result: with a stub `Day.parse` returning `Day(int(text))`, it failed on its assertion:
+    `assert Day(number=-1) == IdFault(kind='day', text='-1')` (1 failed).
+- [x] [AI] GREEN: Write its type in `src/account_ledger/ids.py`, with the constructor check and `parse`. Command:
       `pytest tests/unit/test_ids.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance:
       AC-34.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: `Day` refuses a number below 0 in `__post_init__`; `parse` accepts only ASCII digits, else
+    `IdFault("day", text)`; `next` and `order=True` give counting and comparison. 1 passed; `pytest tests/unit` 9
+    passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-34.
+  - Result: nothing to tidy. `test:quick` exit 0, coverage 96%.
 
 ### Cycle 3.8 — an account ID refuses a malformed value
 
-- [ ] [AI] RED: write `test_account_id_refuses_a_malformed_value` in `tests/unit/test_ids.py`, with the smallest stub it
+- [x] [AI] RED: write `test_account_id_refuses_a_malformed_value` in `tests/unit/test_ids.py`, with the smallest stub it
       imports, and run it; it fails on its assertion because the stub accepts `AccountId.parse("ACC-1")`. Command:
       `pytest tests/unit/test_ids.py`. Proof: the failure message, recorded here. Acceptance: AC-34.
-- [ ] [AI] GREEN: Write its type in `src/account_ledger/ids.py`, with the constructor check and `parse`. Command:
+  - Result: with a stub accepting any text, it failed on its assertion:
+    `assert AccountId(value='ACC-1') == IdFault(kind='account ID', text='ACC-1')` (1 failed, 1 passed).
+- [x] [AI] GREEN: Write its type in `src/account_ledger/ids.py`, with the constructor check and `parse`. Command:
       `pytest tests/unit/test_ids.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance:
       AC-34.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: `AccountId` checks `ACC-` and three digits in `__post_init__` and `parse`, and gives `number` for markers. 2
+    passed; `pytest tests/unit` 10 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-34.
+  - Result: the pattern is one compiled `_ACCOUNT`. `test:quick` exit 0, coverage 96%.
 
 ### Cycle 3.9 — a hold ID refuses a malformed value
 
-- [ ] [AI] RED: write `test_authorization_id_refuses_a_malformed_value` in `tests/unit/test_ids.py`, with the smallest
+- [x] [AI] RED: write `test_authorization_id_refuses_a_malformed_value` in `tests/unit/test_ids.py`, with the smallest
       stub it imports, and run it; it fails on its assertion because the stub accepts `AuthorizationId.parse("Auth-")`.
       Command: `pytest tests/unit/test_ids.py`. Proof: the failure message, recorded here. Acceptance: AC-34.
-- [ ] [AI] GREEN: Write its type in `src/account_ledger/ids.py`, with the constructor check and `parse`. Command:
+  - Result: with a stub accepting any text, it failed on its assertion:
+    `assert AuthorizationId(value='Auth-') == IdFault(kind='hold ID', text='Auth-')` (1 failed, 2 passed).
+- [x] [AI] GREEN: Write its type in `src/account_ledger/ids.py`, with the constructor check and `parse`. Command:
       `pytest tests/unit/test_ids.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance:
       AC-34.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: `AuthorizationId` checks `Auth-` and one or more ASCII letters or digits. 3 passed; `pytest tests/unit` 11
+    passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-34.
+  - Result: nothing to tidy. `test:quick` exit 0, coverage 96%.
 
 ### Cycle 3.10 — an event ID refuses a malformed value
 
-- [ ] [AI] RED: write `test_event_id_refuses_a_malformed_value` in `tests/unit/test_ids.py`, with the smallest stub it
+- [x] [AI] RED: write `test_event_id_refuses_a_malformed_value` in `tests/unit/test_ids.py`, with the smallest stub it
       imports, and run it; it fails on its assertion because the stub accepts `EventId.parse("FEE-1")`. Command:
       `pytest tests/unit/test_ids.py`. Proof: the failure message, recorded here. Acceptance: AC-34.
-- [ ] [AI] GREEN: Write its type in `src/account_ledger/ids.py`, with the constructor check and `parse`. Command:
+  - Result: with a stub `parse_event_id` returning `IncomingId(text)`, it failed on its assertion:
+    `assert IncomingId(value='FEE-1') == IdFault(kind='event ID', text='FEE-1')` (1 failed, 3 passed). `EventId` is a
+    union type alias, so its parse is the function `parse_event_id`, not a method.
+- [x] [AI] GREEN: Write its type in `src/account_ledger/ids.py`, with the constructor check and `parse`. Command:
       `pytest tests/unit/test_ids.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance:
       AC-34.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: `IncomingId`, `InstalmentId`, `FeeId`, `RefundId`, `InterestId`, `CapitalizationId`, the `EventId` union,
+    and `parse_event_id`, one anchored pattern reading an incoming ID, an instalment, or a marker. 4 passed;
+    `pytest tests/unit` 12 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-34.
+  - Result: ruff format only. `test:quick` exit 0, coverage 97%.
 
 ### Cycle 3.11 — an instalment count refuses a malformed value
 
-- [ ] [AI] RED: write `test_instalment_count_refuses_a_malformed_value` in `tests/unit/test_ids.py`, with the smallest
+- [x] [AI] RED: write `test_instalment_count_refuses_a_malformed_value` in `tests/unit/test_ids.py`, with the smallest
       stub it imports, and run it; it fails on its assertion because the stub accepts `InstalmentCount(1)`. Command:
       `pytest tests/unit/test_ids.py`. Proof: the failure message, recorded here. Acceptance: AC-34.
-- [ ] [AI] GREEN: Write its type in `src/account_ledger/ids.py`, with the constructor check and `parse`. Command:
+  - Result: with a stub `parse` accepting any digits, it failed on its assertion:
+    `assert InstalmentCount(n=1) == IdFault(kind='instalment count', text='1')` (1 failed, 4 passed).
+- [x] [AI] GREEN: Write its type in `src/account_ledger/ids.py`, with the constructor check and `parse`. Command:
       `pytest tests/unit/test_ids.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance:
       AC-34.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: `InstalmentCount` refuses below 2 in `__post_init__`; `parse` returns `IdFault("instalment count", text)`. 5
+    passed; `pytest tests/unit` 13 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-34.
+  - Result: nothing to tidy. `test:quick` exit 0, coverage 97%.
 
 ### Cycle 3.12 — a marker prints its kind, account, and days
 
-- [ ] [AI] RED: write `test_a_marker_prints_its_kind_account_and_days` in `tests/unit/test_ids.py`, with the smallest
+- [x] [AI] RED: write `test_a_marker_prints_its_kind_account_and_days` in `tests/unit/test_ids.py`, with the smallest
       stub it imports, and run it; it fails on its assertion because the stub's `text` returns an empty string for
       `FeeId`. Command: `pytest tests/unit/test_ids.py`. Proof: the failure message, recorded here. Acceptance: AC-07.
-- [ ] [AI] GREEN: Write `text` for the six event ID types. Command: `pytest tests/unit/test_ids.py`, then
+  - Result: with a stub `text` printing only incoming IDs, it failed on its assertion: `assert '' == 'E10-3'` (1 failed,
+    5 passed).
+- [x] [AI] GREEN: Write `text` for the six event ID types. Command: `pytest tests/unit/test_ids.py`, then
       `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance: AC-07.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: one `match` over the `EventId` union, ending in `assert_never`, builds each marker from its parts. 6 passed;
+    `pytest tests/unit` 14 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-07.
+  - Result: a loop variable that shadowed `text` renamed (ruff F402). `test:quick` exit 0, coverage 96%.
 
 ### Cycle 3.13 — the configuration refuses an inverted window
 
-- [ ] [AI] RED: write `test_ledger_config_refuses_an_inverted_window` in `tests/unit/test_config.py`, with the smallest
+- [x] [AI] RED: write `test_ledger_config_refuses_an_inverted_window` in `tests/unit/test_config.py`, with the smallest
       stub it imports, and run it; it fails on its assertion because the stub `LedgerConfig.of` accepts a first day
       after the last. Command: `pytest tests/unit/test_config.py`. Proof: the failure message, recorded here.
       Acceptance: AC-34.
-- [ ] [AI] GREEN: Write `config.py`: `Account[M]`, `LedgerConfig.of`, and `CHALLENGE`. Command:
+  - Result: with a stub `LedgerConfig.of` accepting anything, it failed on its assertion:
+    `assert LedgerConfig(... first_day=Day(number=6), last_day=Day(number=1) ...) == ConfigFault(...)`, the reason being
+    `the first day 6 is after the last 1` (1 failed). A first stub lacked `CHALLENGE`, an import error that did not
+    count; `Aed.zero()` and `Bhd.zero()` came with it.
+- [x] [AI] GREEN: Write `config.py`: `Account[M]`, `LedgerConfig.of`, and `CHALLENGE`. Command:
       `pytest tests/unit/test_config.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance:
       AC-34.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: `Account[M]`, `AnyAccount`, `ConfigFault`, and `LedgerConfig`, whose `__post_init__` and `of` share one
+    check: an inverted window, a repeated account, a capitalization day outside the window; `account(id)` looks one up;
+    `CHALLENGE` holds ACC-001 AED 0.00 and ACC-002 BHD 0.000, Days 1 to 6, capitalization on Day 6. 1 passed;
+    `pytest tests/unit` 15 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-34.
+  - Result: ruff format only. `test:quick` exit 0, coverage 97%.
 
 ### Cycle 3.14 — a valid stream parses to its events
 
-- [ ] [AI] RED: write `test_a_valid_stream_parses_to_its_events` in `tests/unit/test_stream_csv.py`, with the smallest
+- [x] [AI] RED: write `test_a_valid_stream_parses_to_its_events` in `tests/unit/test_stream_csv.py`, with the smallest
       stub it imports, and run it; it fails on its assertion because the stub parser returns no events for one row of
       each kind. Command: `pytest tests/unit/test_stream_csv.py`. Proof: the failure message, recorded here. Acceptance:
       AC-05.
-- [ ] [AI] GREEN: Write `events.py` (the incoming kinds, `Capture`, and `posting`) and `parse_stream` in `stream_csv.py`
+  - Result: with a stub `parse_stream` returning `()`, it failed on its assertion:
+    `assert () == (Credit(id=In...tCount(n=3))))`, `Right contains 6 more items` (1 failed).
+- [x] [AI] GREEN: Write `events.py` (the incoming kinds, `Capture`, and `posting`) and `parse_stream` in `stream_csv.py`
       for well-formed rows; the test builds its text with `csv_text(rows)` in `tests/support/streams.py`, which writes
       rows under the current header. Command: `pytest tests/unit/test_stream_csv.py`, then `pytest tests/unit`. Proof:
       both passing runs, recorded here. Acceptance: AC-05.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: `events.py` holds `Capture`, `Whole`, `Instalments`, and the five incoming kinds joined in `IncomingEvent`;
+    `parse_stream` reads rows through `csv` and each value through its type's `parse` (`IncomingId.parse` added), with a
+    generic fault message the later cycles refine; `csv_text(rows)` in `tests/support/streams.py` writes dict rows under
+    `HEADER`. 1 passed; `pytest tests/unit` 16 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-05.
+  - Result: the GREEN's private exception for early exit was replaced by returned `RowFault` values with walrus-narrowed
+    early returns, as S3 and python-standards require. `test:quick` exit 0, coverage 95%.
 
 ### Cycle 3.15 — a wrong header or cell count is refused
 
-- [ ] [AI] RED: write `test_a_wrong_header_or_cell_count_is_refused` in `tests/unit/test_stream_csv.py`, with the
+- [x] [AI] RED: write `test_a_wrong_header_or_cell_count_is_refused` in `tests/unit/test_stream_csv.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because the parser accepts the faulty row instead
       of returning a `StreamError` with its line and message. Command: `pytest tests/unit/test_stream_csv.py`. Proof:
       the failure message, recorded here. Acceptance: AC-03.
-- [ ] [AI] GREEN: Add the header check and the cell count, against this version's columns to `stream_csv.py`, returning
+  - Result: the first run raised `KeyError: 'account'` on the short row, not an assertion, so the reader first read
+    missing cells as empty, adding no behaviour; the rerun failed on its assertion:
+    `assert StreamError(l...is not valid") == StreamError(l...,instalments')` (1 failed, 1 passed).
+- [x] [AI] GREEN: Add the header check and the cell count, against this version's columns to `stream_csv.py`, returning
       the message tech-docs 003 fixes. Command: `pytest tests/unit/test_stream_csv.py`, then `pytest tests/unit`. Proof:
       both passing runs, recorded here. Acceptance: AC-03.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: the header must equal `COLUMNS` exactly, an empty file included, and each row must have `len(COLUMNS)`
+    cells, each a returned `StreamError`. 2 passed; `pytest tests/unit` 17 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-03.
+  - Result: rows now zip strictly, the count being checked first. `test:quick` exit 0, coverage 95%.
 
 ### Cycle 3.16 — an ID of the wrong form is refused
 
@@ -438,117 +539,172 @@ The domain types and the parser, bottom-up ([domain model](tech-docs/001-domain-
       stub it imports, and run it; it fails on its assertion because the parser accepts the faulty row instead of
       returning a `StreamError` with its line and message. Command: `pytest tests/unit/test_stream_csv.py`. Proof: the
       failure message, recorded here. Acceptance: AC-03.
-- [ ] [AI] GREEN: Add the ID checks, reading each through its type's `parse` to `stream_csv.py`, returning the message
+  - Disposition: passes on arrival (3 passed), since Cycle 3.14 already read every ID through its type's `parse`.
+    Mutation: `AccountId.parse` relabelled its fault; the test failed on its assertion
+    (`assert StreamError(l...is not valid") == StreamError(l...is not valid")`, 1 failed, 2 passed); restored from a
+    copy, 3 passed.
+- [x] [AI] GREEN: Add the ID checks, reading each through its type's `parse` to `stream_csv.py`, returning the message
       tech-docs 003 fixes. Command: `pytest tests/unit/test_stream_csv.py`, then `pytest tests/unit`. Proof: both
       passing runs, recorded here. Acceptance: AC-03.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: no production change; passes on arrival, recorded in the Execution Record.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-03.
+  - Result: nothing to tidy. `test:quick` exit 0.
 
 ### Cycle 3.17 — an unknown type or account is refused
 
-- [ ] [AI] RED: write `test_an_unknown_type_or_account_is_refused` in `tests/unit/test_stream_csv.py`, with the smallest
+- [x] [AI] RED: write `test_an_unknown_type_or_account_is_refused` in `tests/unit/test_stream_csv.py`, with the smallest
       stub it imports, and run it; it fails on its assertion because the parser accepts the faulty row instead of
       returning a `StreamError` with its line and message. Command: `pytest tests/unit/test_stream_csv.py`. Proof: the
       failure message, recorded here. Acceptance: AC-03.
-- [ ] [AI] GREEN: Add the type and account checks to `stream_csv.py`, returning the message tech-docs 003 fixes.
+  - Result: it failed on its assertion: the type fault read `... is not valid` instead of listing the five types (1
+    failed, 3 passed).
+- [x] [AI] GREEN: Add the type and account checks to `stream_csv.py`, returning the message tech-docs 003 fixes.
       Command: `pytest tests/unit/test_stream_csv.py`, then `pytest tests/unit`. Proof: both passing runs, recorded
       here. Acceptance: AC-03.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: the type is checked against `KINDS` before the account, so an unknown type is named whatever else the row
+    holds; the unheld account already returned its message. 4 passed; `pytest tests/unit` 19 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-03.
+  - Result: the final `match` arm now serves authorizations and settlements, so no arm is unreachable. `test:quick` exit
+    0, coverage 97%.
 
 ### Cycle 3.18 — an amount that is not a valid amount is refused
 
-- [ ] [AI] RED: write `test_an_amount_that_is_not_a_valid_amount_is_refused` in `tests/unit/test_stream_csv.py`, with
+- [x] [AI] RED: write `test_an_amount_that_is_not_a_valid_amount_is_refused` in `tests/unit/test_stream_csv.py`, with
       the smallest stub it imports, and run it; it fails on its assertion because the parser accepts the faulty row
       instead of returning a `StreamError` with its line and message. Command: `pytest tests/unit/test_stream_csv.py`.
       Proof: the failure message, recorded here. Acceptance: AC-03.
-- [ ] [AI] GREEN: Add the amount checks: a decimal, no more places than the account's currency, above zero to
+  - Result: it failed on its assertion: `assert StreamError(l...is not valid") == StreamError(l...cimal number")` (1
+    failed, 4 passed).
+- [x] [AI] GREEN: Add the amount checks: a decimal, no more places than the account's currency, above zero to
       `stream_csv.py`, returning the message tech-docs 003 fixes. Command: `pytest tests/unit/test_stream_csv.py`, then
       `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance: AC-03.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: `_amount` matches the typed fault: `NotADecimal`, `TooManyPlaces` with its places and currency, and
+    `NotPositive`, each with the tech-docs 003 text. 5 passed; `pytest tests/unit` 20 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-03.
+  - Result: nothing to tidy. `test:quick` exit 0, coverage 97%.
 
 ### Cycle 3.19 — a missing or inapplicable cell is refused
 
-- [ ] [AI] RED: write `test_a_missing_or_inapplicable_cell_is_refused` in `tests/unit/test_stream_csv.py`, with the
+- [x] [AI] RED: write `test_a_missing_or_inapplicable_cell_is_refused` in `tests/unit/test_stream_csv.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because the parser accepts the faulty row instead
       of returning a `StreamError` with its line and message. Command: `pytest tests/unit/test_stream_csv.py`. Proof:
       the failure message, recorded here. Acceptance: AC-03.
-- [ ] [AI] GREEN: Add the per-kind required and inapplicable cells to `stream_csv.py`, returning the message tech-docs
+  - Result: it failed on its assertion: an empty event ID read `... is not valid`, not
+    `column 'event' is required for CREDIT` (1 failed, 5 passed).
+- [x] [AI] GREEN: Add the per-kind required and inapplicable cells to `stream_csv.py`, returning the message tech-docs
       003 fixes. Command: `pytest tests/unit/test_stream_csv.py`, then `pytest tests/unit`. Proof: both passing runs,
       recorded here. Acceptance: AC-03.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: `REQUIRED` and `OPTIONAL` per kind; after the type, each column is checked in header order for a missing
+    required cell or a cell the kind does not take. 6 passed; `pytest tests/unit` 21 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-03.
+  - Result: `OPTIONAL` typed in full for strict pyright. `test:quick` exit 0, coverage 97%.
 
 ### Cycle 3.20 — a day outside the window is refused
 
-- [ ] [AI] RED: write `test_a_day_outside_the_window_is_refused` in `tests/unit/test_stream_csv.py`, with the smallest
+- [x] [AI] RED: write `test_a_day_outside_the_window_is_refused` in `tests/unit/test_stream_csv.py`, with the smallest
       stub it imports, and run it; it fails on its assertion because the parser accepts the faulty row instead of
       returning a `StreamError` with its line and message. Command: `pytest tests/unit/test_stream_csv.py`. Proof: the
       failure message, recorded here. Acceptance: AC-03.
-- [ ] [AI] GREEN: Add the day checks against the configuration's window to `stream_csv.py`, returning the message
+  - Result: it failed on its assertion:
+    `assert None == StreamError(line=2, message="line 2: day '7' is outside the window 1 to 6")`, Day 7 being accepted
+    (1 failed, 6 passed).
+- [x] [AI] GREEN: Add the day checks against the configuration's window to `stream_csv.py`, returning the message
       tech-docs 003 fixes. Command: `pytest tests/unit/test_stream_csv.py`, then `pytest tests/unit`. Proof: both
       passing runs, recorded here. Acceptance: AC-03.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: `_day` reads a day through `Day.parse` and refuses one outside the configured window, a non-whole number
+    included, with the window in the message. 7 passed; `pytest tests/unit` 22 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-03.
+  - Result: nothing to tidy. `test:quick` exit 0, coverage 98%.
 
 ### Cycle 3.21 — a reversal's reference must be an event ID
 
-- [ ] [AI] RED: write `test_a_reversal_reference_must_be_an_event_id` in `tests/unit/test_stream_csv.py`, with the
+- [x] [AI] RED: write `test_a_reversal_reference_must_be_an_event_id` in `tests/unit/test_stream_csv.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because the parser accepts the faulty row instead
       of returning a `StreamError` with its line and message. Command: `pytest tests/unit/test_stream_csv.py`. Proof:
       the failure message, recorded here. Acceptance: AC-03.
-- [ ] [AI] GREEN: Add the reference check through `EventId.parse` to `stream_csv.py`, returning the message tech-docs
+  - Result: it failed on its assertion: `assert StreamError(l...is not valid") == StreamError(l... an event ID")` (1
+    failed, 7 passed); a marker target, `FEE-001-D2@D5`, parses to a `FeeId`.
+- [x] [AI] GREEN: Add the reference check through `EventId.parse` to `stream_csv.py`, returning the message tech-docs
       003 fixes. Command: `pytest tests/unit/test_stream_csv.py`, then `pytest tests/unit`. Proof: both passing runs,
       recorded here. Acceptance: AC-03.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: a reversal's reference goes through `parse_event_id`, and its fault reads
+    `reference 'X' is not an event ID`. 8 passed; `pytest tests/unit` 23 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-03.
+  - Result: nothing to tidy. `test:quick` exit 0, coverage 98%.
 
 ### Cycle 3.22 — an instalment count below two is refused
 
-- [ ] [AI] RED: write `test_an_instalment_count_below_2_is_refused` in `tests/unit/test_stream_csv.py`, with the
+- [x] [AI] RED: write `test_an_instalment_count_below_2_is_refused` in `tests/unit/test_stream_csv.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because the parser accepts the faulty row instead
       of returning a `StreamError` with its line and message. Command: `pytest tests/unit/test_stream_csv.py`. Proof:
       the failure message, recorded here. Acceptance: AC-03.
-- [ ] [AI] GREEN: Add the instalment check to `stream_csv.py`, returning the message tech-docs 003 fixes. Command:
+  - Result: it failed on its assertion: `assert StreamError(l...is not valid") == StreamError(l...e at least 2')` (1
+    failed, 8 passed).
+- [x] [AI] GREEN: Add the instalment check to `stream_csv.py`, returning the message tech-docs 003 fixes. Command:
       `pytest tests/unit/test_stream_csv.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-03.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: an `InstalmentCount.parse` fault reads `instalments must be at least 2`, a non-number included. 9 passed;
+    `pytest tests/unit` 24 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-03.
+  - Result: nothing to tidy. `test:quick` exit 0, coverage 98%.
 
 ### Cycle 3.23 — more instalments than minor units are refused
 
-- [ ] [AI] RED: write `test_more_instalments_than_minor_units_are_refused` in `tests/unit/test_stream_csv.py`, with the
+- [x] [AI] RED: write `test_more_instalments_than_minor_units_are_refused` in `tests/unit/test_stream_csv.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because the parser accepts the faulty row instead
       of returning a `StreamError` with its line and message. Command: `pytest tests/unit/test_stream_csv.py`. Proof:
       the failure message, recorded here. Acceptance: AC-03.
-- [ ] [AI] GREEN: Add the split's floor, reporting `TooManyInstalments` as the row's fault to `stream_csv.py`, returning
+  - Result: it failed on its assertion:
+    `assert None == StreamError(line=2, message='line 2: 0.002 cannot be split into 3 instalments')`, the credit being
+    accepted (1 failed, 9 passed).
+- [x] [AI] GREEN: Add the split's floor, reporting `TooManyInstalments` as the row's fault to `stream_csv.py`, returning
       the message tech-docs 003 fixes. Command: `pytest tests/unit/test_stream_csv.py`, then `pytest tests/unit`. Proof:
       both passing runs, recorded here. Acceptance: AC-03.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: a credit in instalments is refused when `split_of` returns `TooManyInstalments`; `split_of` narrows a
+    run-time currency for `split`, and `digits` gives the value's text. 10 passed; `pytest tests/unit` 25 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-03.
+  - Result: `split_of` returns typed `Amount` parts, not plain money, for processing to reuse. `test:quick` exit 0,
+    coverage 98%.
 
 ### Cycle 3.24 — the shipped stream is the brief's
 
-- [ ] [AI] RED: write `test_the_shipped_stream_is_the_brief` in `tests/integration/test_stream_file.py`, with the
+- [x] [AI] RED: write `test_the_shipped_stream_is_the_brief` in `tests/integration/test_stream_file.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because `streams/challenge.csv` holds only its
       header, so it parses to no events against `brief_stream()`. Command:
       `pytest tests/integration/test_stream_file.py`. Proof: the failure message, recorded here. Acceptance: AC-05.
-- [ ] [AI] GREEN: Write `apps/account-ledger-cli/streams/challenge.csv` with the eight columns tech-docs 003 shows, and
+  - Result: with `streams/challenge.csv` holding only its header, it failed on its assertion:
+    `assert () == (Credit(id=In...final'>), ...)`, `Right contains 10 more items` (1 failed).
+- [x] [AI] GREEN: Write `apps/account-ledger-cli/streams/challenge.csv` with the eight columns tech-docs 003 shows, and
       `tests/support/brief_stream.py`, and list `{projectRoot}/streams/**/*.csv` among the test targets' inputs in
       `project.json`. Command: `pytest tests/integration/test_stream_file.py`, then `pytest tests/unit`. Proof: both
       passing runs, recorded here. Acceptance: AC-05.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: the file holds E1 to E10 in eight columns, as tech-docs 003 shows; `tests/support/brief_stream.py` builds
+    the same events in code; `{projectRoot}/streams/**/*.csv` joined the inputs of `test:unit`, `test:integration`,
+    `test:e2e`, and `test:quick`. 1 passed; `pytest tests/unit tests/integration` 27 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-05.
-- [ ] [AI] Mark the rate literal and the working precision in place in `NUMBERS.md`, since `money.py` now uses both; no
+  - Result: nothing to tidy. `test:quick` exit 0, coverage 98%; `test:integration` exit 0.
+- [x] [AI] Mark the rate literal and the working precision in place in `NUMBERS.md`, since `money.py` now uses both; no
       value changes. Proof: the md gates. Acceptance: AC-24.
-- [ ] [AI] Add `money`, `ids`, `config`, `events`, and `stream_csv` to the components view of
+  - Result: both rows of `NUMBERS.md`'s Chosen Constants read `in place`, since `money.py` defines
+    `DAILY_RATE = Decimal("0.0004")` and uses the default 28-digit context; no value changed. md gates 0.
+- [x] [AI] Add `money`, `ids`, `config`, `events`, and `stream_csv` to the components view of
       `specs/apps/account-ledger/cli/architecture.md`. Proof: each named module exists under `src/account_ledger/`.
       Acceptance: AC-26.
+  - Result: the Components section of `architecture.md` gains a dependency diagram and five table rows; each named
+    module exists under `src/account_ledger/`.
 
 ### Phase 3 Gate
 
-- [ ] [AI] Run every gate command below against the phase's combined state; each exits 0. Proof: each command and its
+- [x] [AI] Run every gate command below against the phase's combined state; each exits 0. Proof: each command and its
       exit status, recorded here. Acceptance: AC-03, AC-05, AC-12, AC-22, AC-34. Commands:
   - `npx nx run account-ledger-cli:test:quick`
   - `npx nx run account-ledger-cli:test:integration`
@@ -556,8 +712,11 @@ The domain types and the parser, bottom-up ([domain model](tech-docs/001-domain-
   - `npm run -s check:hygiene`
   - `sh local-tmp/check-md.sh`
   - `./rhino md internal-link validate && ./rhino md heading-hierarchy validate && ./rhino md naming validate`
-- [ ] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
+  - Result (04:39–04:42): `test:quick` 0 (coverage 98%), `test:integration` 0, `test:e2e` 0, `check:hygiene` 0;
+    `sh local-tmp/check-md.sh`, internal-link, heading-hierarchy, and naming each 0.
+- [x] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
       Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
+  - Result: entry "Plan execution, Phase 3".
 - [ ] [AI] Commit the phase as `feat(account-ledger-cli): add the domain types and the stream reader`, then push to
       `origin/main`; the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof: the
       commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-03, AC-05, AC-12,
