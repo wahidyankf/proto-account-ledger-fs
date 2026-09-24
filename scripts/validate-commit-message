@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+# Commitlint accepts a file while Rhino deliberately exposes message text.
+set -euo pipefail
+
+if [[ "$#" -ne 1 ]]; then
+  printf 'validate-commit-message: expected one message argument\n' >&2
+  exit 2
+fi
+
+message_file=$(mktemp "${TMPDIR:-/tmp}/ledger-commit-message.XXXXXX")
+trap 'rm -f -- "$message_file"' EXIT HUP INT TERM
+printf '%s\n' "$1" >"$message_file"
+exec npx --no -- commitlint --edit "$message_file"

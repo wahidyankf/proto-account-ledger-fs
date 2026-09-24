@@ -1,0 +1,14 @@
+#!/usr/bin/env bash
+# Reconstitute Rhino's sealed message input only for the existing public-safety
+# scanner, which intentionally accepts Git's message-file contract.
+set -euo pipefail
+
+if [[ "$#" -ne 1 ]]; then
+  printf 'check-commit-message: expected one message argument\n' >&2
+  exit 2
+fi
+
+message_file=$(mktemp "${TMPDIR:-/tmp}/ledger-public-message.XXXXXX")
+trap 'rm -f -- "$message_file"' EXIT HUP INT TERM
+printf '%s\n' "$1" >"$message_file"
+exec "$(dirname "$0")/check.sh" "$message_file"

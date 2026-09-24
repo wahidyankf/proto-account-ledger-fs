@@ -1,0 +1,3 @@
+# The message is sealed as typed input before the public-safety and Conventional
+# Commit gates run. No forwarded hook arguments reach child commands.
+exec ./rhino gate run --surface commit-msg --message-file "$1"

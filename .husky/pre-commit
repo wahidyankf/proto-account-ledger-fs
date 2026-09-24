@@ -1,0 +1,3 @@
+# Format staged files and screen them before anything is recorded. Rhino owns
+# the typed index mutation and the public-safety screen.
+exec ./rhino gate run --surface pre-commit

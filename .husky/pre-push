@@ -1,0 +1,67 @@
+set -e
+
+# The last local moment before anything reaches the remote, which for a public
+# repository is the moment publication begins.
+#
+# Git supplies the ref updates on stdin, and two consumers want them: the
+# declared `pre-push` surface, and the loop below. A pipe can only be drained
+# once, so it is read once into a variable and each consumer is fed from that.
+ref_updates=$(cat)
+
+ZERO_SHA="0000000000000000000000000000000000000000"
+# Git represents a newly created remote ref with the all-zero object ID. Its
+# empty tree lets git diff evaluate the first push using normal range logic.
+EMPTY_TREE=$(git hash-object -t tree /dev/null)
+# Multiple ref updates can arrive in one hook invocation; defer this shared
+# check until every update has established whether governance changed.
+SHOULD_CHECK_REPO=0
+
+if ! git rev-parse --verify --quiet origin/main >/dev/null; then
+	printf 'ERROR: origin/main is required for affected pre-push checks.\n' >&2
+	printf 'Fetch origin/main, then retry the push.\n' >&2
+	exit 1
+fi
+
+# Screen first: public safety over the refs, outgoing messages, and tree.
+printf '%s\n' "$ref_updates" | ./rhino gate run --surface pre-push --push-updates-stdin
+
+# Git provides: local ref, local SHA, remote ref, and remote SHA for each ref
+# update. The heredoc keeps the loop in this shell, so SHOULD_CHECK_REPO
+# survives it.
+while read -r local_ref local_sha remote_ref remote_sha; do
+	if [ -z "$local_ref" ]; then
+		# The capture ends in a newline, so the last read yields a blank line.
+		continue
+	fi
+
+	if [ "$local_sha" = "$ZERO_SHA" ]; then
+		# A deletion has no local commit to inspect or validate.
+		continue
+	fi
+
+	base_sha="$remote_sha"
+	if [ "$remote_sha" = "$ZERO_SHA" ]; then
+		# A first push has no remote commit, so diff against the empty tree.
+		base_sha="$EMPTY_TREE"
+	fi
+
+	# Repository-specific: run the quick gate AND the integration suite for
+	# every affected project, compared with main so the whole accumulated change
+	# set is covered.
+	NX_NO_CLOUD=true npm exec -- nx affected -t test:quick test:integration \
+		--base=origin/main --head="$local_sha"
+
+	if ! git diff --quiet "$base_sha" "$local_sha" -- \
+		AGENTS.md CLAUDE.md repo-governance specs scripts .husky .claude .codex \
+		.agents package.json nx.json 'apps/*/project.json' repo-config.yml \
+		rhino rhino.lock; then
+		SHOULD_CHECK_REPO=1
+	fi
+done <<REFS
+$ref_updates
+REFS
+
+if [ "$SHOULD_CHECK_REPO" -eq 1 ]; then
+	# Governance, harness, or config changed: run every declared main gate.
+	./rhino gate run --surface main
+fi

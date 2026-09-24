@@ -1,0 +1,20 @@
+#!/usr/bin/env bash
+# Format only the typed lifecycle paths Rhino selected. Deleted paths have no
+# bytes to format, and the index mutation boundary remains owned by Rhino.
+set -euo pipefail
+
+paths=()
+for path in "$@"; do
+  [[ -f "$path" ]] || continue
+  case "$path" in
+    .claude/agents/* | .claude/skills/* | .codex/agents/*)
+      # These are byte-for-byte generator output, not formatter input.
+      continue
+      ;;
+    *.js | *.cjs | *.mjs | *.ts | *.tsx | *.json | *.md | *.yml | *.yaml | *.css | *.html)
+      paths+=("$path")
+      ;;
+  esac
+done
+
+(( ${#paths[@]} == 0 )) || prettier --write "${paths[@]}"
