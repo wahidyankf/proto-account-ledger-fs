@@ -1,0 +1,20 @@
+{
+  "proseWrap": "always",
+  "printWidth": 120,
+  "overrides": [
+    {
+      "files": [
+        "*.js",
+        "*.cjs",
+        "*.mjs",
+        "*.json",
+        "*.jsonc",
+        "*.yaml",
+        "*.yml"
+      ],
+      "options": {
+        "printWidth": 80
+      }
+    }
+  ]
+}

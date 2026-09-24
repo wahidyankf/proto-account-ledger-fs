@@ -1,0 +1,23 @@
+{
+  "targetDefaults": {
+    "build": {
+      "cache": true
+    },
+    "lint": {
+      "cache": true
+    },
+    "test:integration": {
+      "cache": true
+    },
+    "test:quick": {
+      "cache": true
+    },
+    "test:unit": {
+      "cache": true
+    },
+    "typecheck": {
+      "cache": true
+    }
+  },
+  "analytics": false
+}

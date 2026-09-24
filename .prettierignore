@@ -1,0 +1,7 @@
+# Machine-local working area, gitignored and never reviewed. Formatting it
+# churns todo lists and gate logs for no reader.
+local-tmp/
+
+# The shared plan-structure fixture corpus. Its exact bytes are verified by
+# digest, so a reformat here is not cosmetic.
+specs/fixtures/plan-structure/
