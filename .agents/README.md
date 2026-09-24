@@ -1,3 +1,10 @@
+---
+description: >-
+  Indexes the canonical agent and skill definitions that every supported harness adapter routes to.
+when_to_use: >-
+  Use when locating an agent or skill, or before editing one, since adapters are generated from here.
+---
+
 # Shared Agent Directory
 
 This directory holds the canonical agent and skill definitions shared by every supported harness (Claude Code and
