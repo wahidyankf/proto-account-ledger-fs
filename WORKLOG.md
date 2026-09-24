@@ -8,6 +8,7 @@ earlier work is claimed.
 
 | When                   | What                                                                                        |
 | ---------------------- | ------------------------------------------------------------------------------------------- |
+| 2026-09-25 06:27–06:36 | Plan execution, Phase 9: the assessment docs name their tests; the feature file is retired  |
 | 2026-09-25 06:17–06:26 | Plan execution, Phase 8: partial capture keeps the rest of a hold; the final column read    |
 | 2026-09-25 06:12–06:16 | Plan execution, Phase 7: the known weakness, a hold that never lapses, as a strict xfail    |
 | 2026-09-25 05:38–06:10 | Plan execution, Phase 6: the report as text and the floor-tier CLI; OUTPUT_TARGET exact     |

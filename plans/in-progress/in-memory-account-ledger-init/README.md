@@ -61,8 +61,6 @@ per [Assessment Docs](../../../repo-governance/conventions/structure/assessment-
 - [WORKLOG.md](../../../WORKLOG.md) — timestamped record of the work
 - [MOVEMENT.md](../../../MOVEMENT.md) — each day's movement per account, fully analysed
 - [OUTPUT_TARGET.md](../../../OUTPUT_TARGET.md) — the exact text the CLI must print
-- [ACCEPTANCE_CRITERIA.feature](../../../ACCEPTANCE_CRITERIA.feature) — the criteria as draft Gherkin, deleted in Phase
-  9 (D12b)
 
 ## Directory Map
 

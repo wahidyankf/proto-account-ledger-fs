@@ -77,6 +77,7 @@ first.
 - Phase 8 (06:17–06:26): 5 cycles green, one (8.4) passing on arrival with its mutation proof; the stream reads `final`,
   a partial capture keeps the rest of its hold, and every state and trigger follows the table. Last gate passed:
   Phase 8. Next: Phase 9.
+- Phase 8 committed as `378a7a1` and pushed, `6a1e713..378a7a1`.
 
 ## Execution Checkout
 
@@ -2425,9 +2426,11 @@ calls time, recovery item RC2 fires.
       Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
   - Done 06:26: the row `2026-09-25 06:17–06:26`, "Plan execution, Phase 8: partial capture keeps the rest of a hold;
     the final column read", above Phase 7's.
-- [ ] [AI] Commit the phase as `feat(account-ledger-cli): keep the rest of a hold after a partial capture`, then push to
+- [x] [AI] Commit the phase as `feat(account-ledger-cli): keep the rest of a hold after a partial capture`, then push to
       `origin/main`; the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof: the
       commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-21.
+  - Done 06:26. Commit `378a7a1`, 2026-09-25 06:26:31; the commit hooks passed. `/usr/bin/git push origin main` pushed
+    `6a1e713..378a7a1`, after the pre-push hook ran every test layer.
 
 Pause safety: the phase leaves partial capture proven, or RC2 applied and recorded. Re-verify with
 `npx nx run account-ledger-cli:test:quick`.
@@ -2436,22 +2439,52 @@ Pause safety: the phase leaves partial capture proven, or RC2 applied and record
 
 Docs Propagation of Phases 3 to 8 into the assessment docs, and rule change R4 (D12b). No figure changes.
 
-- [ ] [AI] Give each criterion bullet in `MOVEMENT.md` its test names, and drop its sentence linking
+- [x] [AI] Give each criterion bullet in `MOVEMENT.md` its test names, and drop its sentence linking
       `ACCEPTANCE_CRITERIA.feature`. Proof: the name check below. Acceptance: AC-24.
-- [ ] [AI] Name, in each refused criterion's paragraph of `REJECTED.md`, the tests that prove it: one for C2, C4, C7,
+  - Done 06:30. Each C1–C8 bullet ends with _Test:_ or _Tests:_ naming its tests in `tests/unit/test_criteria.py` (10
+    distinct names); the introduction now says each criterion names the unit test that proves it, and
+    `grep -c ACCEPTANCE_CRITERIA MOVEMENT.md` prints 0.
+  - Name check: empty output.
+- [x] [AI] Name, in each refused criterion's paragraph of `REJECTED.md`, the tests that prove it: one for C2, C4, C7,
       and C8, and two each for C5 and C6. Proof: the name check. Acceptance: AC-24.
-- [ ] [AI] Close the Resolution part of each `AMBIGUITIES.md` entry with a sentence naming the tests tech-docs 004's
+  - Done 06:30. C2, C4, C7, and C8 name one test each; C5 names `test_c5_auth_b_is_declined` and
+    `test_c5_a_hold_reduces_available_balance_but_not_ledger_balance`; C6 names
+    `test_c6_e9_restores_days_2_to_4_and_refunds_the_fees` and `test_c6_day_6_closes_at_285_76_not_285_79`.
+  - Name check: empty output.
+- [x] [AI] Close the Resolution part of each `AMBIGUITIES.md` entry with a sentence naming the tests tech-docs 004's
       table maps to it, every entry but AMB-032, so each entry keeps its six parts, and replace its introduction's "the
       ledger code, which does not exist yet" with the suite that now re-derives every figure. Proof: the name check.
       Acceptance: AC-24.
-- [ ] [AI] Delete `ACCEPTANCE_CRITERIA.feature`; apply R4 to `repo-governance/conventions/structure/assessment-docs.md`
+  - Done 06:30. 34 entries, every one but AMB-032, close their Resolution paragraph with _Test:_ or _Tests:_ per
+    tech-docs 004's table (50 distinct names; each entry keeps its six parts). The introduction now says the figures
+    were first taken from a scratch replay and the suite under `apps/account-ledger-cli/tests/` re-derives every one;
+    `grep -c 'does not exist yet' AMBIGUITIES.md` prints 0.
+  - Name check: empty output.
+- [x] [AI] Delete `ACCEPTANCE_CRITERIA.feature`; apply R4 to `repo-governance/conventions/structure/assessment-docs.md`
       through Rules Propagation; drop its row from the root `README.md` and its line from this plan's README. Command:
       the first below. Proof: the output, each hit being `WORKLOG.md`, REJECTED's abandoned approach, or this plan's own
       documents. Acceptance: AC-24.
-- [ ] [AI] Write the root `README.md`'s run-and-read section: the command that prints the report, each test layer's
+  - Done 06:31. `git rm ACCEPTANCE_CRITERIA.feature`; R4 applied to `assessment-docs.md` (the list, the owners table,
+    and the One Owner reason's feature-file clause) through Rules Propagation, recorded in
+    `local-tmp/rules-propagation-drop-feature-file.md` (word-budget 0, internal-link 0, 1363 links); the root README row
+    and the plan README line dropped; REJECTED's abandoned approach now reads "The feature file was deleted once each
+    criterion named its test."
+  - The grep printed: `REJECTED.md` (the abandoned approach), and this plan's `prd.md`, `delivery.md`,
+    `tech-docs/005-decision-records.md`, `tech-docs/006-specification-and-rule-changes.md`, and
+    `tech-docs/007-file-impact.md`; nothing else.
+- [x] [AI] Write the root `README.md`'s run-and-read section: the command that prints the report, each test layer's
       command, and how to read the three tables a day prints. Proof: the md gates. Acceptance: AC-25.
-- [ ] [AI] Check every test name the docs cite exists; the second command below prints nothing. Proof: the empty output.
+  - Done 06:32. New section "Run and Read the Report" with "Run It" (`npx nx run account-ledger-cli:run`, which prints
+    OUTPUT_TARGET's fenced text, with a link to the application README for other streams), "Test It" (the three test
+    layers and `check:hygiene`), and "Read a Day" (Events processed, EOD applied, and Closing summary); the introduction
+    now names the command-line program.
+  - Md gates: check-md "All matched files use Prettier code style!"; internal-link 0 (1367 links, no findings);
+    heading-hierarchy 0; naming 0.
+- [x] [AI] Check every test name the docs cite exists; the second command below prints nothing. Proof: the empty output.
       Acceptance: AC-24.
+  - Done 06:32. The second command printed nothing (52 distinct names across MOVEMENT, REJECTED, and AMBIGUITIES).
+    MOVEMENT's introduction had named the file `test_criteria.py`, which the pattern read as a test; it now names the
+    directory `tests/unit/`.
 
 ```bash
 grep -rln --exclude-dir=.git --exclude-dir=.nx --exclude-dir=local-tmp --exclude-dir=generated-reports \
@@ -2466,7 +2499,7 @@ done
 
 ### Phase 9 Gate
 
-- [ ] [AI] Run every gate command below against the phase's combined state; each exits 0. Proof: each command and its
+- [x] [AI] Run every gate command below against the phase's combined state; each exits 0. Proof: each command and its
       exit status, recorded here. Acceptance: AC-24, AC-25. Commands:
   - `npx nx run account-ledger-cli:test:quick`
   - `npx nx run account-ledger-cli:test:integration`
@@ -2475,6 +2508,9 @@ done
   - `sh local-tmp/check-md.sh`
   - `./rhino md internal-link validate && ./rhino md heading-hierarchy validate && ./rhino md naming validate`
   - `./rhino governance word-budget validate`
+  - Run 06:32–06:35, every command exit 0 (logs local-tmp/p9-1.log to p9-7.log): test:quick 0 (All checks passed; 111
+    passed, 1 xfailed; coverage TOTAL 96%); test:integration 0 (2 passed); test:e2e 0 (6 passed); check:hygiene 0;
+    check-md 0; internal-link && heading-hierarchy && naming 0; word-budget 0.
 - [ ] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
       Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
 - [ ] [AI] Commit the phase as `docs(assessment): name the test behind every criterion and rule`, then push to

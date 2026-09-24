@@ -9,21 +9,20 @@ when_to_use: >-
 # Assessment Docs
 
 The assessment docs are the root files that answer the challenge brief: `challenge-raw.md`, `AMBIGUITIES.md`,
-`NUMBERS.md`, `REJECTED.md`, `WORKLOG.md`, `MOVEMENT.md`, `OUTPUT_TARGET.md`, and `ACCEPTANCE_CRITERIA.feature`. They
-are read side by side and defended figure by figure, so one fact told two ways is a wrong answer in one of them.
+`NUMBERS.md`, `REJECTED.md`, `WORKLOG.md`, `MOVEMENT.md`, and `OUTPUT_TARGET.md`. They are read side by side and
+defended figure by figure, so one fact told two ways is a wrong answer in one of them.
 
 ## Owners
 
-| Document                      | Owns                                                                                |
-| ----------------------------- | ----------------------------------------------------------------------------------- |
-| `challenge-raw.md`            | the brief's wording                                                                 |
-| `AMBIGUITIES.md`              | each reading: its `AMB-nnn` identifier, options, status, recommendation, and reason |
-| `NUMBERS.md`                  | each constant: its value, given or chosen, status, and why not half                 |
-| `REJECTED.md`                 | each criterion's verdict, and each abandoned approach                               |
-| `MOVEMENT.md`                 | criterion identifiers, events, each day's figures, and what a pending one waits on  |
-| `OUTPUT_TARGET.md`            | the exact text the command-line program prints                                      |
-| `ACCEPTANCE_CRITERIA.feature` | the criteria as Gherkin, each with its verdict tag and ambiguity list               |
-| `WORKLOG.md`                  | when each section of work happened                                                  |
+| Document           | Owns                                                                                |
+| ------------------ | ----------------------------------------------------------------------------------- |
+| `challenge-raw.md` | the brief's wording                                                                 |
+| `AMBIGUITIES.md`   | each reading: its `AMB-nnn` identifier, options, status, recommendation, and reason |
+| `NUMBERS.md`       | each constant: its value, given or chosen, status, and why not half                 |
+| `REJECTED.md`      | each criterion's verdict, and each abandoned approach                               |
+| `MOVEMENT.md`      | criterion identifiers, events, each day's figures, and what a pending one waits on  |
+| `OUTPUT_TARGET.md` | the exact text the command-line program prints                                      |
+| `WORKLOG.md`       | when each section of work happened                                                  |
 
 ## Rules
 
@@ -35,8 +34,8 @@ identifier, verdict, and quotation matches its owner. Violated: two assessment d
 its owner holds.
 
 Reason: a second copy is corrected late or never, per [One Source Per Fact](../../principles/one-source-per-fact.md).
-Quoting is deliberate redundancy: `MOVEMENT.md` quotes the brief to tag each rule, the feature file restates each
-criterion as Gherkin, and `OUTPUT_TARGET.md` repeats `MOVEMENT.md` because a test compares the program against it.
+Quoting is deliberate redundancy: `MOVEMENT.md` quotes the brief to tag each rule, and `OUTPUT_TARGET.md` repeats
+`MOVEMENT.md` because a test compares the program against it.
 
 **Open values are marked.** A value that differs between the options of an open ambiguity names that entry where it
 appears, unless its document declares once which basis its figures take: every open option agreeing, or the current
