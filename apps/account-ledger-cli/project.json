@@ -5,73 +5,110 @@
   "root": "apps/account-ledger-cli",
   "sourceRoot": "apps/account-ledger-cli/src",
   "targets": {
-    "build": {
-      "command": "dotnet publish apps/account-ledger-cli/account-ledger-cli.fsproj -c Release -o apps/account-ledger-cli/dist",
-      "cache": true,
-      "inputs": [
-        "{projectRoot}/src/**/*.fs",
-        "{projectRoot}/account-ledger-cli.fsproj",
-        "{workspaceRoot}/global.json"
-      ],
-      "outputs": ["{projectRoot}/dist"]
+    "install": {
+      "command": "uv sync --locked",
+      "options": {
+        "cwd": "apps/account-ledger-cli"
+      },
+      "cache": false
     },
     "typecheck": {
-      "command": "dotnet build apps/account-ledger-cli/account-ledger-cli.fsproj",
+      "command": "uv run --no-sync pyright",
+      "options": {
+        "cwd": "apps/account-ledger-cli"
+      },
+      "dependsOn": ["install"],
       "cache": true,
       "inputs": [
-        "{projectRoot}/src/**/*.fs",
-        "{projectRoot}/account-ledger-cli.fsproj",
-        "{workspaceRoot}/global.json"
+        "{projectRoot}/src/**/*.py",
+        "{projectRoot}/pyproject.toml",
+        "{projectRoot}/uv.lock",
+        "{projectRoot}/.python-version",
+        "{projectRoot}/tests/**/*.py"
       ]
     },
     "lint": {
       "executor": "nx:run-commands",
       "options": {
         "commands": [
-          "dotnet tool restore",
-          "dotnet fantomas --check apps/account-ledger-cli/src apps/account-ledger-cli/tests",
-          "dotnet fsharplint lint apps/account-ledger-cli/account-ledger-cli.fsproj --lint-config apps/account-ledger-cli/fsharplint.json"
+          "uv run --no-sync ruff check .",
+          "uv run --no-sync ruff format --check ."
         ],
-        "parallel": false
+        "parallel": false,
+        "cwd": "apps/account-ledger-cli"
       },
+      "dependsOn": ["install"],
       "cache": true,
       "inputs": [
-        "{projectRoot}/src/**/*.fs",
-        "{projectRoot}/account-ledger-cli.fsproj",
-        "{workspaceRoot}/global.json",
-        "{projectRoot}/tests/**/*.fs",
-        "{projectRoot}/fsharplint.json",
-        "{workspaceRoot}/.editorconfig",
-        "{workspaceRoot}/.config/dotnet-tools.json"
+        "{projectRoot}/src/**/*.py",
+        "{projectRoot}/pyproject.toml",
+        "{projectRoot}/uv.lock",
+        "{projectRoot}/.python-version",
+        "{projectRoot}/tests/**/*.py"
       ]
     },
     "run": {
-      "command": "dotnet run --project apps/account-ledger-cli/account-ledger-cli.fsproj --",
+      "command": "uv run --no-sync python -m account_ledger",
+      "options": {
+        "cwd": "apps/account-ledger-cli",
+        "env": {
+          "PYTHONPATH": "src"
+        }
+      },
+      "dependsOn": ["install"],
       "cache": false
     },
     "test:unit": {
-      "command": "if grep -rn -E --include='*.fs' 'Skip\\s*=' apps/account-ledger-cli/tests/unit; then echo 'ERROR: xunit Skip= attribute found in test files above'; exit 1; fi && dotnet test apps/account-ledger-cli/tests/unit/account-ledger-cli-unit-tests.fsproj /p:CollectCoverage=true /p:Threshold=80 /p:ThresholdType=line \"/p:Include=[account-ledger-cli]*\" \"/p:ExcludeByFile=**/Program.fs\"",
+      "command": "if grep -rnE --include='*.py' 'pytest\\.skip|mark\\.skip|skipif|mark\\.xfail' tests; then echo 'ERROR: a skipped or expected-failure test is marked above'; exit 1; fi && uv run --no-sync pytest tests/unit --cov=account_ledger --cov-report=term-missing --cov-fail-under=80",
+      "options": {
+        "cwd": "apps/account-ledger-cli"
+      },
+      "dependsOn": ["install"],
       "cache": true,
       "inputs": [
-        "{projectRoot}/src/**/*.fs",
-        "{projectRoot}/account-ledger-cli.fsproj",
-        "{workspaceRoot}/global.json",
-        "{projectRoot}/tests/unit/**/*.fs",
-        "{projectRoot}/tests/unit/*.fsproj",
-        "{projectRoot}/tests/unit/xunit.runner.json",
+        "{projectRoot}/src/**/*.py",
+        "{projectRoot}/pyproject.toml",
+        "{projectRoot}/uv.lock",
+        "{projectRoot}/.python-version",
+        "{projectRoot}/tests/conftest.py",
+        "{projectRoot}/tests/support/**/*.py",
+        "{projectRoot}/tests/unit/**/*.py",
         "{workspaceRoot}/specs/apps/account-ledger/cli/behaviours/**/*.feature"
       ]
     },
     "test:integration": {
-      "command": "if grep -rn -E --include='*.fs' 'Skip\\s*=' apps/account-ledger-cli/tests/integration; then echo 'ERROR: xunit Skip= attribute found in test files above'; exit 1; fi && dotnet test apps/account-ledger-cli/tests/integration/account-ledger-cli-integration-tests.fsproj",
+      "command": "if grep -rnE --include='*.py' 'pytest\\.skip|mark\\.skip|skipif|mark\\.xfail' tests; then echo 'ERROR: a skipped or expected-failure test is marked above'; exit 1; fi && uv run --no-sync pytest tests/integration",
+      "options": {
+        "cwd": "apps/account-ledger-cli"
+      },
+      "dependsOn": ["install"],
       "cache": true,
       "inputs": [
-        "{projectRoot}/src/**/*.fs",
-        "{projectRoot}/account-ledger-cli.fsproj",
-        "{workspaceRoot}/global.json",
-        "{projectRoot}/tests/integration/**/*.fs",
-        "{projectRoot}/tests/integration/*.fsproj",
-        "{projectRoot}/tests/integration/xunit.runner.json",
+        "{projectRoot}/src/**/*.py",
+        "{projectRoot}/pyproject.toml",
+        "{projectRoot}/uv.lock",
+        "{projectRoot}/.python-version",
+        "{projectRoot}/tests/conftest.py",
+        "{projectRoot}/tests/support/**/*.py",
+        "{projectRoot}/tests/integration/**/*.py",
+        "{workspaceRoot}/specs/apps/account-ledger/cli/behaviours/**/*.feature"
+      ]
+    },
+    "test:e2e": {
+      "command": "if grep -rnE --include='*.py' 'pytest\\.skip|mark\\.skip|skipif|mark\\.xfail' tests; then echo 'ERROR: a skipped or expected-failure test is marked above'; exit 1; fi && uv run --no-sync pytest tests/e2e",
+      "options": {
+        "cwd": "apps/account-ledger-cli"
+      },
+      "dependsOn": ["install"],
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/src/**/*.py",
+        "{projectRoot}/pyproject.toml",
+        "{projectRoot}/uv.lock",
+        "{projectRoot}/.python-version",
+        "{projectRoot}/tests/conftest.py",
+        "{projectRoot}/tests/support/**/*.py",
+        "{projectRoot}/tests/e2e/**/*.py",
         "{workspaceRoot}/specs/apps/account-ledger/cli/behaviours/**/*.feature"
       ]
     },
@@ -87,16 +124,14 @@
       },
       "cache": true,
       "inputs": [
-        "{projectRoot}/src/**/*.fs",
-        "{projectRoot}/account-ledger-cli.fsproj",
-        "{workspaceRoot}/global.json",
-        "{projectRoot}/tests/unit/**/*.fs",
-        "{projectRoot}/tests/unit/*.fsproj",
-        "{projectRoot}/tests/unit/xunit.runner.json",
-        "{workspaceRoot}/specs/apps/account-ledger/cli/behaviours/**/*.feature",
-        "{projectRoot}/fsharplint.json"
+        "{projectRoot}/src/**/*.py",
+        "{projectRoot}/pyproject.toml",
+        "{projectRoot}/uv.lock",
+        "{projectRoot}/.python-version",
+        "{projectRoot}/tests/**/*.py",
+        "{workspaceRoot}/specs/apps/account-ledger/cli/behaviours/**/*.feature"
       ]
     }
   },
-  "tags": ["type:app", "platform:cli", "lang:fsharp"]
+  "tags": ["type:app", "platform:cli", "lang:python"]
 }

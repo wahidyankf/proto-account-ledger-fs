@@ -21,12 +21,13 @@ local-tmp/*
 .env
 .env.*
 !.env.example
-# .NET build output and test coverage artifacts. Root-level, because Prettier
-# resolves ignore patterns from the root .gitignore only.
-bin/
-obj/
-coverage/
-coverage.json
-coverage.*.json
-*.opencover.xml
-TestResults/
+# Python virtual environments, bytecode, and tool caches. Root-level, because
+# Prettier resolves ignore patterns from the root .gitignore only.
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/

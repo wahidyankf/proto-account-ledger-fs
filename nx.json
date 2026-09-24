@@ -6,6 +6,9 @@
     "lint": {
       "cache": true
     },
+    "test:e2e": {
+      "cache": true
+    },
     "test:integration": {
       "cache": true
     },

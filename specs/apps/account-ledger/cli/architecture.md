@@ -5,8 +5,8 @@ a boundary updates this document in the same commit.
 
 ## Scope
 
-`account-ledger-cli` is a hello-world scaffold today: it proves the build, lint, and both test levels end to end before
-the ledger itself is designed. It runs locally, reads nothing from disk, and never reaches the network.
+`account-ledger-cli` is a hello-world scaffold today: it proves lint, type checking, and every test level end to end
+before the ledger itself is designed. It runs locally, reads nothing from disk, and never reaches the network.
 
 ## System Context
 
@@ -20,27 +20,28 @@ One actor runs one executable, which writes one line to standard output and exit
 
 ## Containers
 
-| Container            | What it is             | How it is reached                   |
-| -------------------- | ---------------------- | ----------------------------------- |
-| `account-ledger-cli` | one .NET 10 executable | `npx nx run account-ledger-cli:run` |
+| Container            | What it is              | How it is reached                   |
+| -------------------- | ----------------------- | ----------------------------------- |
+| `account-ledger-cli` | one Python 3.14 package | `npx nx run account-ledger-cli:run` |
 
 ## Components
 
 ```text
 +--------------------------------+        +-----------------------------+
-| Program (imperative shell)     | -----> | Greeting (functional core)  |
+| cli (imperative shell)         | -----> | greeting (functional core)  |
 | entry point, writes to a       |  calls | pure: returns the greeting  |
-| TextWriter, returns exit code  |        | text, performs no I/O       |
+| TextIO, returns exit code      |        | text, performs no I/O       |
 +--------------------------------+        +-----------------------------+
 ```
 
-The shell owns every effect: it receives the output writer and returns the exit code. The core is pure, so unit tests
-call it in-process with an injected writer while integration tests run the entry point against the real console.
+The shell owns every effect: it receives the output stream and returns the exit code. The core is pure, so unit tests
+call the shell in-process with an injected stream, integration tests run the entry point against the real standard
+output, and end-to-end tests run `python -m account_ledger` as a separate process.
 
-| Component  | Responsibility                                                     |
-| ---------- | ------------------------------------------------------------------ |
-| `Greeting` | the greeting text; the future home of pure ledger logic            |
-| `Program`  | the entry point: writes the greeting to its writer and returns `0` |
+| Component  | Responsibility                                                                 |
+| ---------- | ------------------------------------------------------------------------------ |
+| `greeting` | the greeting text; the future home of pure ledger logic                        |
+| `cli`      | `run` writes the greeting to its stream and returns `0`; `main` binds `stdout` |
 
 ## Constraints
 
