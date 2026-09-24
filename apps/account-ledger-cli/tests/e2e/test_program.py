@@ -10,7 +10,7 @@ from support.output_target import expected_output
 APP = Path(__file__).resolve().parents[2]
 SOURCE = APP / "src"
 CHALLENGE_STREAM = APP / "streams" / "challenge.csv"
-HEADER = "event,booked,type,account,amount,value_date,reference,instalments"
+HEADER = "event,booked,type,account,amount,value_date,reference,instalments,final"
 
 
 def program(*args: str) -> subprocess.CompletedProcess[str]:
@@ -51,7 +51,7 @@ def test_a_missing_stream_file_exits_2() -> None:
 def test_a_malformed_amount_names_its_line(tmp_path: Path) -> None:
     """AC-03: a malformed stream prints the first fault with its line and exits 2."""
     stream = tmp_path / "stream.csv"
-    stream.write_text(f"{HEADER}\nE1,1,CREDIT,ACC-001,10.00,1,,\nE2,1,CREDIT,ACC-001,12.00x,1,,\n", encoding="utf-8")
+    stream.write_text(f"{HEADER}\nE1,1,CREDIT,ACC-001,10.00,1,,,\nE2,1,CREDIT,ACC-001,12.00x,1,,,\n", encoding="utf-8")
 
     completed = program(str(stream))
 
@@ -65,7 +65,7 @@ def test_a_malformed_amount_names_its_line(tmp_path: Path) -> None:
 def test_an_unheld_account_names_its_line(tmp_path: Path) -> None:
     """AC-03: a row naming an account the ledger does not hold is a fault in the input, never a refusal (D21)."""
     stream = tmp_path / "stream.csv"
-    stream.write_text(f"{HEADER}\nE1,1,CREDIT,ACC-009,10.00,1,,\n", encoding="utf-8")
+    stream.write_text(f"{HEADER}\nE1,1,CREDIT,ACC-009,10.00,1,,,\n", encoding="utf-8")
 
     completed = program(str(stream))
 

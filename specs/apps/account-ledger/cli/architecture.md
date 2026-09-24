@@ -129,8 +129,9 @@ log       LogEntry = Accepted | AuthorizationDecided | SettlementAccepted | Reje
           Rejected.reason: Rejection = IdReused | AlreadyReversed | ReversesAReversal | UnknownTarget
                                        | MovedNoMoney | AlreadyUndone
           Log = tuple[LogEntry, ...]
-auth      AuthorizationState = Approved(hold) | Declined(requested) | Settled(captured)
-          transition(state, SettleFinal) -> AuthorizationState | NoTransition
+auth      AuthorizationState = Approved(hold) | PartiallySettled(captured, hold) | Declined(requested)
+                                 | Settled(captured)
+          transition(state, SettleFinal | SettlePartial) -> AuthorizationState | NoTransition
           AuthorizationRecord = the Authorization + its state now
 report    DayReport = day, processed: Processed..., closing, available, restated: Restatement...,
                       authorizations: AuthorizationRecord..., errors, end_of_day: (Fired | Capitalized
@@ -140,19 +141,23 @@ stream    parse_stream(text, config) -> tuple[IncomingEvent, ...] | StreamError(
 ```
 
 `authorizations` is a hand-written state machine: `transition` is one `match` over the state and its trigger, ending in
-`assert_never`. As built:
+`assert_never`. A settlement whose `final` cell is `no` fires `SettlePartial`; any other fires `SettleFinal`. As built:
 
 ```text
-             available >= 0 after the hold            SettleFinal
-  (arrives) ------------------------------> Approved --------------> Settled
-      |
-      | available < 0 after the hold
-      v
-   Declined
+             available >= 0 after the hold              SettleFinal, or SettlePartial reaching the hold
+  (arrives) ------------------------------> Approved -------------------------------------------> Settled
+      |                                        |                                                     ^
+      | available < 0 after the hold           | SettlePartial below the hold                        |
+      v                                        v                                                     |
+   Declined                             PartiallySettled --------------------------------------------+
+                                          |          ^     SettleFinal, or SettlePartial reaching the hold
+                                          +----------+
+                                   SettlePartial below the hold
 ```
 
-`Settled` and `Declined` have no transition for any trigger, so a settlement against either, or against an authorization
-the log does not know, is accepted as a force-post: it debits its amount and releases no hold.
+A final settlement releases the whole remaining hold and settles for the captures' sum; a partial one below the hold
+keeps the rest. `Settled` and `Declined` have no transition for any trigger, so a settlement against either, or against
+an authorization the log does not know, is accepted as a force-post: it debits its amount and releases no hold.
 
 ## Dynamic View — One Day
 

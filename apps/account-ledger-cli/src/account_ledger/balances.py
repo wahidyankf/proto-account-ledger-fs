@@ -3,7 +3,7 @@
 from collections.abc import Iterator
 from typing import assert_never
 
-from account_ledger.authorizations import Approved, Declined, Settled, records
+from account_ledger.authorizations import Approved, Declined, PartiallySettled, Settled, records
 from account_ledger.config import Account, AnyAccount, is_aed
 from account_ledger.events import (
     Authorization,
@@ -91,14 +91,15 @@ def closing[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> M:
 
 
 def holds[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> M:
-    """The hold of every approved authorization on the account whose value day is <= day (AMB-010)."""
+    """The hold of every approved or partially settled authorization on the account whose value day is <= day
+    (AMB-010, AMB-013)."""
     total = type(account.opening).zero()
     for record in records(log):
         opened, state = record.authorization, record.state
         if opened.account != account.id or opened.value_day > day:
             continue
         match state:
-            case Approved(hold=hold):
+            case Approved(hold=hold) | PartiallySettled(hold=hold):
                 total = total + _same(total, hold.money)
             case Declined() | Settled():
                 pass  # a declined authorization holds nothing, and a final settlement released the hold

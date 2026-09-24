@@ -249,6 +249,28 @@ def amount_of(money: Money) -> Amount[Aed] | Amount[Bhd] | NotPositive:
             return Amount.of(money)
 
 
+def rest_of(hold: Amount[Aed] | Amount[Bhd], taken: Amount[Aed] | Amount[Bhd]) -> Money:
+    """What a hold keeps once an amount of its own currency is taken; a mismatch is a bug the reader prevents."""
+    match (hold.money, taken.money):
+        case (Aed() as kept, Aed() as out):
+            return kept - out
+        case (Bhd() as kept, Bhd() as out):
+            return kept - out
+        case _:
+            raise ValueError(f"{currency(taken.money)} taken from {currency(hold.money)}")
+
+
+def sum_of(first: Amount[Aed] | Amount[Bhd], second: Amount[Aed] | Amount[Bhd]) -> Amount[Aed] | Amount[Bhd]:
+    """Two amounts of one currency added, above zero as both are; a mismatch is a bug the reader prevents."""
+    match (first.money, second.money):
+        case (Aed() as one, Aed() as other):
+            return Amount(one + other)
+        case (Bhd() as one, Bhd() as other):
+            return Amount(one + other)
+        case _:
+            raise ValueError(f"{currency(first.money)} added to {currency(second.money)}")
+
+
 def digits(money: Money) -> str:
     """The value's text, for the renderer and messages: its places, no sign change, no separators."""
     return str(money.value)

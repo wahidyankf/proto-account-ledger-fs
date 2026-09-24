@@ -1,6 +1,7 @@
 """The report as text: layout, tables, amounts, and every Type and Detail text (tech-docs 003)."""
 
 from account_ledger.config import CHALLENGE
+from account_ledger.events import Capture
 from account_ledger.ids import Day
 from account_ledger.render import render
 from account_ledger.replay import replay
@@ -154,3 +155,24 @@ def test_the_texts_beyond_output_target_follow_its_patterns() -> None:
     assert details(lines[day_2:]) == ["reverses E98", "reverses E99", "reverses INT-001-D1@D1"]
     errors = next(line for line in lines[day_2:] if line.startswith("| Errors"))
     assert errors.split(" | ")[1].strip() == "E5 refused: E98 is not in the log; E6 refused: E99 is not in the log"
+
+
+def test_a_partially_settled_authorization_prints_its_remaining_hold() -> None:
+    """D22, tech-docs 003: a partial settlement prints `settles for ..., hold kept`, and its authorization `partially
+    settled for C, hold H`; once a final capture follows, it prints `settled for` the captures' sum."""
+    stream = (
+        credit("E1", 1, "500.00"),
+        authorization("E2", 1, "Auth-A", "200.00"),
+        settlement("E3", 2, "Auth-A", "120.00", capture=Capture.PARTIAL),
+        settlement("E4", 3, "Auth-A", "40.00"),
+    )
+    lines = render(replay(stream, CHALLENGE).reports[2:4]).split("\n")
+    day_3 = lines.index("Day 3")
+
+    def cell(block: list[str], start: str, column: int) -> str:
+        return next(line for line in block if line.startswith(start)).split(" | ")[column].strip()
+
+    assert cell(lines[:day_3], "| E3 ", 4) == "Auth-A settles for AED 120.00, hold kept"
+    assert cell(lines[:day_3], "| Authorizations", 1) == "Auth-A partially settled for 120.00, hold 80.00"
+    assert cell(lines[day_3:], "| E4 ", 4) == "Auth-A settles for AED 40.00"
+    assert cell(lines[day_3:], "| Authorizations", 1) == "Auth-A settled for 160.00"

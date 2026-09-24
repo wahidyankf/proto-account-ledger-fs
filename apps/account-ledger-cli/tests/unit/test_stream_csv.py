@@ -93,7 +93,7 @@ def test_a_wrong_header_or_cell_count_is_refused() -> None:
     header = ",".join(HEADER)
     assert parse_stream("event,booked\nE1,1\n", CHALLENGE) == StreamError(1, f"line 1: expected the header {header}")
     assert parse_stream(f"{header}\nE1,1,CREDIT,ACC-001,100.00,1,\n", CHALLENGE) == StreamError(
-        2, "line 2: expected 8 cells, found 7"
+        2, "line 2: expected 9 cells, found 7"
     )
     assert parse_stream("", CHALLENGE) == StreamError(1, f"line 1: expected the header {header}")
 
@@ -157,4 +157,26 @@ def test_an_instalment_count_below_2_is_refused() -> None:
 def test_more_instalments_than_minor_units_are_refused() -> None:
     assert fault_of(account="ACC-002", amount="0.002", instalments="3") == StreamError(
         2, "line 2: 0.002 cannot be split into 3 instalments"
+    )
+
+
+def test_a_final_cell_other_than_yes_or_no_is_refused() -> None:
+    """AMB-013, tech-docs 003: a settlement's `final` cell is `yes`, `no`, or blank for `yes`; any other is a fault, and
+    the cell applies to a settlement only."""
+    header = ",".join(HEADER)
+    settlement = "E5,4,SETTLEMENT,ACC-001,185.00,4,Auth-A,,"
+
+    def capture(cell: str) -> Capture:
+        events = parse_stream(f"{header}\n{settlement}{cell}\n", CHALLENGE)
+        assert not isinstance(events, StreamError), events
+        (event,) = events
+        assert isinstance(event, Settlement)
+        return event.capture
+
+    assert parse_stream(f"{header}\n{settlement}maybe\n", CHALLENGE) == StreamError(
+        2, "line 2: final must be yes or no"
+    )
+    assert [capture("yes"), capture(""), capture("no")] == [Capture.FINAL, Capture.FINAL, Capture.PARTIAL]
+    assert parse_stream(f"{header}\nE1,1,CREDIT,ACC-001,10.00,1,,,no\n", CHALLENGE) == StreamError(
+        2, "line 2: column 'final' does not apply to CREDIT"
     )

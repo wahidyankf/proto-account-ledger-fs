@@ -7,6 +7,7 @@ from account_ledger.authorizations import (
     AuthorizationState,
     Declined,
     NoTransition,
+    PartiallySettled,
     Settled,
     decide,
     record_for,
@@ -84,7 +85,7 @@ def _effect(before: AuthorizationState, settlement: Settlement) -> Captured | Fo
     match after:
         case NoTransition():
             return ForcePosted()
-        case Approved() | Declined() | Settled():
+        case Approved() | PartiallySettled() | Declined() | Settled():
             return Captured(before, after)
         case _:
             assert_never(after)

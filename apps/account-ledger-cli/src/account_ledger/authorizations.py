@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import assert_never
 
-from account_ledger.events import AnyAmount, Authorization, Settlement
+from account_ledger.events import AnyAmount, Authorization, Capture, Settlement
 from account_ledger.log import (
     Accepted,
     AuthorizationDecided,
@@ -14,7 +14,7 @@ from account_ledger.log import (
     Rejected,
     SettlementAccepted,
 )
-from account_ledger.money import Money, below
+from account_ledger.money import Money, NotPositive, amount_of, below, rest_of, sum_of
 
 
 @dataclass(frozen=True, slots=True)
@@ -32,13 +32,21 @@ class Declined:
 
 
 @dataclass(frozen=True, slots=True)
+class PartiallySettled:
+    """Captured in part, still holding the rest."""
+
+    captured: AnyAmount
+    hold: AnyAmount
+
+
+@dataclass(frozen=True, slots=True)
 class Settled:
     """Settled; it holds nothing more."""
 
     captured: AnyAmount
 
 
-type AuthorizationState = Approved | Declined | Settled
+type AuthorizationState = Approved | PartiallySettled | Declined | Settled
 
 
 @dataclass(frozen=True, slots=True)
@@ -48,7 +56,14 @@ class SettleFinal:
     amount: AnyAmount
 
 
-type Trigger = SettleFinal
+@dataclass(frozen=True, slots=True)
+class SettlePartial:
+    """The trigger a settlement followed by more captures fires, with its amount."""
+
+    amount: AnyAmount
+
+
+type Trigger = SettleFinal | SettlePartial
 
 
 @dataclass(frozen=True, slots=True)
@@ -62,15 +77,37 @@ def transition(state: AuthorizationState, trigger: Trigger) -> AuthorizationStat
     match pair:
         case Approved(), SettleFinal(amount=a):
             return Settled(a)
+        case Approved(hold=h), SettlePartial(amount=a) if below(a.money, h):
+            return PartiallySettled(a, _rest(h, a))
+        case Approved(), SettlePartial(amount=a):  # a >= h: it reaches the hold, so nothing is left to keep
+            return Settled(a)
+        case PartiallySettled(captured=c), SettleFinal(amount=a):
+            return Settled(sum_of(c, a))
+        case PartiallySettled(captured=c, hold=h), SettlePartial(amount=a) if below(a.money, h):
+            return PartiallySettled(sum_of(c, a), _rest(h, a))
+        case PartiallySettled(captured=c), SettlePartial(amount=a):  # a >= h
+            return Settled(sum_of(c, a))
         case Settled() | Declined(), _:
             return NoTransition()
         case _:
             assert_never(pair)
 
 
+def _rest(hold: AnyAmount, taken: AnyAmount) -> AnyAmount:
+    """The hold left after a partial capture, above zero as every hold is."""
+    rest = amount_of(rest_of(hold, taken))
+    if isinstance(rest, NotPositive):
+        raise ValueError(f"a hold is above zero, not {rest.text}")
+    return rest
+
+
 def trigger_of(settlement: Settlement) -> Trigger:
     """The trigger a settlement fires, from its capture and amount."""
-    return SettleFinal(settlement.amount)
+    match settlement.capture:
+        case Capture.FINAL:
+            return SettleFinal(settlement.amount)
+        case Capture.PARTIAL:
+            return SettlePartial(settlement.amount)
 
 
 @dataclass(frozen=True, slots=True)

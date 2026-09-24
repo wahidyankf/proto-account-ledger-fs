@@ -67,6 +67,16 @@ first.
   closed-pipe test. The CLI honours the floor tier, the architecture is the C4 model, and the README publishes the
   statuses. Last gate passed: Phase 6. Next: Phase 7.
 - Phase 6 committed as `0857bae` and pushed, `148a42e..0857bae`.
+- Phase 7 (06:12–06:16): the known weakness as one strict expected failure, its strictness proven by `XPASS(strict)`
+  failing the run, and its two constants defended in NUMBERS. Last gate passed: Phase 7. Next: Phase 8, Cycle 8.1.
+- Phase 7 committed as `6a1e713` and pushed, `0857bae..6a1e713`.
+- Cycle 8.4 passed on arrival, as planned; its mutation proof is recorded under its RED.
+- Phase 8 repair budget, two repairs a cycle after a failing first GREEN attempt: Cycles 8.1 to 8.4 spent none. Cycle
+  8.5 spent one, for pyright's narrowing errors after the tests passed. The ceiling was not reached, so RC2 did not
+  fire.
+- Phase 8 (06:17–06:26): 5 cycles green, one (8.4) passing on arrival with its mutation proof; the stream reads `final`,
+  a partial capture keeps the rest of its hold, and every state and trigger follows the table. Last gate passed:
+  Phase 8. Next: Phase 9.
 
 ## Execution Checkout
 
@@ -2256,9 +2266,11 @@ The brief's one failing test (AMB-018, AMB-031, D6), as [testing strategy](tech-
       Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
   - Done 06:16: the row `2026-09-25 06:12–06:16`, "Plan execution, Phase 7: the known weakness, a hold that never
     lapses, as a strict xfail", above Phase 6's.
-- [ ] [AI] Commit the phase as `test(account-ledger-cli): record that holds never expire as a strict expected failure`,
+- [x] [AI] Commit the phase as `test(account-ledger-cli): record that holds never expire as a strict expected failure`,
       then push to `origin/main`; the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`.
       Proof: the commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-23.
+  - Done 06:17. Commit `6a1e713`, 2026-09-25 06:16:57; the commit hooks passed. `/usr/bin/git push origin main` pushed
+    `0857bae..6a1e713`, after the pre-push hook ran every test layer.
 
 Pause safety: the phase leaves exactly one strict expected failure in a green suite. Re-verify with
 `npx nx run account-ledger-cli:test:quick`.
@@ -2271,40 +2283,77 @@ calls time, recovery item RC2 fires.
 
 ### Cycle 8.1 — the stream carries a final marker
 
-- [ ] [AI] RED: write `test_a_final_cell_other_than_yes_or_no_is_refused` in `tests/unit/test_stream_csv.py`, with the
+- [x] [AI] RED: write `test_a_final_cell_other_than_yes_or_no_is_refused` in `tests/unit/test_stream_csv.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because the header has eight columns and no
       `final` cell is read. Command: `pytest tests/unit/test_stream_csv.py`. Proof: the failure message, recorded here.
       Acceptance: AC-03, AC-05.
-- [ ] [AI] GREEN: Add `final` to the header, read it into `Capture`, add the fault message, add a trailing empty cell to
+  - Done 06:18. The test puts a nine-column header over a settlement ending in `maybe`, `yes`, blank, and `no`, and a
+    credit carrying `no`. No new stub.
+  - `pytest tests/unit/test_stream_csv.py`: 1 failed, 10 passed, on its assertion: `StreamError(... 'line 1: ...')` or
+    `'... found 9'` was not `StreamError(2, 'line 2: final must be yes or no')`. The reader still expects the
+    eight-column header.
+- [x] [AI] GREEN: Add `final` to the header, read it into `Capture`, add the fault message, add a trailing empty cell to
       each row of `streams/challenge.csv`, and move `csv_text` and every fixture to nine columns. Command:
       `pytest tests/unit/test_stream_csv.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-03, AC-05.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 06:18. `COLUMNS` gains `final`, optional for a settlement only. `_capture` reads `yes` or blank as
+    `Capture.FINAL` and `no` as `Capture.PARTIAL`, and refuses any other cell with `final must be yes or no`.
+    `streams/challenge.csv`, `BRIEF_CSV`, the support `HEADER`, and the e2e header and rows moved to nine columns, and
+    the cell-count fixture now expects 9. The README's header line followed.
+  - `pytest tests/unit/test_stream_csv.py`: 11 passed. `pytest tests/unit`: 95 passed, 1 xfailed; integration 2 passed
+    and e2e 6 passed, with the shipped file still parsing to the brief.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-03, AC-05.
+  - Result: nothing to tidy; `OPTIONAL` now lists each kind explicitly. `npx nx run account-ledger-cli:test:quick`:
+    pyright 0 errors, ruff all checks passed, 95 passed, 1 xfailed, coverage 96%.
 
 ### Cycle 8.2 — a non-final settlement keeps the rest of the hold
 
-- [ ] [AI] RED: write `test_amb_013_a_non_final_settlement_keeps_the_rest_of_the_hold` in
+- [x] [AI] RED: write `test_amb_013_a_non_final_settlement_keeps_the_rest_of_the_hold` in
       `tests/unit/test_authorizations.py`, with the smallest stub it imports, and run it; it fails on its assertion
       because every settlement releases the whole hold. Command: `pytest tests/unit/test_authorizations.py`. Proof: the
       failure message, recorded here. Acceptance: AC-21.
-- [ ] [AI] GREEN: Add `PartiallySettled`, `SettlePartial`, and their rows of the table, with a final settlement of the
+  - Done 06:19. The test credits AED 500.00, approves Auth-A for 200.00, settles 120.00 marked partial on Day 2, then
+    40.00 final on Day 3. Stub: `PartiallySettled(captured, hold)` in `authorizations.py`, outside the state union.
+  - `pytest tests/unit/test_authorizations.py`: 1 failed, 7 passed, on its assertion:
+    `At index 0 diff: Settled(captured=...120.00...) != PartiallySettled(captured=...120.00..., hold=...80.00...)`. The
+    partial settlement released the whole hold.
+- [x] [AI] GREEN: Add `PartiallySettled`, `SettlePartial`, and their rows of the table, with a final settlement of the
       rest settling for the captures' sum. Command: `pytest tests/unit/test_authorizations.py`, then
       `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance: AC-21.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 06:20. `PartiallySettled` joins `AuthorizationState`, and `SettlePartial` joins `Trigger`; `trigger_of` maps
+    `Capture.PARTIAL` to it. `transition` gains three rows: `Approved` then partial goes to
+    `PartiallySettled(a, h − a)`, `PartiallySettled` then final to `Settled(c + a)`, and then partial to
+    `PartiallySettled(c + a, h − a)`. `money.rest_of` and `money.sum_of` do the same-currency arithmetic, and `_rest`
+    refuses a hold that is not above zero. `balances.holds` counts a `PartiallySettled` hold, and `processing._effect`
+    and `render._state` match the new state, the latter with a placeholder until Cycle 8.5.
+  - `pytest tests/unit/test_authorizations.py`: 8 passed. `pytest tests/unit`: 96 passed, 1 xfailed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-21.
+  - Result: nothing to tidy. `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 96
+    passed, 1 xfailed, coverage 96%.
 
 ### Cycle 8.3 — a partial capture reaching the hold settles
 
-- [ ] [AI] RED: write `test_amb_013_a_partial_capture_reaching_the_hold_settles` in `tests/unit/test_authorizations.py`,
+- [x] [AI] RED: write `test_amb_013_a_partial_capture_reaching_the_hold_settles` in `tests/unit/test_authorizations.py`,
       with the smallest stub it imports, and run it; it fails on its assertion because a partial settlement of the whole
       remaining hold builds a `PartiallySettled` with a zero hold, and `Amount.of` refuses it. Command:
       `pytest tests/unit/test_authorizations.py`. Proof: the failure message, recorded here. Acceptance: AC-21.
-- [ ] [AI] GREEN: Add the guard `a >= h` rows, which go to `Settled`. Command:
+  - Done 06:20. Parametrized over Auth-A's 200.00 hold met by partial captures: exactly 200.00, 250.00, 120.00 then
+    80.00, and 120.00 then 95.00. Each case expects `Settled` for the captures' sum, with no hold left. No new stub.
+  - `pytest tests/unit/test_authorizations.py`: 4 failed, 8 passed, each on the stated reason. A `PartiallySettled` with
+    no hold left was built, and its refusal raised `ValueError: a hold is above zero, not 0.00`, twice, and `not -50.00`
+    and `not -15.00`.
+- [x] [AI] GREEN: Add the guard `a >= h` rows, which go to `Settled`. Command:
       `pytest tests/unit/test_authorizations.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-21.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 06:21. Each partial row is now guarded `if below(a.money, h)`. After it comes the `a >= h` row, to `Settled(a)`
+    from `Approved` and to `Settled(c + a)` from `PartiallySettled`, following tech-docs 001's table in order.
+  - `pytest tests/unit/test_authorizations.py`: 12 passed. `pytest tests/unit`: 100 passed, 1 xfailed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-21.
+  - Result: nothing to tidy. `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 100
+    passed, 1 xfailed, coverage 95%.
 
 ### Cycle 8.4 — every state and trigger follow the table
 
@@ -2313,28 +2362,55 @@ calls time, recovery item RC2 fires.
       every row; its red is the mutation proof that swapping one row's result fails the walk. Command:
       `pytest tests/unit/test_authorizations.py`. Proof: the failure message, recorded here. Acceptance: AC-18, AC-19,
       AC-21.
-- [ ] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
+  - Disposition: passes on arrival (22 passed), since Cycles 4.9, 4.11, 8.2, and 8.3 built every row. The walk covers
+    ten pairs: every state against both triggers, and each guard on both sides. Mutation: making `PartiallySettled` then
+    `SettleFinal` settle for `a` instead of `c + a` failed the walk on its assertion:
+    `Settled(...40.00...) == Settled(...160.00...)`, case `state3-trigger3-after3`. Restored from a copy, 22 passed.
+- [x] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
       `pytest tests/unit/test_authorizations.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-18, AC-19, AC-21.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: no production change; passes on arrival, recorded in the Execution Record. `pytest tests/unit`: 110 passed,
+    1 xfailed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-18, AC-19,
       AC-21.
+  - Result: nothing to tidy. `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 110
+    passed, 1 xfailed, coverage 96%.
 
 ### Cycle 8.5 — a partially settled authorization prints its remaining hold
 
-- [ ] [AI] RED: write `test_a_partially_settled_authorization_prints_its_remaining_hold` in `tests/unit/test_render.py`,
+- [x] [AI] RED: write `test_a_partially_settled_authorization_prints_its_remaining_hold` in `tests/unit/test_render.py`,
       with the smallest stub it imports, and run it; it fails on its assertion because the state has no text. Command:
       `pytest tests/unit/test_render.py`. Proof: the failure message, recorded here. Acceptance: AC-21.
-- [ ] [AI] GREEN: Render `Auth-A partially settled for 120.00, hold 80.00` and the partial settlement's Detail. Command:
+  - Done 06:22. The test renders Days 2 and 3 of Cycle 8.2's stream: E3's Detail and the Authorizations cell after the
+    partial capture, then after the final one. No new stub.
+  - `pytest tests/unit/test_render.py`: 1 failed, 9 passed, on its assertion. The first to fail was E3's Detail,
+    `'Auth-A settles for AED 120.00' == '... hold kept'`; the state printed Cycle 8.2's placeholder `PartiallySettled`,
+    having no text.
+- [x] [AI] GREEN: Render `Auth-A partially settled for 120.00, hold 80.00` and the partial settlement's Detail. Command:
       `pytest tests/unit/test_render.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance:
       AC-21.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 06:22. `_state` prints `partially settled for C, hold H` without codes. `_kept` appends `, hold kept` to a
+    settlement whose `Captured` effect leaves a `PartiallySettled` state, so a partial capture reaching the hold prints
+    none.
+  - The first attempt passed `pytest` but failed pyright with 7 errors, since an `isinstance` held in a variable does
+    not narrow. One repair made `_kept` a `match` on `SettlementAccepted(effect=Captured(after=PartiallySettled()))`.
+  - `pytest tests/unit/test_render.py`: 10 passed. `pytest tests/unit`: 111 passed, 1 xfailed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-21.
-- [ ] [AI] Update the state diagram in `architecture.md`. Proof: it matches `transition`. Acceptance: AC-26.
+  - Result: nothing to tidy. `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 111
+    passed, 1 xfailed, coverage 96%.
+- [x] [AI] Update the state diagram in `architecture.md`. Proof: it matches `transition`. Acceptance: AC-26.
+  - Done 06:23. The diagram now has all four states. From `Approved`, `SettleFinal` or a `SettlePartial` reaching the
+    hold goes to `Settled`, and one below the hold to `PartiallySettled`. That state loops on a partial below the hold
+    and settles on a final or a partial reaching it; `Declined` and `Settled` have no transition. The L4 row lists
+    `PartiallySettled` and both triggers, and the text says which `final` cell fires which trigger.
+  - Proof: each arrow matches one `case` of `transition` in `authorizations.py`, as does each row of Cycle 8.4's walk.
+    `./rhino md internal-link validate` found nothing.
 
 ### Phase 8 Gate
 
-- [ ] [AI] Run every gate command below against the phase's combined state; each exits 0. Proof: each command and its
+- [x] [AI] Run every gate command below against the phase's combined state; each exits 0. Proof: each command and its
       exit status, recorded here. Acceptance: AC-21. Commands:
   - `npx nx run account-ledger-cli:test:quick`
   - `npx nx run account-ledger-cli:test:integration`
@@ -2342,8 +2418,13 @@ calls time, recovery item RC2 fires.
   - `npm run -s check:hygiene`
   - `sh local-tmp/check-md.sh`
   - `./rhino md internal-link validate && ./rhino md heading-hierarchy validate && ./rhino md naming validate`
-- [ ] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
+  - Done 06:26, each exiting 0: `test:quick` 0 (111 passed, 1 xfailed, coverage 96%); `test:integration` 0 (2 passed);
+    `test:e2e` 0 (6 passed); `npm run -s check:hygiene` 0; `sh local-tmp/check-md.sh` 0;
+    `./rhino md internal-link validate` 0, `heading-hierarchy validate` 0, `naming validate` 0.
+- [x] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
       Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
+  - Done 06:26: the row `2026-09-25 06:17–06:26`, "Plan execution, Phase 8: partial capture keeps the rest of a hold;
+    the final column read", above Phase 7's.
 - [ ] [AI] Commit the phase as `feat(account-ledger-cli): keep the rest of a hold after a partial capture`, then push to
       `origin/main`; the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof: the
       commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-21.

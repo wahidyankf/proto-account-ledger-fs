@@ -39,16 +39,16 @@ def brief_stream() -> tuple[IncomingEvent, ...]:
 
 
 BRIEF_CSV = """\
-event,booked,type,account,amount,value_date,reference,instalments
-E1,1,CREDIT,ACC-001,1200.00,1,,
-E2,1,DEBIT,ACC-001,950.00,1,,
-E3,2,AUTHORIZATION,ACC-001,200.00,2,Auth-A,
-E4,3,CREDIT,ACC-001,400.00,3,,
-E5,4,SETTLEMENT,ACC-001,185.00,4,Auth-A,
-E6,4,SETTLEMENT,ACC-001,180.00,4,Auth-Z,
-E7,5,DEBIT,ACC-001,620.00,2,,
-E8,5,AUTHORIZATION,ACC-001,90.00,5,Auth-B,
-E9,6,REVERSAL,ACC-001,,2,E7,
-E10,5,CREDIT,ACC-002,10.000,5,,3
+event,booked,type,account,amount,value_date,reference,instalments,final
+E1,1,CREDIT,ACC-001,1200.00,1,,,
+E2,1,DEBIT,ACC-001,950.00,1,,,
+E3,2,AUTHORIZATION,ACC-001,200.00,2,Auth-A,,
+E4,3,CREDIT,ACC-001,400.00,3,,,
+E5,4,SETTLEMENT,ACC-001,185.00,4,Auth-A,,
+E6,4,SETTLEMENT,ACC-001,180.00,4,Auth-Z,,
+E7,5,DEBIT,ACC-001,620.00,2,,,
+E8,5,AUTHORIZATION,ACC-001,90.00,5,Auth-B,,
+E9,6,REVERSAL,ACC-001,,2,E7,,
+E10,5,CREDIT,ACC-002,10.000,5,,3,
 """
 """The brief's stream as the stream file holds it, for a unit test that reads no file."""

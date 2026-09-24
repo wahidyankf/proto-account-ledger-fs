@@ -36,7 +36,7 @@ from account_ledger.money import (
     split_of,
 )
 
-COLUMNS = ("event", "booked", "type", "account", "amount", "value_date", "reference", "instalments")
+COLUMNS = ("event", "booked", "type", "account", "amount", "value_date", "reference", "instalments", "final")
 KINDS = ("CREDIT", "DEBIT", "AUTHORIZATION", "SETTLEMENT", "REVERSAL")
 _EVERY = frozenset({"event", "booked", "type", "account", "value_date"})
 REQUIRED = {
@@ -47,7 +47,11 @@ REQUIRED = {
     "REVERSAL": _EVERY | {"reference"},
 }
 OPTIONAL: dict[str, frozenset[str]] = {
-    kind: frozenset({"instalments"}) if kind == "CREDIT" else frozenset[str]() for kind in KINDS
+    "CREDIT": frozenset({"instalments"}),
+    "DEBIT": frozenset(),
+    "AUTHORIZATION": frozenset(),
+    "SETTLEMENT": frozenset({"final"}),
+    "REVERSAL": frozenset(),
 }
 
 
@@ -103,6 +107,17 @@ def _posting(text: str) -> Posting | RowFault:
     return RowFault("instalments must be at least 2") if isinstance(count, IdFault) else Instalments(count)
 
 
+def _capture(text: str) -> Capture | RowFault:
+    """`yes` or blank is a final settlement, `no` one followed by more captures (AMB-013)."""
+    match text:
+        case "" | "yes":
+            return Capture.FINAL
+        case "no":
+            return Capture.PARTIAL
+        case _:
+            return RowFault("final must be yes or no")
+
+
 def _row(cells: dict[str, str], config: LedgerConfig) -> IncomingEvent | RowFault:
     if (kind := cells["type"]) not in KINDS:
         return RowFault(f"type '{kind}' is not one of {', '.join(KINDS)}")
@@ -144,7 +159,9 @@ def _row(cells: dict[str, str], config: LedgerConfig) -> IncomingEvent | RowFaul
                 return hold
             if kind == "AUTHORIZATION":
                 return Authorization(*head, hold, amount)
-            return Settlement(*head, hold, amount, Capture.FINAL)
+            if isinstance(capture := _capture(cells["final"]), RowFault):
+                return capture
+            return Settlement(*head, hold, amount, capture)
 
 
 def parse_stream(text: str, config: LedgerConfig) -> tuple[IncomingEvent, ...] | StreamError:

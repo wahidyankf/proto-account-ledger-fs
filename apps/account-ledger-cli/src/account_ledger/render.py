@@ -3,7 +3,7 @@
 from collections.abc import Sequence
 from typing import assert_never
 
-from account_ledger.authorizations import Approved, AuthorizationRecord, Declined, Settled
+from account_ledger.authorizations import Approved, AuthorizationRecord, Declined, PartiallySettled, Settled
 from account_ledger.events import (
     AnyAmount,
     Authorization,
@@ -22,7 +22,7 @@ from account_ledger.events import (
     Whole,
 )
 from account_ledger.ids import AccountId, Day, text
-from account_ledger.log import Duplicate, ForcePosted, LogEntry, SettlementAccepted
+from account_ledger.log import Captured, Duplicate, ForcePosted, LogEntry, SettlementAccepted
 from account_ledger.money import Direction, Money, currency, digits
 from account_ledger.report import Capitalized, DayReport, EndOfDayEvent, Fired, NothingFired, Processed, Step
 
@@ -109,7 +109,7 @@ def _detail(processed: Processed) -> str:
         case Authorization(authorization=hold, amount=amount):
             return f"{hold.value}, hold {_money(amount)}"
         case Settlement(authorization=hold, amount=amount):
-            return f"{hold.value} {_settles(processed.entry)} {_money(amount)}"
+            return f"{hold.value} {_settles(processed.entry)} {_money(amount)}{_kept(processed.entry)}"
         case Reversal(reverses=target):
             return f"reverses {text(target)}"
         case _:
@@ -138,6 +138,15 @@ def _settles(entry: LogEntry) -> str:
     """A settlement the table could not apply force-posts (AMB-012); any other settles for its amount."""
     forced = isinstance(entry, SettlementAccepted) and isinstance(entry.effect, ForcePosted)
     return "force-posts" if forced else "settles for"
+
+
+def _kept(entry: LogEntry) -> str:
+    """A partial capture that leaves part of the hold says so (D22)."""
+    match entry:
+        case SettlementAccepted(effect=Captured(after=PartiallySettled())):
+            return ", hold kept"
+        case _:
+            return ""
 
 
 def _applied(row: Fired | Capitalized | NothingFired) -> Row:
@@ -225,6 +234,8 @@ def _state(record: AuthorizationRecord) -> str:
     match state:
         case Approved(hold=amount):
             return f"{hold} approved, hold {_amount(amount.money)}"
+        case PartiallySettled(captured=captured, hold=kept):
+            return f"{hold} partially settled for {_amount(captured.money)}, hold {_amount(kept.money)}"
         case Declined(requested=amount):
             return f"{hold} declined, {_amount(amount.money)}"
         case Settled(captured=amount):

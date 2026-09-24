@@ -32,7 +32,7 @@ from account_ledger.log import Accepted, Log
 from account_ledger.money import Aed, Amount, Bhd, Direction, Money
 from support.values import aed, bhd
 
-HEADER = ("event", "booked", "type", "account", "amount", "value_date", "reference", "instalments")
+HEADER = ("event", "booked", "type", "account", "amount", "value_date", "reference", "instalments", "final")
 
 ACC_001: Account[Aed] = Account(AccountId("ACC-001"), Aed.zero())
 ACC_002: Account[Bhd] = Account(AccountId("ACC-002"), Bhd.zero())
