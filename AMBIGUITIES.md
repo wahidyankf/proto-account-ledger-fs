@@ -326,8 +326,9 @@ a rule, so its entry says what the value drives; only chosen constants carry a "
 **Where.** Days 1 to 6 have no calendar, time zone, or cut-off time.
 
 **Status: Open.** Recommendation: days are plain integers, every day in the window closes whether or not events arrive,
-and there is no business-day calendar, weekend, or cut-off. Nothing in the rules consults a calendar, so inventing one
-would add assumptions without changing a figure.
+and there is no business-day calendar, weekend, or cut-off. Day 0 names the opening state, reported before Day 1 in the
+same shape, with the opening balance as its closing; it is outside the window, so it assesses no fee and accrues no
+interest. Nothing in the rules consults a calendar, so inventing one would add assumptions without changing a figure.
 
 ## AMB-033 — What the report prints beyond the four named items
 

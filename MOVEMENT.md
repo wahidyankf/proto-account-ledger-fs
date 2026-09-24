@@ -77,6 +77,21 @@ AMB-025.
 | E9    | Day 6  | Reversal      | ACC-001 | reverses E7                                           | Day 2      |
 | E10   | Day 5  | Credit        | ACC-002 | BHD 10.000 in three equal instalments                 | Day 5      |
 
+## Day 0
+
+The opening state, before any event, in the same shape as every other day: its closing balance is the opening balance.
+Day 0 is not in the window, so no fee is assessed and no interest accrues (AMB-032).
+
+Events processed: none.
+
+| Item                   | ACC-001 (AED) | ACC-002 (BHD) |
+| ---------------------- | ------------- | ------------- |
+| Closing ledger balance | 0.00          | 0.000         |
+| Available balance      | 0.00          | 0.000         |
+| Fees assessed          | none          | none          |
+| Authorizations         | none          | none          |
+| Errors                 | none          | none          |
+
 ## Day 1
 
 Events processed:
@@ -102,13 +117,13 @@ Events processed:
 | ----- | ------ | ------------- | ------- | ----------------------- | ---------- |
 | E3    | Day 2  | Authorization | ACC-001 | Auth-A, hold AED 200.00 | Day 2      |
 
-| Item                   | ACC-001 (AED)                       | ACC-002 (BHD) |
-| ---------------------- | ----------------------------------- | ------------- |
-| Closing ledger balance | 250.00                              | 0.000         |
-| Available balance      | 50.00                               | 0.000         |
-| Fees assessed          | none                                | none          |
-| Authorizations         | Auth-A approved, hold 200.00 active | none          |
-| Errors                 | none                                | none          |
+| Item                   | ACC-001 (AED)                | ACC-002 (BHD) |
+| ---------------------- | ---------------------------- | ------------- |
+| Closing ledger balance | 250.00                       | 0.000         |
+| Available balance      | 50.00                        | 0.000         |
+| Fees assessed          | none                         | none          |
+| Authorizations         | Auth-A approved, hold 200.00 | none          |
+| Errors                 | none                         | none          |
 
 ## Day 3
 
@@ -118,13 +133,13 @@ Events processed:
 | ----- | ------ | ------ | ------- | ---------- | ---------- |
 | E4    | Day 3  | Credit | ACC-001 | AED 400.00 | Day 3      |
 
-| Item                   | ACC-001 (AED)                       | ACC-002 (BHD) |
-| ---------------------- | ----------------------------------- | ------------- |
-| Closing ledger balance | 650.00                              | 0.000         |
-| Available balance      | 450.00                              | 0.000         |
-| Fees assessed          | none                                | none          |
-| Authorizations         | Auth-A approved, hold 200.00 active | none          |
-| Errors                 | none                                | none          |
+| Item                   | ACC-001 (AED)                | ACC-002 (BHD) |
+| ---------------------- | ---------------------------- | ------------- |
+| Closing ledger balance | 650.00                       | 0.000         |
+| Available balance      | 450.00                       | 0.000         |
+| Fees assessed          | none                         | none          |
+| Authorizations         | Auth-A approved, hold 200.00 | none          |
+| Errors                 | none                         | none          |
 
 ## Day 4
 
@@ -158,22 +173,30 @@ Events processed:
 | E8    | Day 5  | Authorization | ACC-001 | Auth-B, hold AED 90.00; never settled in window          | Day 5      |
 | E10   | Day 5  | Credit        | ACC-002 | BHD 10.000 in three equal instalments; pending (AMB-001) | Day 5      |
 
-| Item                             | ACC-001 (AED)                       | ACC-002 (BHD) |
-| -------------------------------- | ----------------------------------- | ------------- |
-| Day 2 closing, restated, pre-fee | −370.00                             | —             |
-| Closing ledger balance           | pending (a)                         | pending (b)   |
-| Available balance                | pending (c)                         | pending (b)   |
-| Fees assessed                    | 25.00 for Day 5; others pending (d) | none          |
-| Authorizations                   | Auth-A settled; Auth-B declined     | none          |
-| Errors                           | pending (e)                         | none          |
+| Item                    | ACC-001 (AED)                                     | ACC-002 (BHD) |
+| ----------------------- | ------------------------------------------------- | ------------- |
+| Day 2 closing, restated | pending (f)                                       | —             |
+| Day 3 closing, restated | pending (g)                                       | —             |
+| Day 4 closing, restated | pending (h)                                       | —             |
+| Closing ledger balance  | pending (a)                                       | pending (b)   |
+| Available balance       | pending (c)                                       | pending (b)   |
+| Fees assessed           | 25.00 for Day 5; others pending (d)               | none          |
+| Authorizations          | Auth-A settled for 185.00; Auth-B declined, 90.00 | none          |
+| Errors                  | pending (e)                                       | none          |
+
+Before any fee, E7 restates Day 2 to −370.00 under every option (criterion 1); the printed restatement is the closing
+after that day's fees, so it waits on them.
 
 Pending cells wait on:
 
 - (a) AMB-003, AMB-004, AMB-005, AMB-014, AMB-022
 - (b) AMB-001, AMB-025
-- (c) AMB-003, AMB-005, AMB-014
+- (c) AMB-003, AMB-005, AMB-011, AMB-014, AMB-020
 - (d) AMB-003, AMB-004, AMB-005
 - (e) AMB-017
+- (f) AMB-003, AMB-004
+- (g) AMB-003, AMB-004, AMB-022
+- (h) AMB-003, AMB-004, AMB-014, AMB-022
 
 ## Day 6
 
@@ -184,14 +207,19 @@ Events processed:
 | E9    | Day 6  | Reversal | ACC-001 | reverses E7                                              | Day 2      |
 | E10   | Day 5  | Credit   | ACC-002 | BHD 10.000 in three equal instalments; pending (AMB-001) | Day 5      |
 
-| Item                   | ACC-001 (AED)                     | ACC-002 (BHD) |
-| ---------------------- | --------------------------------- | ------------- |
-| Closing ledger balance | pending (a)                       | pending (b)   |
-| Available balance      | pending (a)                       | pending (b)   |
-| Fees assessed          | no new fee; reversals pending (c) | none          |
-| Interest capitalized   | pending (d)                       | pending (e)   |
-| Authorizations         | Auth-A settled; Auth-B declined   | none          |
-| Errors                 | none                              | pending (f)   |
+| Item                    | ACC-001 (AED)                                     | ACC-002 (BHD) |
+| ----------------------- | ------------------------------------------------- | ------------- |
+| Day 2 closing, restated | pending (h)                                       | —             |
+| Day 3 closing, restated | pending (i)                                       | —             |
+| Day 4 closing, restated | pending (j)                                       | —             |
+| Day 5 closing, restated | pending (k)                                       | pending (l)   |
+| Closing ledger balance  | pending (a)                                       | pending (b)   |
+| Available balance       | pending (g)                                       | pending (b)   |
+| Fees assessed           | none                                              | none          |
+| Fee reversals           | pending (c)                                       | none          |
+| Interest capitalized    | pending (d)                                       | pending (e)   |
+| Authorizations          | Auth-A settled for 185.00; Auth-B declined, 90.00 | none          |
+| Errors                  | none                                              | pending (f)   |
 
 Pending cells wait on:
 
@@ -201,15 +229,22 @@ Pending cells wait on:
 - (d) AMB-006, AMB-007, AMB-008, AMB-009, AMB-014, AMB-023
 - (e) AMB-001, AMB-007, AMB-023, AMB-025
 - (f) AMB-001
+- (g) AMB-006, AMB-007, AMB-009, AMB-011, AMB-014, AMB-020
+- (h) AMB-003, AMB-004, AMB-006
+- (i) AMB-003, AMB-004, AMB-006, AMB-022
+- (j) AMB-003, AMB-004, AMB-006, AMB-014, AMB-022
+- (k) AMB-003, AMB-004, AMB-006, AMB-014, AMB-022
+- (l) AMB-001, which also decides whether the line is printed at all
 
 ## Why the Fixed Figures Hold
 
+- **Day 0** is the opening balances the brief gives, before any event.
 - **Day 1 to 3** involve no backdated entry, no negative balance, and no settlement, so no open entry touches them.
 - **Auth-A** is approved against 250.00 − 200.00 = 50.00 under every reading of when and against what it is checked
   (AMB-016, AMB-028), and its settlement is accepted because no open entry rejects a settlement within its hold.
 - **Day 4 fees** are none because ACC-001 stays positive whether E6 is rejected (465.00) or honoured (285.00).
-- **Day 2's restated pre-fee closing** is 1,200.00 − 950.00 − 620.00 = −370.00; E6 is value-dated Day 4 and cannot reach
-  it.
+- **Day 2's restated closing before fees** is 1,200.00 − 950.00 − 620.00 = −370.00; E6 is value-dated Day 4 and cannot
+  reach it.
 - **Day 5's own fee** is assessed under every option in AMB-003, because Day 5 closes at −155.00 or lower before any
   fee.
 - **Auth-B** is declined whether E6 was rejected (available −245.00) or honoured (−425.00), and whether retroactive fees
