@@ -226,8 +226,11 @@ rounds differently under half-up and half-even. No figure in this stream is a ti
 
 **Status.** Resolved.
 
-**Resolution.** Every amount is rounded to its currency's precision half-even: a value exactly halfway goes to the even
-digit, and any other value to the nearer one. A split into instalments rounds down instead, as AMB-020 resolves.
+**Resolution.** Every amount the ledger computes is rounded to its currency's precision half-even: a value exactly
+halfway goes to the even digit, and any other value to the nearer one. A split into instalments rounds down instead, as
+AMB-020 resolves. An amount the stream gives is already stored at its currency's precision, as every amount in the brief
+is; one given with more places is not rounded but refused as a fault in the input (AMB-014), since rounding it would
+post money its sender never sent.
 
 **Rationale.** The brief names no mode, and daily accruals are rounded many times. Half-up pushes every halfway value
 up, a small bias that grows with the number of accruals; half-even sends half of them each way, so the rounded accruals
@@ -438,14 +441,20 @@ the report's errors have anything to point at, and whether "append-only" covers 
 
 **Status.** Resolved.
 
-**Resolution.** Every incoming event is appended to the one log with its outcome, accepted, approved, declined, or
-rejected, and the aggregations count only the events that were accepted or approved. E8 is in the log as declined and
-moves no balance and holds nothing.
+**Resolution.** Every incoming event is appended to the one log with its outcome, accepted, approved, declined,
+rejected, or duplicate (AMB-034), and the aggregations count only the events that were accepted or approved. E8 is in
+the log as declined and moves no balance and holds nothing. A row that cannot be an event at all, such as one naming an
+account that is not configured, an amount that is not positive or has more places than its currency (AMB-006), a day
+outside the replay, or more instalments than its amount has minor units (AMB-020), is a fault in the input, not a
+refusal: it never reaches the log, and the replay stops with an error naming its line.
 
 **Rationale.** Discarding a refused event deletes an event record in all but name, which "No event record is ever
 mutated or deleted" forbids. With the outcome in the log, a report line such as "Auth-B declined" points at the event
 behind it, replaying the log rebuilds every report exactly, and an auditor can see what was refused, when, and why. A
 second log for refusals would keep the ledger's log to money-moving events, at the cost of two sources that must agree.
+A refusal is the ledger's decision against what it already holds, so it belongs in the log; a row naming an account the
+ledger does not have, or an amount no event can carry, is refused by nothing the ledger holds, and logging it would put
+a record in the log that no account, balance, or rule can read.
 
 ## AMB-015 — Replay order when booked days are out of sequence
 
@@ -603,12 +612,15 @@ cannot all be equal and still sum to 10.000. Criterion 7's 3.334 × 3 = 10.002 i
 **Status.** Resolved.
 
 **Resolution.** An amount posted as N equal instalments gives each instalment the amount divided by N, rounded down to
-the currency's precision, and adds what remains to the last one. E10's BHD 10.000 is 3.333, 3.333, and 3.334.
+the currency's precision, and adds what remains to the last one. E10's BHD 10.000 is 3.333, 3.333, and 3.334. Every
+instalment must be at least one minor unit, so a credit split into more instalments than its amount has minor units,
+such as BHD 0.002 in three, is refused as a fault in the input (AMB-014).
 
 **Rationale.** No three-decimal amount divides 10.000 into three, so exact instalments need one to differ. Rounding down
-and giving the last the remainder keeps the sum at exactly 10.000, invents no money, and works for any N and precision;
-rounding down, rather than half-even (AMB-006), keeps the remainder from ever being negative. Criterion 7's 3.334 each
-sums to 10.002, crediting 0.002 BHD that E10 never posted, so it cannot hold, and [REJECTED](REJECTED.md) refuses it.
+and giving the last the remainder keeps the sum at exactly 10.000, invents no money, and works for any N and precision
+that leaves each instalment at least one minor unit; rounding down, rather than half-even (AMB-006), keeps the remainder
+from ever being negative. Criterion 7's 3.334 each sums to 10.002, crediting 0.002 BHD that E10 never posted, so it
+cannot hold, and [REJECTED](REJECTED.md) refuses it.
 
 ## AMB-021 — Auth-B: declined, yet "never settled"
 
@@ -780,13 +792,15 @@ assertion with presentation.
 
 **Resolution.** Both. The command-line program, `account-ledger-cli`, replays the stream and prints the daily report
 exactly as [OUTPUT_TARGET](OUTPUT_TARGET.md) shows it. The test suite replays the same stream and asserts every figure:
-unit and integration tests check the scenarios in `ACCEPTANCE_CRITERIA.feature`, and an end-to-end test runs the program
-through its process boundary and compares its output with OUTPUT_TARGET.
+plain pytest unit and integration tests assert each criterion and each resolved rule, each by at least one named test,
+and an end-to-end test runs the program through its process boundary and compares its output with OUTPUT_TARGET.
 
 **Rationale.** Each does one job: the program shows the replay, and the tests prove it. A script alone asserts nothing,
 so a Day 6 closing of 285.73 instead of 285.76 would fail nothing; a test suite that prints buries the report in test
 output and leaves nothing a reader can run to see it. The repository already holds both, a runnable app and three test
-levels bound to the same feature files, and the failing test the brief asks for needs a suite to live in.
+levels, and the failing test the brief asks for needs a suite to live in. The tests are plain pytest, not Gherkin: each
+criterion has at least one named test whose docstring quotes it, so step bindings would add a second language without
+adding a reader ([REJECTED](REJECTED.md)).
 
 ## AMB-027 — An overdraft fee on a BHD account
 
@@ -1005,14 +1019,57 @@ routine retry. AMB-028 settles this for a reversal only.
 **Status.** Resolved.
 
 **Resolution.** Idempotent by event ID. The event ID is the idempotency key: an event whose ID is already in the log,
-with the same content, has no effect and is not an error; one whose ID is already in the log with different content is
-refused, recorded with its outcome (AMB-014), and printed as that day's error. The rule covers every event, from the
-brief or fired by the ledger, and AMB-028's rule for a repeated reversal is this rule applied to a reversal. Nothing
-repeats in this stream, so no figure moves.
+with the same content in every field, is appended with the outcome duplicate (AMB-014), has no effect, and is not an
+error; one whose ID is already in the log with different content, the booked day included, is refused, recorded with its
+outcome (AMB-014), and printed as that day's error. The rule covers every event, from the brief or fired by the ledger,
+and AMB-028's rule for a repeated reversal is this rule applied to a reversal. Nothing repeats in this stream, so no
+figure moves.
 
 **Rationale.** An event already carries an ID, so it is the natural key: a retry after a timeout delivers the same ID
 and content and must not move a balance twice, and an alarm for it would be false. The same ID with different content
 cannot be a retry, so dropping it silently could lose a real transaction; it is a clash someone must see. The ledger's
 own markers, such as `FEE-001-D2@D5`, are built from kind, account, and days (AMB-024), so re-running a day's close
-fires the same IDs and cannot charge a fee twice. The rule relies on the sender keeping IDs unique, which the brief does
-not state; a sender that reuses an ID for a new event sees it refused, not applied.
+fires the same IDs and cannot charge a fee twice. Appending the retry as a duplicate keeps every delivery in the log, so
+an auditor sees that a retry arrived and when, and a replay shows it moved nothing. The rule relies on the sender
+keeping IDs unique, which the brief does not state; a sender that reuses an ID for a new event sees it refused, not
+applied.
+
+## AMB-035 — What a reversal may target
+
+**Where.** "E9 — Day 6 — REVERSAL — ACC-001 reverses E7 — value_date Day 2", with "No event record is ever mutated or
+deleted." E7 is a debit, and nothing else is reversed in this stream.
+
+**Why it is problematic.** The brief does not say which events a reversal may undo: an unknown ID, a declined or refused
+event, an authorization, or an event the ledger fires itself, such as a fee, an interest event, an instalment, or a
+capitalization. Reversing a fee whose day is still negative also meets the fee rule, which would charge that day again.
+
+**Options.**
+
+- Only an accepted incoming credit, debit, or settlement, anything else refused. **Recommended**: the ledger corrects
+  its own events by re-evaluating them, so reversing one would fight the rule that fired it.
+- Any accepted incoming posting, plus an approved authorization, whose reversal releases its hold, as a card void does.
+- Any accepted event, incoming or fired; after a fired end-of-day event is reversed, the next close fires again whatever
+  the rules still require.
+- Any accepted event, with a reversed fired event waived and never fired again.
+
+**Status.** Resolved.
+
+**Resolution.** Any accepted event, incoming or fired, may be reversed. A reversal of an unknown ID, or of an event that
+moved no money, declined or rejected, is refused, recorded with its outcome (AMB-014), and printed as that day's error;
+an authorization is approved, never accepted, so a reversal of one is refused the same way, and a reversal of a reversal
+stays refused (AMB-028). Each event's money is undone at most once, whichever event undoes it: a reversal is refused
+when its target is an instalment of a credit already reversed, a credit one of whose instalments is already reversed, or
+a fee already refunded. A refund may itself be reversed, which puts its fee back in force for the next close to judge
+again. A reversal undoes only what its target moved, so a reversed settlement leaves its authorization's state and hold
+as they are, and reversing a credit posted in instalments undoes every instalment. After a fee, an interest event, or a
+capitalization is reversed, the next close re-evaluates as always and fires again whatever the rules still require,
+under a new marker for that close: a fee reversed while its day is still negative is charged again. An instalment is
+fired when its credit is processed, not at a close, so a reversed instalment stays reversed. None of this occurs in this
+stream, so no figure moves.
+
+**Rationale.** In production an operations team corrects any posted entry, whether a customer sent it or the bank
+generated it, through the same reversal path, so one rule for every accepted event keeps the log uniform: each
+correction is an event that names what it undoes. Letting the end-of-day rules re-evaluate afterwards keeps them the
+only source of fees and interest, so no balance is left that the rules disagree with; waiving a fee for good is a
+separate decision the ledger does not model, and the architecture trade-offs record it as a simplification. Refusing a
+reversal of something that moved no money keeps a mistake visible instead of logging an undo of nothing.

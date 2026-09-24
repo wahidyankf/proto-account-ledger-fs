@@ -45,7 +45,7 @@ Non-negotiable rules:
   AMB-006, AMB-007, AMB-023._
 - AED is 2 decimal places, BHD is 3. Amounts stored and rounded to their own precision. _Ambiguities: AMB-006, AMB-020._
 - The ledger is append-only. No event record is ever mutated or deleted. _Ambiguities: AMB-004, AMB-024, AMB-028,
-  AMB-014._
+  AMB-014, AMB-035._
 - An authorization is approved only if the account's available balance — ledger balance minus active holds — remains at
   or above zero after the hold is applied. _Ambiguities: AMB-008, AMB-009, AMB-010, AMB-013, AMB-018._
 
@@ -326,7 +326,8 @@ Closing Summary:
 E10 is booked Day 5 but arrives after E9, so it is processed on Day 6 as a late event value-dated Day 5 (AMB-015): Day 6
 restates ACC-002's Day 5 and fires its interest for Day 5 as an adjustment.
 
-Readings that touch this day without changing a figure: AMB-028, on what a reversal such as E9 may target.
+Readings that touch this day without changing a figure: AMB-028, on reversing a reversal, and AMB-035, on what a
+reversal such as E9 may target.
 
 ## Why the Fixed Figures Hold
 

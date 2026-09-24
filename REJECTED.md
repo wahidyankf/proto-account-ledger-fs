@@ -77,4 +77,9 @@ rather than accepted as vacuously true. A test asserts that each capitalization 
 
 ## Abandoned Approaches
 
-None yet.
+### Gherkin acceptance tests
+
+The criteria were first drafted as Gherkin in `ACCEPTANCE_CRITERIA.feature`, and the repository's scaffold bound its one
+scenario at three test levels with pytest-bdd. Both are abandoned for plain pytest (AMB-026): every criterion has at
+least one named test whose docstring quotes the brief, so step bindings would add a second language and a mapping layer
+without adding a reader. The feature file is deleted once each criterion names its test.
