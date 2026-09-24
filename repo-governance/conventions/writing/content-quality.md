@@ -33,14 +33,14 @@ rewriting an archive to satisfy a later rule destroys the record it exists to ke
 
 ## Owned Elsewhere
 
-| Concern                       | Owner                               |
-| ----------------------------- | ----------------------------------- |
-| colour, contrast, and palette | Colour Accessibility                |
-| diagrams                      | [Diagrams](diagrams.md)             |
-| link form and link integrity  | [Internal Links](internal-links.md) |
-| emoji                         | [Emoji Usage](emoji-usage.md)       |
-| factual accuracy              | Factual Validation                  |
-| the structure of a plan       | [Plans](../structure/plans.md)      |
+| Concern                       | Owner                                       |
+| ----------------------------- | ------------------------------------------- |
+| colour, contrast, and palette | Colour Accessibility                        |
+| diagrams                      | [Diagrams](diagrams.md)                     |
+| link form and link integrity  | [Internal Links](internal-links.md)         |
+| emoji                         | [Emoji Usage](emoji-usage.md)               |
+| factual accuracy              | [Factual Validation](factual-validation.md) |
+| the structure of a plan       | [Plans](../structure/plans.md)              |
 
 ## Enforcement
 

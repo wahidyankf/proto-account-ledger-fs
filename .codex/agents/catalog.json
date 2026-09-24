@@ -50,7 +50,7 @@
     {
       "id": "agent/swe-code-maker",
       "path": ".agents/agents/swe-code-maker.md",
-      "digest": "501d140fe28336f26f0fe3a0fa06257409a8bf1ce1b346078692522fee6cac8b"
+      "digest": "6d61b3f399d0a34c8494cf1608546f44d4f36e10dd3fa233f161b605829540a6"
     },
     {
       "id": "skill/adopt-artifact",
@@ -155,12 +155,12 @@
     {
       "id": "skill/writing-readme-files",
       "path": ".agents/skills/writing-readme-files/SKILL.md",
-      "digest": "e1d56e9bf7463e221cdc83048740aba8ab6deedaae385a0dbba65aeadca17c40"
+      "digest": "7f09790b901d22641631daf8760e9b7acfe25714cbbb522bd39a5a2f10e446cf"
     },
     {
       "id": "instruction",
       "path": "AGENTS.md",
-      "digest": "d70cf7b1a8b5ca9a9b780f944e7a9027823374e716a4989fa88e891f563bb22c"
+      "digest": "8caccd5d5fad58876ae1ace9579265047bb5daaad200b0023d669e5311b09de3"
     }
   ]
 }

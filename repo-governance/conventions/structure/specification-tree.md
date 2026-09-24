@@ -66,7 +66,8 @@ It changes in the same delivery unit that changes what it describes. A proposed 
 
 A repository adopting this convention indexes its specification tree, with every file type counted, per
 [Directory Indexes](directory-indexes.md). A feature file absent from its index is a scenario nobody browsing the tree
-will find. The project side of each corpus follows Project READMEs, whose README links here and is linked back.
+will find. The project side of each corpus follows [Project READMEs](project-readmes.md), whose README links here and is
+linked back.
 
 An adopter enforces the required files, non-empty behaviours, and index completeness with its own structure check in
 pre-commit or CI.

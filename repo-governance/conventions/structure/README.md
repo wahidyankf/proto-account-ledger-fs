@@ -23,8 +23,10 @@ mechanically.
 | [Command-Line Interface](command-line-interface.md)         | the exit vocabulary, streams, and output a tool owes its callers                         |
 | [Directory Indexes](directory-indexes.md)                   | the README index every indexed directory carries                                         |
 | [Document Word Budget](document-word-budget.md)             | the word ceiling on instruction and governance documents, and repair                     |
+| [Documentation Architecture](documentation-architecture.md) | where documentation lives and the one mode each page serves                              |
 | [Governance Layers](governance-layers.md)                   | what each governance level answers and which level wins a conflict                       |
 | [Monorepo Layout](monorepo-layout.md)                       | dependency direction and project boundaries inside a monorepo                            |
+| [Project READMEs](project-readmes.md)                       | what a project's root README covers, and what it leaves to its specification             |
 | [Related Repositories](related-repositories.md)             | parity, consumption, and knowledge-sharing relationships                                 |
 | [Specification Tree](specification-tree.md)                 | one specification corpus per logical owner, fully specified for Gherkin, C4, and OpenAPI |
 | [Temporary Files](temporary-files.md)                       | where scratch files and reports go, and how they are named and written                   |
@@ -54,8 +56,10 @@ mechanically.
 - [Command-Line Interface Modules](command-line-interface-details/README.md) — the seven interface modules
 - [Directory Indexes](directory-indexes.md)
 - [Document Word Budget](document-word-budget.md)
+- [Documentation Architecture](documentation-architecture.md)
 - [Governance Layers](governance-layers.md)
 - [Monorepo Layout](monorepo-layout.md)
+- [Project READMEs](project-readmes.md) — the sections of a project README and its boundary with the specification
 - [Related Repositories](related-repositories.md)
 - [Specification Tree](specification-tree.md) — corpus placement, required files, and as-built architecture
 - [Temporary Files](temporary-files.md) — designated directories, collision-free names, and progressive reports

@@ -59,8 +59,9 @@ End-to-End Tests as its skill.
 6. **Check before handing over.** Run the repository's type check, lint, and format checks and the fast gate over the
    changed projects, plus the end-to-end journeys the change affects. Name every check
    [Behaviour Change Verification](../../repo-governance/development/quality/manual-verification/006-behaviour-change-verification.md)
-   still requires of the change, and every README or document the change leaves stale, per Docs Propagation, so the
-   caller can route it to Docs Maker or run that workflow before committing.
+   still requires of the change, and every README or document the change leaves stale, per
+   [Docs Propagation](../../repo-governance/workflows/maintenance/docs-propagation.md), so the caller can route it to
+   Docs Maker or run that workflow before committing.
 
 ## Shell
 

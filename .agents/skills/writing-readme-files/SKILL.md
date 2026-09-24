@@ -12,17 +12,18 @@ compatibility: Requires read access to the project the README describes and the 
 # Writing README Files
 
 [README Quality](../../../repo-governance/conventions/writing/readme-quality.md) and its modules own every README rule:
-navigation, plain language, paragraph length, and the sections each kind carries. Project READMEs owns what a project
-README covers, [Directory Indexes](../../../repo-governance/conventions/structure/directory-indexes.md) owns index
-READMEs, and Docs Propagation owns keeping a README true as its project changes. This skill supplies shape and repairs;
-where it and a convention seem to differ, the convention wins.
+navigation, plain language, paragraph length, and the sections each kind carries.
+[Project READMEs](../../../repo-governance/conventions/structure/project-readmes.md) owns what a project README covers,
+[Directory Indexes](../../../repo-governance/conventions/structure/directory-indexes.md) owns index READMEs, and
+[Docs Propagation](../../../repo-governance/workflows/maintenance/docs-propagation.md) owns keeping a README true as its
+project changes. This skill supplies shape and repairs; where it and a convention seem to differ, the convention wins.
 
 ## Decide the Kind First
 
 | The README introduces     | Its shape comes from                                                                                                        |
 | ------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
 | a whole repository        | the root order in [Required Sections](../../../repo-governance/conventions/writing/readme-quality/003-required-sections.md) |
-| an application or library | Project READMEs                                                                                                             |
+| an application or library | [Project READMEs](../../../repo-governance/conventions/structure/project-readmes.md)                                        |
 | a directory of documents  | Directory Indexes                                                                                                           |
 
 A README that tries to be two kinds, such as a root README summarizing every component, holds copies that belong to the

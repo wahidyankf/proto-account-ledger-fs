@@ -16,6 +16,7 @@ inside it, how it is formatted, and how it stays true.
 | [Content Quality](content-quality.md)                     | how prose, headings, formatting, and accessible content are written         |
 | [Diagrams](diagrams.md)                                   | when a diagram is used and what form it must take                           |
 | [Emoji Usage](emoji-usage.md)                             | whether, where, and with what meaning an emoji may appear                   |
+| [Factual Validation](factual-validation.md)               | how a technical claim is verified before it is published                    |
 | [Internal Links](internal-links.md)                       | how internal links are written and kept resolving                           |
 | [Markdown Indentation](markdown-indentation.md)           | how lists, frontmatter, and code blocks are indented                        |
 | [Markdown Prose Wrap](markdown-prose-wrap.md)             | the fixed width prose wraps at, and its one exemption                       |
@@ -30,6 +31,7 @@ inside it, how it is formatted, and how it stays true.
   and time estimates.
 - [Diagrams](diagrams.md)
 - [Emoji Usage](emoji-usage.md)
+- [Factual Validation](factual-validation.md)
 - [Internal Links](internal-links.md)
 - [Markdown Indentation](markdown-indentation.md)
 - [Markdown Prose Wrap](markdown-prose-wrap.md)

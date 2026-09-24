@@ -18,8 +18,11 @@ mostly adopted from `ose-rules`. Levels are ordered — principles, then convent
 and a lower level never contradicts a higher one. `README.md` and `docs/` serve people, this file and `.agents/` serve
 agents, and `repo-governance/` serves both. `CLAUDE.md` only imports this file.
 
-Change a rule through [rules-propagation](repo-governance/workflows/maintenance/rules-propagation.md). Run
-[rules-quality-gate](repo-governance/workflows/maintenance/rules-quality-gate.md) and
+Change a rule through [rules-propagation](repo-governance/workflows/maintenance/rules-propagation.md), and carry every
+change into the documents it makes stale through
+[docs-propagation](repo-governance/workflows/maintenance/docs-propagation.md) before committing it. Run
+[rules-quality-gate](repo-governance/workflows/maintenance/rules-quality-gate.md),
+[docs-quality-gate](repo-governance/workflows/quality/docs-quality-gate.md), and
 [plan-quality-gate](repo-governance/workflows/plan/plan-quality-gate.md) only when the owner explicitly asks. Adopt more
 catalog artifacts only through [adopt-artifact](repo-governance/workflows/adoption/adopt-artifact.md), recording
 `OSE-Rules-Source` and `OSE-Rules-Commit` trailers.

@@ -30,8 +30,8 @@ optional, default the adopter's recorded stage, or `backlog` for a promoted brie
    [Delivery Seams and Ownership](../../development/agents/planning-capabilities/005-delivery-seams-and-ownership.md),
    whether the change alters a repository rule, which adds a [Rules Propagation](../maintenance/rules-propagation.md)
    outcome, split into actions rather than one generic checkbox, to the delivery unit changing it; whether it changes
-   what a document describes, which adds a Docs Propagation item to that unit; and whether any claim needs outside
-   verification.
+   what a document describes, which adds a [Docs Propagation](../maintenance/docs-propagation.md) item to that unit; and
+   whether any claim needs outside verification.
 
 3. **Verify unstable facts before authoring.** Check each flagged claim, such as a library version, an interface's
    behaviour, or a third-party practice, against an authoritative source, and cite it. A finding that changes an answer

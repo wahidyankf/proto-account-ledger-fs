@@ -16,4 +16,5 @@ way each time, and so that its result is a verdict rather than an impression.
 
 ## Directory Map
 
+- [Docs Quality Gate](docs-quality-gate.md)
 - [Red, Green, Refactor](red-green-refactor.md)
