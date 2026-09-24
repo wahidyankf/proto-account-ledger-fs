@@ -1,0 +1,32 @@
+node_modules/
+/worktrees/
+.nx/
+apps/*/dist/
+libs/*/dist/
+# Untracked working area: todo lists, gate logs, and other machine-local records — keep dir, ignore contents.
+local-tmp/*
+!local-tmp/.gitkeep
+# Requested generated audits and reports are evidence, never authoritative source.
+# `**/` is load-bearing: a pattern containing a non-trailing slash is anchored to
+# this file's directory, so `generated-reports/*` alone would leave a nested
+# apps/<x>/generated-reports/ entirely untracked-and-visible. Matching contents
+# rather than the directory itself (`/*`, not `/`) is also load-bearing: git
+# cannot re-include a file whose parent directory is excluded.
+**/generated-reports/*
+!**/generated-reports/.gitkeep
+# Personal harness overrides: never repository rules.
+.claude/settings.local.json
+# Real environment files hold local secrets that exist nowhere else. Only the
+# template is committable.
+.env
+.env.*
+!.env.example
+# .NET build output and test coverage artifacts. Root-level, because Prettier
+# resolves ignore patterns from the root .gitignore only.
+bin/
+obj/
+coverage/
+coverage.json
+coverage.*.json
+*.opencover.xml
+TestResults/

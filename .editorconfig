@@ -1,0 +1,5 @@
+root = true
+
+[*.fs]
+# Fantomas 8 defaults to aligned multiline brackets; keep the cramped layout used across ose-public F# projects.
+fsharp_multiline_bracket_style = cramped
