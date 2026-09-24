@@ -29,7 +29,8 @@ per [Assessment Docs](../../../repo-governance/conventions/structure/assessment-
 - The deliberately failing test is a strict expected failure in the regular suite, as AMB-031 resolves; the guard
   against `mark.xfail` is to be narrowed, through Rules Propagation, when the test is written.
 - Expected domain failures are typed result values, not exceptions.
-- The agent appends to `WORKLOG.md` with real timestamps as work happens; entries may also be added by hand.
+- The agent adds each `WORKLOG.md` entry at the top, newest first, with real timestamps as work happens; entries may
+  also be added by hand.
 
 - `ACCEPTANCE_CRITERIA.feature` stays at the root, unexecuted, so it cannot break the test suite. It moves under
   `specs/` only once every verdict is decided, and only after the plan documents exist.

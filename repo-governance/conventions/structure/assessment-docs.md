@@ -56,11 +56,13 @@ adds none.
 
 Reason: the brief requires a timestamped, real worklog, and a reconstructed one is neither.
 
-**The worklog is append-only.** A `WORKLOG.md` entry is never edited or removed once committed, even when a later change
-renames what it mentions. Followed: committed rows survive unchanged in every later revision. Violated: a diff that
-edits or deletes one.
+**The worklog is newest first and never rewritten.** A new `WORKLOG.md` entry goes at the top of the table, directly
+under its header, and an entry is never edited or removed once committed, even when a later change renames what it
+mentions. Followed: every committed row survives unchanged in every later revision, and no row is older than the row
+below it. Violated: a revision that edits or drops a committed row, or places a row above a newer one.
 
-Reason: an entry records what was true when the work happened, and rewriting it turns a log into a story.
+Reason: an entry records what was true when the work happened, and rewriting it turns a log into a story; the newest
+work comes first because a reader most often checks what happened last.
 
 ## Enforcement
 
