@@ -46,3 +46,7 @@ npm run check:hygiene                           # every repository gate Rhino de
 
 Work lands directly on `main` as thematic Conventional Commits; there are no pull requests. The pre-push hook runs
 `test:quick` and `test:integration` for every affected project. See [AGENTS.md](AGENTS.md) for the full agreement.
+
+## License
+
+[MIT](LICENSE).
