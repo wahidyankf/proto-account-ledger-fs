@@ -2,7 +2,7 @@
 
 ## Purpose and Working Style
 
-This repository holds an in-memory account ledger core written in F#, built as an Nx monorepo. Use the smallest
+This repository holds an in-memory account ledger core written in Python, built as an Nx monorepo. Use the smallest
 responsible change; see [minimal sufficiency](repo-governance/principles/minimal-sufficiency.md). Resolve every material
 open decision by grilling with options, one decision per question and one recommendation, using the
 [grill-me skill](.agents/skills/grill-me/SKILL.md); never settle it silently in prose.
@@ -27,17 +27,18 @@ catalog artifacts only through [adopt-artifact](repo-governance/workflows/adopti
 ## Project Structure
 
 - `apps/` runnable applications; `libs/` reusable libraries (none yet).
-- `specs/` Gherkin behaviours and architecture; test projects embed the same feature files.
+- `specs/` Gherkin behaviours and architecture; every test level binds the same feature files.
 - `plans/` delivery plans; `docs/` Diátaxis documentation for people.
 - `.agents/` canonical agents and skills; `.claude/`, `.codex/`, and `.opencode/` are generated adapters.
 
 ## Commands
 
 ```bash
-npm install && dotnet tool restore        # bootstrap a checkout
+npm install                               # bootstrap; Nx targets run uv sync first
 npx nx run account-ledger-cli:run         # run the CLI
 npx nx run account-ledger-cli:test:quick  # typecheck, lint, unit tests with coverage gate
 npx nx run account-ledger-cli:test:integration
+npx nx run account-ledger-cli:test:e2e
 npm run generate:bindings                 # regenerate harness adapters after editing .agents/
 npm run check:hygiene                     # every declared main-surface gate
 ```
@@ -70,7 +71,8 @@ Specify behaviour as Gherkin in `specs/` and implement it test-first, one scenar
 [test-driven development](repo-governance/development/quality/testing/test-driven-development.md) and
 [behaviour-driven development](repo-governance/development/quality/testing/behaviour-driven-development.md). `test:unit`
 runs in-process with every OS-facing dependency injected and enforces 80% line coverage; `test:integration` uses real,
-isolated local resources and never the network. Both consume the same feature files. Never skip a test.
+isolated local resources and never the network; `test:e2e` runs the CLI through its public process boundary. All three
+consume the same feature files. Never skip a test.
 
 ## Commits and Integration
 
@@ -84,5 +86,5 @@ Never add AI or harness attribution to a commit or pull request: no `Co-Authored
 and no "Generated with" line. Never amend, rebase, or force-push existing commits without the owner's explicit
 instruction for that instance; see
 [no destructive git operations](repo-governance/development/workflow/no-destructive-git-operations.md). The hooks run
-public-safety screening and commitlint on commit, and `test:quick` plus `test:integration` for affected projects on
-push. Fix a failing hook at its cause; never bypass it.
+public-safety screening and commitlint on commit, and `test:quick`, `test:integration`, and `test:e2e` for affected
+projects on push. Fix a failing hook at its cause; never bypass it.

@@ -1,7 +1,7 @@
 {
-  "name": "proto-account-ledger-fs",
+  "name": "proto-account-ledger-py",
   "version": "1.0.0",
-  "description": "In-memory account ledger core in F#, scaffolded as an Nx monorepo.",
+  "description": "In-memory account ledger core in Python, scaffolded as an Nx monorepo.",
   "private": true,
   "engines": {
     "node": ">=24.15.0 <25"
