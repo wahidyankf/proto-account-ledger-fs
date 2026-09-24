@@ -1,0 +1,157 @@
+#!/usr/bin/env bash
+# The pinned RHINO this repository's gates run.
+#
+# Every gate surface dispatches through here rather than through whatever
+# `rhino` happens to be on PATH. A hygiene tool that changes what it enforces
+# between two runs of the same gate turns a clean repository red without anyone
+# editing it, and a tool resolved from PATH is exactly that: the same commit
+# validates differently on two machines, and neither one is wrong about its own
+# binary.
+#
+# Verification is unconditional and happens before execution. A cached copy is
+# re-digested every run, because a cache is a place other processes can write.
+#
+# Exit 125 is this wrapper refusing to run: a malformed pin, an unsupported
+# platform, a digest that does not match, or an identity that is not the one
+# the pin names. Every other exit code is RHINO's own.
+set -euo pipefail
+unset CDPATH
+
+tool_dir=$(cd -- "$(dirname -- "$0")" && pwd)
+lock_file="$tool_dir/rhino.lock"
+
+refuse() {
+	printf '[rhino] %s\n' "$1" >&2
+	exit 125
+}
+
+[[ -r "$lock_file" ]] || refuse "there is no pin at rhino.lock, and an unpinned gate is not a gate"
+
+# Every key must resolve exactly once. A duplicate is ambiguous, and ambiguity
+# in a pin is a configuration error rather than something to resolve by
+# preferring the first or the last.
+lock_value() {
+	local key=$1 value
+	value=$(awk -F= -v key="$key" '$0 !~ /^#/ && $1 == key { print substr($0, index($0, "=") + 1) }' "$lock_file")
+	[[ -n "$value" ]] || refuse "the pin declares no $key"
+	[[ "$value" != *$'\n'* ]] || refuse "the pin declares $key more than once"
+	printf '%s' "$value"
+}
+
+version=$(lock_value version)
+commit=$(lock_value commit)
+
+# A prerelease is a legitimate pin: this repository adopts a candidate before a
+# stable tag exists, which is the point of a candidate.
+[[ "$version" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.]+)?$ ]] ||
+	refuse "the pin declares an invalid version"
+[[ "$commit" =~ ^[0-9a-f]{40}$ ]] ||
+	refuse "the pin declares an invalid commit"
+
+# The identity the executable must report. Comparing the whole document rather
+# than parsing it means a build that reports an extra field, or the same fields
+# in another order, does not silently pass.
+expected_identity="{\"schemaVersion\":1,\"version\":\"${version%%-*}\",\"commit\":\"$commit\"}"
+
+# Only the platforms the release publishes. Anything else is refused by name
+# rather than approximated.
+case "$(uname -s)" in
+Darwin) os=apple-darwin ;;
+Linux) os=unknown-linux-gnu ;;
+*) refuse "there is no pinned RHINO for this operating system" ;;
+esac
+case "$(uname -m)" in
+x86_64 | amd64) arch=x86_64 ;;
+arm64 | aarch64) arch=aarch64 ;;
+*) refuse "there is no pinned RHINO for this architecture" ;;
+esac
+target="$arch-$os"
+
+digest=$(lock_value "$target")
+[[ "$digest" =~ ^[0-9a-f]{64}$ ]] || refuse "the pin declares an invalid digest for $target"
+
+# Downloaded binaries stay outside the repository, so a clone is never the
+# thing holding a multi-megabyte executable and a clean checkout is genuinely
+# clean. Tests may redirect the cache without weakening any verification.
+if [[ -n "${RHINO_INSTALL_CACHE:-}" ]]; then
+	cache_root=$RHINO_INSTALL_CACHE
+elif [[ "$os" == apple-darwin ]]; then
+	cache_root=${XDG_CACHE_HOME:-"$HOME/Library/Caches"}/ose-rhino
+else
+	cache_root=${XDG_CACHE_HOME:-"$HOME/.cache"}/ose-rhino
+fi
+install_dir="$cache_root/$version/$target"
+binary="$install_dir/rhino"
+
+digest_of() {
+	if command -v sha256sum >/dev/null 2>&1; then
+		sha256sum "$1" | awk '{ print $1 }'
+	else
+		shasum -a 256 "$1" | awk '{ print $1 }'
+	fi
+}
+
+identity_matches() {
+	local reported
+	reported=$("$1" version --json 2>/dev/null) || return 1
+	[[ "$reported" == "$expected_identity" ]]
+}
+
+# The archive digest is what the release publishes, so it is what the pin
+# records. The executable inside it has its own digest, which nothing publishes
+# and which this wrapper therefore records itself the first time it extracts
+# one, so a later run can re-verify a cached copy without the archive.
+stamp="$install_dir/.rhino.sha256"
+
+cached_is_valid() {
+	[[ -x "$binary" && -r "$stamp" ]] || return 1
+	local recorded
+	recorded=$(cat "$stamp")
+	[[ "$recorded" =~ ^[0-9a-f]{64}$ ]] || return 1
+	[[ "$(digest_of "$binary")" == "$recorded" ]] || return 1
+	identity_matches "$binary"
+}
+
+if ! cached_is_valid; then
+	# A hook may run with no network. Say so plainly rather than failing with a
+	# transport error that reads like an outage.
+	command -v curl >/dev/null 2>&1 || refuse "curl is required to install the pinned RHINO"
+
+	staging=$(mktemp -d "${TMPDIR:-/tmp}/rhino-install.XXXXXX")
+	trap 'rm -rf -- "$staging"' EXIT
+
+	archive="$staging/rhino-$target.tar.gz"
+	url="https://github.com/wahidyankf/rhino/releases/download/$version/rhino-$target.tar.gz"
+	curl -fsSL --retry 2 -o "$archive" "$url" ||
+		refuse "the pinned RHINO could not be fetched, and this wrapper will not fall back to an unpinned one"
+
+	# Verify before extracting. Verifying afterwards tells you what you already
+	# unpacked.
+	actual=$(digest_of "$archive")
+	[[ "$actual" == "$digest" ]] ||
+		refuse "the fetched archive does not match the pinned digest for $target"
+
+	tar -xzf "$archive" -C "$staging" ||
+		refuse "the pinned archive could not be extracted"
+	[[ -f "$staging/rhino" ]] ||
+		refuse "the pinned archive does not carry an executable named rhino"
+	chmod 0755 "$staging/rhino"
+
+	identity_matches "$staging/rhino" ||
+		refuse "the pinned archive reports an identity the pin does not name"
+
+	# Publish atomically, so a concurrent gate either sees no install or sees a
+	# complete one, and never sees a half-written executable.
+	mkdir -p "$install_dir"
+	published=$(mktemp "$install_dir/.rhino.XXXXXX")
+	cp "$staging/rhino" "$published"
+	chmod 0755 "$published"
+	printf '%s\n' "$(digest_of "$published")" >"$stamp.$$"
+	mv -f "$stamp.$$" "$stamp"
+	mv -f "$published" "$binary"
+
+	cached_is_valid ||
+		refuse "the installed RHINO did not verify immediately after installation"
+fi
+
+exec "$binary" "$@"

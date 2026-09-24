@@ -1,0 +1,165 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/wahidyankf/rhino/v0.5.0/schemas/repo-config/v2.schema.json
+schema: rhino/repo-config/v2
+
+repository: {}
+
+scan:
+  exclude-directories:
+    - .git
+    - .nx
+    - node_modules
+    - local-tmp
+    - generated-reports
+    - dist
+
+harness:
+  canonical:
+    agents:
+      name: name
+      description: description
+      grants: requires
+      denials: denies
+      constraints: constraints
+    skills:
+      name: name
+      description: description
+  requirements:
+    capabilities: [repository-read, repository-write, shell]
+    constraints: []
+    routes: [canonical-import]
+    identities: [description]
+  profiles:
+    - id: claude
+      supports:
+        capabilities: [repository-read, repository-write, shell]
+        constraints: []
+        routes: [canonical-import]
+        identities: [description]
+      instruction-adapter:
+        path: CLAUDE.md
+        route: "@{path}"
+      agent-adapter:
+        path: ".claude/agents/{name}.md"
+        format: front-matter
+        route-field: body
+        route:
+          "Before acting, read the complete canonical agent definition at the
+          repository-root path {path} and follow it as authoritative. If it
+          cannot be read, stop and report the missing path."
+        identity: { name: name, description: description }
+        fixed: { model: inherit }
+        translations:
+          - { when: always, field: tools, members: [Read] }
+          - {
+              when: requires,
+              capability: repository-read,
+              field: tools,
+              members: [Glob, Grep],
+            }
+          - {
+              when: requires,
+              capability: repository-write,
+              field: tools,
+              members: [Write, Edit],
+            }
+          - { when: requires, capability: shell, field: tools, members: [Bash] }
+          - {
+              when: denies,
+              capability: repository-write,
+              field: tools,
+              absent-members: [Write, Edit],
+            }
+          - {
+              when: denies,
+              capability: shell,
+              field: tools,
+              absent-members: [Bash, PowerShell],
+            }
+          - {
+              when: denies,
+              capability: nested-agent,
+              field: tools,
+              absent-members: [Agent, Task],
+            }
+      skill-adapter:
+        path: ".claude/skills/{name}/SKILL.md"
+        format: front-matter
+        route-field: body
+        route:
+          "Read {path} completely, resolve every relative resource from that
+          skill directory, and follow it as authoritative before acting."
+        identity: { name: name, description: description }
+    - id: codex
+      supports:
+        capabilities: [repository-read, repository-write, shell]
+        constraints: []
+        routes: [canonical-import]
+        identities: [description]
+      agent-adapter:
+        path: ".codex/agents/{name}.toml"
+        format: toml
+        route-field: developer_instructions
+        route:
+          "Before acting, read the complete canonical agent definition at the
+          repository-root path {path} and follow it as authoritative. If it
+          cannot be read, stop and report the missing path."
+        identity: { name: name, description: description }
+        fixed: { sandbox_mode: read-only }
+        absent: [model]
+
+policies:
+  markdown:
+    internal-link:
+      exclude-sources: ["specs/fixtures/**"]
+  governance:
+    word-budget:
+      count: whitespace-separated
+      surfaces:
+        - { glob: "AGENTS.md", fail: 750 }
+        - { glob: "CLAUDE.md", fail: 750 }
+        - { glob: "repo-governance/**/*.md", fail: 750 }
+        - { glob: ".agents/README.md", fail: 750 }
+        - { glob: ".claude/README.md", fail: 750 }
+        - { glob: ".codex/README.md", fail: 750 }
+    directory-map:
+      trees: []
+
+gates:
+  composition:
+    pull-request: { relation: exact }
+  entries:
+    - id: repo-config
+      type: check
+      command:
+        executable: ./rhino
+        args: [{ literal: repo-config }, { literal: validate }]
+      run-on: { main: {} }
+    - id: word-budget
+      type: check
+      command:
+        executable: ./rhino
+        args:
+          [
+            { literal: governance },
+            { literal: word-budget },
+            { literal: validate },
+          ]
+      run-on: { main: {} }
+    - id: directory-map
+      type: check
+      command:
+        executable: ./rhino
+        args:
+          [
+            { literal: governance },
+            { literal: directory-map },
+            { literal: validate },
+          ]
+      run-on: { main: {} }
+    - id: internal-link
+      type: check
+      command:
+        executable: ./rhino
+        args:
+          [{ literal: md }, { literal: internal-link }, { literal: validate }]
+      run-on: { pre-push: {}, pull-request: {}, main: {} }

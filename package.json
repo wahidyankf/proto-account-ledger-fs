@@ -12,15 +12,21 @@
   ],
   "scripts": {
     "build": "nx run-many -t build",
+    "check:governance": "./rhino governance word-budget validate",
+    "check:harness-parity": "./rhino harness adapters validate",
+    "check:hygiene": "./rhino gate run --surface main",
+    "check:markdown-links": "./rhino md internal-link validate",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "generate:bindings": "./rhino harness adapters generate",
     "lint": "nx run-many -t lint",
     "prepare": "husky",
     "test": "npm run test:quick",
     "test:integration": "nx run-many -t test:integration",
     "test:quick": "nx run-many -t test:quick",
     "test:unit": "nx run-many -t test:unit",
-    "typecheck": "nx run-many -t typecheck"
+    "typecheck": "nx run-many -t typecheck",
+    "validate:config": "./rhino repo-config validate"
   },
   "repository": {
     "type": "git",
