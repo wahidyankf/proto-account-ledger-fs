@@ -116,6 +116,11 @@ policies:
         - { glob: ".agents/skills/*/SKILL.md", schema: skill }
         - { glob: ".agents/agents/*.md", schema: agent }
         - { glob: ".agents/**/README.md", schema: governance }
+    heading-hierarchy:
+      surfaces:
+        - { glob: "**/*.md" }
+      single-h1: true
+      max-level-jump: 1
     naming:
       surfaces:
         - { glob: "**/*.md", style: kebab-case }
@@ -248,6 +253,17 @@ gates:
       command:
         executable: ./rhino
         args: [{ literal: md }, { literal: naming }, { literal: validate }]
+      run-on: { pre-push: {}, pull-request: {}, main: {} }
+    - id: heading-hierarchy
+      type: check
+      command:
+        executable: ./rhino
+        args:
+          [
+            { literal: md },
+            { literal: heading-hierarchy },
+            { literal: validate },
+          ]
       run-on: { pre-push: {}, pull-request: {}, main: {} }
     - id: internal-link
       type: check
