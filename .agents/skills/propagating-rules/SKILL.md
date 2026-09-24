@@ -20,7 +20,7 @@ The wording varies far more than the intent. Treat each of these as rule work:
 
 - **Named.** The request says rule, convention, policy, or standard, and asks to add, change, move, or remove one.
 - **Stated in ordinary words.** The request sets a standing expectation without naming it: from now on, always, never
-  again, before every release. An obligation stated in prose is a rule whether or not the word appears.
+  again, before every push. An obligation stated in prose is a rule whether or not the word appears.
 - **Implied by the target.** The edit lands in a rule-bearing location: governance prose, a root instruction file, an
   agent or skill definition, a gate declaration, or the hooks and pipeline jobs that enforce one.
 

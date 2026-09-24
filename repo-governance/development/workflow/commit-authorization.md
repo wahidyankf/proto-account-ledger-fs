@@ -56,12 +56,12 @@ Keep to the stated scope, meaning the files, theme, branch, and target it names,
 
 ## Separate Permissions
 
-| Action                                   | Governed by                                                                                                                                 |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- |
-| choosing where a change goes             | [Integration Path](integration-path.md), which picks a route and grants none                                                                |
-| merging a pull request                   | Pull Request Merge                                                                                                                          |
-| rewriting or discarding history          | [No Destructive Git Operations](no-destructive-git-operations.md)                                                                           |
-| bypassing a hook or publishing a release | [Hook Verification](hook-verification.md) for a hook and the adopter's own rule for a release; a commit or push grant never includes either |
+| Action                          | Governed by                                                                         |
+| ------------------------------- | ----------------------------------------------------------------------------------- |
+| choosing where a change goes    | [Integration Path](integration-path.md), which picks a route and grants none        |
+| merging a pull request          | Pull Request Merge                                                                  |
+| rewriting or discarding history | [No Destructive Git Operations](no-destructive-git-operations.md)                   |
+| bypassing a hook                | [Hook Verification](hook-verification.md); a commit or push grant never includes it |
 
 ## Why the Cost Is Asymmetric
 

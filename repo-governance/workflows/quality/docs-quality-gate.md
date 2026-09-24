@@ -11,8 +11,7 @@ when_to_use: >-
 
 ## Entry
 
-Someone explicitly names this gate or directs its audit; this repository cuts no releases, so nothing else starts it. A
-change or a propagation run never authorizes it alone.
+Someone explicitly names this gate or directs its audit. A change or a propagation run never authorizes it alone.
 
 - `scope` (`enum`: `change`, `all`; required): the documents one change affects, or the whole document set
   [Docs Propagation](../maintenance/docs-propagation.md) defines.

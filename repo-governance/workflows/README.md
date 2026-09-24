@@ -20,7 +20,7 @@ principle or a convention. When a workflow starts explaining how to decide well,
 | `plan/`        | the plan lifecycle, from idea to archived plan                                                                                             |
 | `adoption/`    | comparing a repository with this catalog, and adopting from it                                                                             |
 | `quality/`     | reviews that judge finished work against stated criteria, gates that repair work to meet them, and one that repairs upstream harness drift |
-| `maintenance/` | keeping a repository clean, current, releasable, its READMEs true, and its rules written once                                              |
+| `maintenance/` | keeping a repository clean, its documents true, and its rules written once                                                                 |
 
 ## Directory Map
 

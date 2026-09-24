@@ -76,7 +76,6 @@ Run dev-artifact-clean-up with integration pull-request and outcome pass.
 ## Related Workflows
 
 - [Execution](../plan/plan-execution.md) produces most of what this removes.
-- Release Cut leaves build scratch for it.
 
 ## Deletion Is Not Reversible in the Way People Assume
 
