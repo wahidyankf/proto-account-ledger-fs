@@ -23,7 +23,7 @@ are read side by side and defended figure by figure, so one fact told two ways i
 | `MOVEMENT.md`                 | criterion identifiers, events, each day's figures, and what a pending one waits on  |
 | `OUTPUT_TARGET.md`            | the exact text the command-line program prints                                      |
 | `ACCEPTANCE_CRITERIA.feature` | the criteria as Gherkin, each with its verdict tag and ambiguity list               |
-| `WORKLOG.md`                  | when each piece of work happened                                                    |
+| `WORKLOG.md`                  | when each section of work happened                                                  |
 
 ## Rules
 
@@ -50,19 +50,22 @@ inside a `WORKLOG.md` entry. Followed: each cited identifier has its entry. Viol
 
 Reason: an identifier that points nowhere hides which decision a figure waits on.
 
-**Work is logged.** Every commit that changes an assessment doc other than `WORKLOG.md` adds at least one `WORKLOG.md`
-entry stamped with the real local time of the work it records. Followed: each such commit adds a row. Violated: one that
-adds none.
+**Work is logged.** Every commit that changes an assessment doc other than `WORKLOG.md` adds or extends a `WORKLOG.md`
+entry stamped with the real local times of the work it records. Followed: each such commit adds or extends a row.
+Violated: one that does neither.
 
-Reason: the brief requires a timestamped, real worklog, and a reconstructed one is neither.
+Reason: the brief requires a timestamped, real worklog; a reconstructed one is neither.
 
-**The worklog is newest first and never rewritten.** A new `WORKLOG.md` entry goes at the top of the table, directly
-under its header, and an entry is never edited or removed once committed, even when a later change renames what it
-mentions. Followed: every committed row survives unchanged in every later revision, and no row is older than the row
-below it. Violated: a revision that edits or drops a committed row, or places a row above a newer one.
+**The worklog is newest first, one entry per section of work.** A new `WORKLOG.md` entry goes at the top, under its
+header, stamped with the real local times its section began and ended. Committed entries may be merged into one for
+their section, spanning their times and saying only what they said, in the words then true; no committed entry is
+otherwise edited or removed. Followed: every committed entry survives unchanged or inside a merged entry covering its
+times, and none sits above a newer one. Violated: an edit or drop outside a merge, a merge adding a claim or leaving its
+times, or an entry above a newer one.
 
-Reason: an entry records what was true when the work happened, and rewriting it turns a log into a story; the newest
-work comes first because a reader most often checks what happened last.
+Reason: an entry records what was true when the work happened, and rewriting it turns a log into a story; a merged entry
+keeps that truth, and the git history keeps the finer entries. The newest comes first, as the latest work is checked
+most.
 
 ## Enforcement
 
