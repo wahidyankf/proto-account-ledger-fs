@@ -17,6 +17,10 @@ contract describes whichever one was built first, and the second is then judged 
 The catalog ships no validator. An adopter that checks plan structure builds or chooses the implementations, and each
 one conforms to this contract and reports every rule the modules below identify.
 
+This repository builds no validator and keeps no fixture corpus; structural validation is prose-only, as
+[Structural Validation](plans/006-structural-validation.md) records. The contract stays so a future validator has a
+fixed target.
+
 ## Modules
 
 1. [Inputs and Exit Classes](plan-validator-contract/001-inputs-and-exits.md)

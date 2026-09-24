@@ -29,6 +29,13 @@ frees review to spend its attention on the part no validator can reach.
 | phase numbering     | a delivery phase heading carries no phase number                                  |
 | archival separation | archival items are interleaved with substantive phases rather than following them |
 
+## This Repository's Binding: Prose Only
+
+This repository runs no mechanical plan validator, by owner decision. The table above is applied as a prose checklist:
+the structural step of [plan-quality-gate](../../../workflows/plan/plan-quality-gate.md) reads the frozen plan against
+each row and records every failing row as a finding with its path. Nothing here claims a mechanical guarantee, so a
+reviewer states which rows were checked rather than reporting "structure passed".
+
 ## What Is Not Checked
 
 A validator does not judge whether the writing is clear, whether the acceptance criteria are the right ones, whether the
