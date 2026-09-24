@@ -15,5 +15,5 @@ standard only when it uses that stack, and the stack's programming skill defers 
 
 ## Directory Map
 
-- [F# Standards](fsharp-standards.md) — F# formatter and warnings gates, dependency-ordered compilation, a functional
-  core, F# domain and failure types, and the adopter's framework choices
+- [Python Standards](python-standards.md) — the uv, ruff, strict pyright, and pytest gates, a functional core, Python
+  domain shapes, `Decimal` money, and failures

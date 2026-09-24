@@ -128,9 +128,9 @@
       "digest": "61912460e55afe17a60bde8200fdfd6dfdc41f74503c1628478f371bf5257434"
     },
     {
-      "id": "skill/programming-fsharp",
-      "path": ".agents/skills/programming-fsharp/SKILL.md",
-      "digest": "0e3b993c88c6359f1d369f0d23f8a8a91acae78f36c51f080b05f839856b41eb"
+      "id": "skill/programming-python",
+      "path": ".agents/skills/programming-python/SKILL.md",
+      "digest": "7377837e7928ea439a6291eecbd13c2a748d5ae8945921ae408b46c2a1149841"
     },
     {
       "id": "skill/propagating-rules",
@@ -160,7 +160,7 @@
     {
       "id": "instruction",
       "path": "AGENTS.md",
-      "digest": "e03eadc7766cbb99295d12b846feeaae65a5744f3640cec0838bd3c938c120af"
+      "digest": "47026dbf046736c3a99a56f07971522094191da73a5662a04dcbc506450eea86"
     }
   ]
 }

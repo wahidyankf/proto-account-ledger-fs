@@ -59,11 +59,10 @@ reading, not by a validator; see
 
 ## Coding Conventions
 
-Follow the [F# standards](repo-governance/development/quality/stacks/fsharp-standards.md): a functional core with an
-imperative shell, discriminated unions and records for the domain, `Result` for expected failures, warnings as errors,
-Fantomas formatting, and FSharpLint. Prettier is the source of truth for Markdown, JSON, and YAML; prose wraps at 120
-columns. Diagrams are plain-text ASCII only, never Mermaid; see
-[diagrams](repo-governance/conventions/writing/diagrams.md).
+Follow the [Python standards](repo-governance/development/quality/stacks/python-standards.md): a functional core with an
+imperative shell, frozen dataclasses and enums for the domain, `Decimal` for money, strict pyright, and ruff for lint
+and format. Prettier is the source of truth for Markdown, JSON, and YAML; prose wraps at 120 columns. Diagrams are
+plain-text ASCII only, never Mermaid; see [diagrams](repo-governance/conventions/writing/diagrams.md).
 
 ## Testing
 

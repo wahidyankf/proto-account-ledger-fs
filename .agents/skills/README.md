@@ -36,7 +36,7 @@ is the one harness that needs a generated route.
 - [plan-writing-gherkin-criteria](plan-writing-gherkin-criteria/SKILL.md) — acceptance scenarios that can actually fail
 - [practicing-trunk-based-development](practicing-trunk-based-development/SKILL.md) — keeping work on one trunk in small
   pieces
-- [programming-fsharp](programming-fsharp/SKILL.md) — F# work under the F# standard
+- [programming-python](programming-python/SKILL.md) — Python work under the Python standard
 - [propagating-rules](propagating-rules/SKILL.md) — routing rule work through propagation
 - [understanding-governance-architecture](understanding-governance-architecture/SKILL.md) — reading a repository as
   ordered levels
