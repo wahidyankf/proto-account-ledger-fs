@@ -46,6 +46,10 @@ Test levels follow [Test Boundaries and Gates](../quality/testing/test-boundarie
 Running the integration and end-to-end suites on every push, not only `test:quick`, is this repository's choice: both
 are fast and local, and a push is the moment publication begins.
 
+Affected detection reads each target's `inputs`, so a test target lists every file its tests read beyond the project's
+sources: for `account-ledger-cli`, the stream files under `streams/` and the root `OUTPUT_TARGET.md`, whose fenced block
+the golden run compares byte for byte. A change to either then marks the project affected and reruns its tests on push.
+
 ## Verification
 
 Run `npm exec -- nx show projects` to confirm project discovery, then the affected targets. Keep `.nx/` and build output

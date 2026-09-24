@@ -36,6 +36,32 @@ first.
   adds the reversed-refund rule, which no planned test reached; both failed on their assertions first.
 - Phase 5 (05:14–05:37): 17 cycles green, three of them (5.5, 5.6, 5.11) passing on arrival with their mutation proofs;
   every criterion green, and every day report complete as data. Last gate passed: Phase 5. Next: Phase 6, Cycle 6.1.
+- Phase 5 committed as `148a42e` and pushed, `58b0cdb..148a42e`.
+- Cycle 6.5's RED stub added `DayReport.processed`, the events-processed field tech-docs 002's day report names. Phase 5
+  left it unbuilt because no test asked for it until rendering. It is pinned by Cycle 6.5's comparison with
+  OUTPUT_TARGET and, from Cycle 6.6 on, by Day 6's instalment rows.
+- While building Cycle 6.8, a gap between the assessment docs and Phase 5's code came to light. AMB-035 and tech-docs
+  001 and 002 say a reversed interest event drops out of what was fired for its day, and `accrued` is net of reversals.
+  Phase 5's `interest_fired`, `accrued`, and `interest_base` ignored reversals, and no planned test reversed an interest
+  event or a capitalization. Three tests were added to `tests/unit/test_end_of_day.py`, each failing on its assertion
+  first (05:52):
+- `test_amb_035_a_reversed_interest_event_is_fired_again` failed with
+  `('INT-001-D2@D2', ...) != ('INT-001-D1@D2', ...)`.
+  `test_amb_035_a_reversed_capitalization_returns_its_interest_to_accrued` failed with
+  `('CAP-001@D2', 0.40) != ('CAP-001@D2', 0.80)`.
+  `test_amb_035_a_capitalization_reversed_on_its_own_day_leaves_that_days_interest` failed on a spurious `INT-001-D1@D2`
+  of `-0.01`.
+- The fix, 05:52 to 05:53: `balances._reversed` collects the events an accepted reversal undid. `interest_fired`,
+  `accrued`, and `accrued_days` skip those events, and `interest_base` subtracts no capitalization whose reversal that
+  day's closing already counts. 85 passed. Mutation proof: letting `accrued_days` reset at a reversed capitalization
+  failed the second test's days assertion, `(Day(2),) != (Day(1), Day(2))`; restored.
+- Cycle 6.17 added `test_a_closed_pipe_exits_141_quietly` to `tests/e2e/test_program.py`, beside the planned tests,
+  since only a separate process shows the exit-time flush. It hands the program a pipe whose read end is already closed.
+  At 06:01 it failed on its assertion:
+  `('Exception ignored while flushing sys.stdout:\nBrokenPipeError: [Errno 32] Broken pipe\n', 120) == ('', 141)`.
+- The fix, 06:02: `_replay` flushes `out` after writing, so a closed pipe raises inside `run`'s handlers; the test then
+  passed, and the e2e suite passed 6 of 6. Mutation proof: without `main`'s null-device `dup2`, the test failed again
+  with the same exit-time message; restored.
 
 ## Execution Checkout
 
@@ -1687,10 +1713,12 @@ and is handled as the rule above says.
       Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
   - Done 05:37: the row `2026-09-25 05:14–05:37`, "Plan execution, Phase 5: fees, refunds, interest, capitalization, and
     the day report".
-- [ ] [AI] Commit the phase as `feat(account-ledger-cli): close each day with fees, interest, and capitalization`, then
+- [x] [AI] Commit the phase as `feat(account-ledger-cli): close each day with fees, interest, and capitalization`, then
       push to `origin/main`; the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof:
       the commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-06 to AC-20,
       AC-22, AC-31, AC-35.
+  - Done 05:38: commit `148a42e`; the pre-push hook ran `test:quick`, `test:integration`, and `test:e2e`, all green;
+    pushed `58b0cdb..148a42e` to `origin/main`.
 
 Pause safety: the phase leaves every criterion green and every day report complete as data. Re-verify with
 `npx nx run account-ledger-cli:test:quick`.
@@ -1699,217 +1727,447 @@ Pause safety: the phase leaves every criterion green and every day report comple
 
 The renderer, the floor-tier shell, and the golden run ([input and output](tech-docs/003-input-output-and-cli.md)).
 
-- [ ] [AI] RED, the phase's outer tests: write `test_the_brief_replay_prints_output_target` in
+- [x] [AI] RED, the phase's outer tests: write `test_the_brief_replay_prints_output_target` in
       `tests/e2e/test_program.py`, with `tests/support/output_target.py`, and beside it the error paths
       `test_a_missing_stream_file_exits_2`, `test_a_malformed_amount_names_its_line`,
       `test_an_unheld_account_names_its_line`, and `test_no_argument_prints_usage_and_exits_2`. Each fails on its
       assertion, since the program still prints the greeting and exits 0. Command: `pytest tests/e2e`. Proof: each
       failure's head, recorded here. Acceptance: AC-01 to AC-04.
+  - Done 05:39. `tests/support/output_target.py` reads OUTPUT_TARGET.md's fenced block plus one newline. The e2e runner
+    now runs the program from the application directory, so AC-02's relative `streams/missing.csv` and AC-03's line-3
+    `12.00x` are tested as written.
+  - `pytest tests/e2e`: 5 failed, 1 passed (the greeting test, retired in 6.10), each on its assertion: the golden run
+    `At index 0 diff: 'Hello, world!\n' != '====...'`; the missing file, the malformed amount, the unheld account, and
+    no argument each `assert ('Hello, world!\n', '', 0) == ('', 'error: ...', 2)` or `('', 'usage: ...', 2)`.
 
 ### Cycle 6.1 — a day opens with its banner and its blocks
 
-- [ ] [AI] RED: write `test_a_day_opens_with_its_banner_and_its_blocks` in `tests/unit/test_render.py`, with the
+- [x] [AI] RED: write `test_a_day_opens_with_its_banner_and_its_blocks` in `tests/unit/test_render.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because the stub renders nothing. Command:
       `pytest tests/unit/test_render.py`. Proof: the failure message, recorded here. Acceptance: AC-01.
-- [ ] [AI] GREEN: Write `render.py`'s banner, block titles, and blank-line layout. Command:
+  - Done 05:39. New file `tests/unit/test_render.py`. Stub: `render.py` with `render(reports)` returning `""`.
+  - `pytest tests/unit/test_render.py`: 1 failed, on its assertion: `At index 0 diff: '' != '====...'`. The stub
+    rendered nothing.
+- [x] [AI] GREEN: Write `render.py`'s banner, block titles, and blank-line layout. Command:
       `pytest tests/unit/test_render.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance:
       AC-01.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:40. `render` joins each day with one blank line and ends with a newline; `_day` prints the banner between
+    two lines of 120 `=`, then the three titled blocks, each after one blank line, with empty bodies for now.
+  - `pytest tests/unit/test_render.py`: 1 passed. `pytest tests/unit`: 75 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-01.
+  - Result: nothing to tidy. `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 75
+    passed, coverage 98%.
 
 ### Cycle 6.2 — an empty block prints none
 
-- [ ] [AI] RED: write `test_an_empty_block_prints_none` in `tests/unit/test_render.py`, with the smallest stub it
+- [x] [AI] RED: write `test_an_empty_block_prints_none` in `tests/unit/test_render.py`, with the smallest stub it
       imports, and run it; it fails on its assertion because an empty block prints an empty table. Command:
       `pytest tests/unit/test_render.py`. Proof: the failure message, recorded here. Acceptance: AC-01.
-- [ ] [AI] GREEN: Print two spaces and `none` for a block with no rows. Command: `pytest tests/unit/test_render.py`,
+  - Done 05:41. Test reads Day 0's report from a replay of no events under the brief's config; its Events processed and
+    EOD applied blocks are empty. No new stub: `render` already imports.
+  - `pytest tests/unit/test_render.py`: 1 failed, 1 passed, on its assertion: `At index 1 diff: '' != '  none'`. The
+    empty block printed no row at all.
+- [x] [AI] GREEN: Print two spaces and `none` for a block with no rows. Command: `pytest tests/unit/test_render.py`,
       then `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance: AC-01.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:41. `_block` prints `  none` in place of an empty body (AMB-033).
+  - `pytest tests/unit/test_render.py`: 2 passed. `pytest tests/unit`: 76 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-01.
+  - Result: nothing to tidy. `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 76
+    passed, coverage 98%.
 
 ### Cycle 6.3 — a table is a box as wide as its cells
 
-- [ ] [AI] RED: write `test_a_table_is_a_box_as_wide_as_its_cells` in `tests/unit/test_render.py`, with the smallest
+- [x] [AI] RED: write `test_a_table_is_a_box_as_wide_as_its_cells` in `tests/unit/test_render.py`, with the smallest
       stub it imports, and run it; it fails on its assertion because cells are not padded to their column. Command:
       `pytest tests/unit/test_render.py`. Proof: the failure message, recorded here. Acceptance: AC-01.
-- [ ] [AI] GREEN: Draw the borders and pad every column, left-aligned, to its widest cell. Command:
+  - Done 05:43. The test compares Day 0's rendering with OUTPUT_TARGET's Day 0, byte for byte; its only table is the
+    closing summary. No new stub: `render` already imports.
+  - `pytest tests/unit/test_render.py`: 1 failed, 2 passed, on its assertion: the diff shows `+   none` where
+    OUTPUT_TARGET draws `+------------------------+---------------+...`. No cell was drawn or padded yet, so the closing
+    summary fell to the empty-block text.
+- [x] [AI] GREEN: Draw the borders and pad every column, left-aligned, to its widest cell. Command:
       `pytest tests/unit/test_render.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance:
       AC-01.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:43. `_table(header, rows)` sizes each column to its widest cell, header included, and draws the `+`/`-`
+    borders and `|` rows with one space either side. `_summary` builds the Item rows in tech-docs 003's order: restated
+    closings, then balances, authorizations, and errors, with `none` or `-` where nothing is. Authorizations print a
+    placeholder until Cycle 6.7, amounts print `digits` until Cycle 6.4.
+  - `pytest tests/unit/test_render.py`: 3 passed. `pytest tests/unit`: 77 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-01.
+  - Done 05:43. Removed an unused `_day_cell` helper and its import, added ahead of its cycle.
+    `npx nx run account-ledger-cli:test:quick`: pyright and ruff clean, 77 passed, coverage 97%.
 
 ### Cycle 6.4 — amounts print in their currency's format
 
-- [ ] [AI] RED: write `test_amounts_print_in_their_currencys_format` in `tests/unit/test_render.py`, with the smallest
+- [x] [AI] RED: write `test_amounts_print_in_their_currencys_format` in `tests/unit/test_render.py`, with the smallest
       stub it imports, and run it; it fails on its assertion because `-370.00` prints with a hyphen and `1200.00` with
       no comma. Command: `pytest tests/unit/test_render.py`. Proof: the failure message, recorded here. Acceptance:
       AC-01.
-- [ ] [AI] GREEN: Format places, thousands, and `−` from `money.digits`, a `DOWN` adjustment taking the minus. Command:
+  - Done 05:44. The test renders Day 1 after credits of AED 1200.00 and BHD 1000.000, and the brief's Day 5, and asserts
+    that every closing-summary line is one length. No new stub.
+  - `pytest tests/unit/test_render.py`: 1 failed, 3 passed, on its assertion:
+    `assert '| Closing ledger balance | 1,200.00      | 1,000.000     |' in [...]`. The row printed `1200.00`, and Day
+    5's restated row printed `-370.00` with a hyphen.
+- [x] [AI] GREEN: Format places, thousands, and `−` from `money.digits`, a `DOWN` adjustment taking the minus. Command:
       `pytest tests/unit/test_render.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance:
       AC-01.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:44. `_amount` takes `digits`, groups the whole part by threes, and prints `−` (U+2212, `MINUS`) for a
+    negative, so no `Decimal` leaves `money`. A `DOWN` adjustment's minus is a Detail text, so it lands with the
+    interest Detail in Cycle 6.5.
+  - `pytest tests/unit/test_render.py`: 4 passed. `pytest tests/unit`: 78 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-01.
+  - Done 05:44. `_amount` reads `digits` once instead of three times. `npx nx run account-ledger-cli:test:quick`:
+    pyright 0 errors, ruff all checks passed, 78 passed, coverage 97%.
 
 ### Cycle 6.5 — each row prints its type and detail
 
-- [ ] [AI] RED: write `test_each_row_prints_its_type_and_detail` in `tests/unit/test_render.py`, with the smallest stub
+- [x] [AI] RED: write `test_each_row_prints_its_type_and_detail` in `tests/unit/test_render.py`, with the smallest stub
       it imports, and run it; it fails on its assertion because rows print the class names of their events. Command:
       `pytest tests/unit/test_render.py`. Proof: the failure message, recorded here. Acceptance: AC-01.
-- [ ] [AI] GREEN: Render the Type strings and Detail patterns tech-docs 003 lists. Command:
+  - Done 05:46. The test renders the brief's whole replay and compares the Events processed and EOD applied blocks of
+    Days 1 to 5 with OUTPUT_TARGET's.
+  - Stub: `DayReport` gains `processed`, tech-docs 002's events processed. Each `Processed` holds the incoming event,
+    the entry it made whatever its outcome, and the instalments it fired, in log order. Both tables print with the
+    event's class name for Type and an empty Detail.
+  - `pytest tests/unit/test_render.py`: 1 failed, 4 passed, on its assertion. Day 1's Events processed diff shows
+    `| Credit | ACC-001 |        |` where OUTPUT_TARGET has `AED 1,200.00`. Day 5's EOD rows print `Fee` and
+    `InterestAdjustment`, not `Overdraft fee` and `Interest adjustment`.
+- [x] [AI] GREEN: Render the Type strings and Detail patterns tech-docs 003 lists. Command:
       `pytest tests/unit/test_render.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance:
       AC-01.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:47. `_type`, `_detail`, `_posting`, `_settles`, `_fired`, and `_step` each end in `assert_never` or an
+    exhausted enum. A settlement whose effect is `ForcePosted` `force-posts`; any other `settles for`. An interest
+    Detail prints no currency code, and a `DOWN` adjustment takes `−`. Each instalment prints as a `Credit` row,
+    `instalment n of N`, under its credit.
+  - `pytest tests/unit/test_render.py`: 5 passed. `pytest tests/unit`: 79 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-01.
+  - Done 05:47. The instalment row moved out of `_processed` into `_instalment`.
+    `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 79 passed, coverage 97%.
 
 ### Cycle 6.6 — instalment counts print as words
 
-- [ ] [AI] RED: write `test_instalment_counts_print_as_words` in `tests/unit/test_render.py`, with the smallest stub it
+- [x] [AI] RED: write `test_instalment_counts_print_as_words` in `tests/unit/test_render.py`, with the smallest stub it
       imports, and run it; it fails on its assertion because the count prints as `3`. Command:
       `pytest tests/unit/test_render.py`. Proof: the failure message, recorded here. Acceptance: AC-01.
-- [ ] [AI] GREEN: Spell counts from two to ten. Command: `pytest tests/unit/test_render.py`, then `pytest tests/unit`.
+  - Done 05:47. The test checks E10's four rows on Day 6 of the brief against OUTPUT_TARGET's, and the Detail of a BHD
+    12.000 credit in two, ten, and eleven instalments. No new stub.
+  - `pytest tests/unit/test_render.py`: 1 failed, 5 passed, on its assertion:
+    `'... BHD 10.000 in 3 equal instalments ...' != '... BHD 10.000 in three equal instalments ...'`.
+- [x] [AI] GREEN: Spell counts from two to ten. Command: `pytest tests/unit/test_render.py`, then `pytest tests/unit`.
       Proof: both passing runs, recorded here. Acceptance: AC-01.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:47. `_count` spells two to ten and prints digits above. The instalment parts already printed
+    `instalment n of N` from Cycle 6.5.
+  - `pytest tests/unit/test_render.py`: 6 passed. `pytest tests/unit`: 80 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-01.
+  - Done 05:47. The index arithmetic became a `SPELLED` map from count to word, read with `get`.
+    `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 80 passed, coverage 97%.
 
 ### Cycle 6.7 — authorization states print as OUTPUT_TARGET shows
 
-- [ ] [AI] RED: write `test_authorization_states_print_as_output_target_shows` in `tests/unit/test_render.py`, with the
+- [x] [AI] RED: write `test_authorization_states_print_as_output_target_shows` in `tests/unit/test_render.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because states print as class names. Command:
       `pytest tests/unit/test_render.py`. Proof: the failure message, recorded here. Acceptance: AC-01.
-- [ ] [AI] GREEN: Render each state's text. Command: `pytest tests/unit/test_render.py`, then `pytest tests/unit`.
+  - Done 05:48. The test compares every `Authorizations` row of the brief's rendering with OUTPUT_TARGET's. No new stub.
+  - `pytest tests/unit/test_render.py`: 1 failed, 6 passed, on its assertion: `At index 2 diff:`. Day 2's ACC-001 cell
+    printed `Approved`, the class name, where OUTPUT_TARGET prints `Auth-A approved, hold 200.00`.
+- [x] [AI] GREEN: Render each state's text. Command: `pytest tests/unit/test_render.py`, then `pytest tests/unit`.
       Proof: both passing runs, recorded here. Acceptance: AC-01.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:48. `_state` matches the three states, ending in `assert_never`: `approved, hold A`, `declined, A`, and
+    `settled for A`, each amount without its code.
+  - `pytest tests/unit/test_render.py`: 7 passed. `pytest tests/unit`: 81 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-01.
+  - Result: nothing to tidy. `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 81
+    passed, coverage 97%.
 
 ### Cycle 6.8 — capitalization names the days it accrued
 
-- [ ] [AI] RED: write `test_capitalization_names_the_days_it_accrued` in `tests/unit/test_render.py`, with the smallest
+- [x] [AI] RED: write `test_capitalization_names_the_days_it_accrued` in `tests/unit/test_render.py`, with the smallest
       stub it imports, and run it; it fails on its assertion because the detail omits the days. Command:
       `pytest tests/unit/test_render.py`. Proof: the failure message, recorded here. Acceptance: AC-01.
-- [ ] [AI] GREEN: Render the day list rules tech-docs 003 fixes. Command: `pytest tests/unit/test_render.py`, then
+  - Done 05:49. The test checks the brief's Day 6 capitalization Details, and a stream whose ACC-001 earns interest on
+    Days 1, 2, and 4 only while ACC-002 earns on Day 6 alone.
+  - Stub: `report.Capitalized(event, days)`, step 3's row, which now carries the days it pays, with `days` always empty.
+    `EndOfDayEvent` no longer includes `Capitalization`, so `Fired` cannot hold one. The report test's row helper
+    matches the new row.
+  - `pytest tests/unit/test_render.py`: 1 failed, 7 passed, on its assertion:
+    `At index 0 diff: 'AED 0.76' != 'AED 0.76, accrued Days 1 to 6'`.
+- [x] [AI] GREEN: Render the day list rules tech-docs 003 fixes. Command: `pytest tests/unit/test_render.py`, then
       `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance: AC-01.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:50. `balances.accrued_days` returns each day whose interest events, fired since the account's previous
+    capitalization, do not net to zero. `accrued_days_of` dispatches it by currency, and the report fills
+    `Capitalized.days` from it. `render._days` prints `Day N`, `Days N and M`, `Days N to M` for three or more in a row,
+    and `Days 1, 2, and 4` otherwise.
+  - `pytest tests/unit/test_render.py`: 8 passed. `pytest tests/unit`: 82 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-01.
+  - Done 05:53. Nothing in the cycle's code needed tidying. Between GREEN and this run, the three reversal tests in the
+    Execution Record made `accrued_days` skip reversed events. `npx nx run account-ledger-cli:test:quick`: pyright 0
+    errors, ruff all checks passed, 85 passed, coverage 97%.
 
 ### Cycle 6.9 — the texts beyond OUTPUT_TARGET follow its patterns
 
-- [ ] [AI] RED: write `test_the_texts_beyond_output_target_follow_its_patterns` in `tests/unit/test_render.py`, with the
+- [x] [AI] RED: write `test_the_texts_beyond_output_target_follow_its_patterns` in `tests/unit/test_render.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because a duplicate and a force-post against a
       known hold print no detail. Command: `pytest tests/unit/test_render.py`. Proof: the failure message, recorded
       here. Acceptance: AC-01.
-- [ ] [AI] GREEN: Render the D22 texts in tech-docs 003. Command: `pytest tests/unit/test_render.py`, then
+  - Done 05:54. The test covers a duplicate, a force-post against the settled Auth-A, two refused reversals whose
+    reasons share one Errors cell, and a reversal of `INT-001-D1@D1`. No new stub. The first run failed on an
+    `IndexError` in the test's own row filter, which read `| Errors` as an event row; that is not a RED, so the filter
+    was fixed and the test rerun.
+  - `pytest tests/unit/test_render.py`: 1 failed, 8 passed, on its assertion:
+    `At index 1 diff: 'AED 400.00' != 'duplicate of E1, no effect'`. The duplicate printed its credit's usual detail
+    rather than none, as the item expected. The force-post against a known hold already printed as E6 does, from Cycle
+    6.5's `ForcePosted` rule.
+- [x] [AI] GREEN: Render the D22 texts in tech-docs 003. Command: `pytest tests/unit/test_render.py`, then
       `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance: AC-01.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:54. `_detail` prints `duplicate of ID, no effect` for a `Duplicate` entry. Every other D22 text in the table
+    already followed from Cycles 6.3 to 6.8: a rejected event's usual detail, a reversal naming a marker, errors joined
+    by `; `, and `no interest capitalized`. The partial-settlement texts arrive with Phase 8.
+  - `pytest tests/unit/test_render.py`: 9 passed. `pytest tests/unit`: 86 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-01.
+  - Result: nothing to tidy. `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 86
+    passed, coverage 97%.
 
 ### Cycle 6.10 — a stream file prints its report and exits 0
 
-- [ ] [AI] RED: write `test_a_stream_file_prints_its_report_and_exits_0` in `tests/unit/test_cli.py`, with the smallest
+- [x] [AI] RED: write `test_a_stream_file_prints_its_report_and_exits_0` in `tests/unit/test_cli.py`, with the smallest
       stub it imports, and run it; it fails on its assertion because `run` still prints the greeting. Command:
       `pytest tests/unit/test_cli.py`. Proof: the failure message, recorded here. Acceptance: AC-01.
-- [ ] [AI] GREEN: Rewrite `cli.run(argv, read_text, out, err)` to read, parse, replay, and render; delete `greeting.py`
+  - Done 05:56. The test injects a reader that maps `streams/challenge.csv` to `BRIEF_CSV`, the stream file's text now
+    held in `tests/support/brief_stream.py`, and expects OUTPUT_TARGET on `out`, nothing on `err`, and `0`. Stub:
+    `run(argv, read_text, out, err)`, still writing the greeting; the greeting's unit test moved to the new signature.
+  - `pytest tests/unit/test_cli.py`: 1 failed, 1 passed, on its assertion:
+    `assert ('Hello, world!\n', '', 0) == ('====...', '', 0)`.
+- [x] [AI] GREEN: Rewrite `cli.run(argv, read_text, out, err)` to read, parse, replay, and render; delete `greeting.py`
       and the greeting tests. Command: `pytest tests/unit/test_cli.py`, then `pytest tests/unit`. Proof: both passing
       runs, recorded here. Acceptance: AC-01.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:56. `run` parses each named stream under `CHALLENGE`, replays it, and writes `render` of its reports. A
+    `StreamError` returns `2` with no message yet, the smallest branch the type checker demands; its message arrives in
+    Cycle 6.13. `main` binds `sys.argv[1:]`, a plain file reader, and the standard streams.
+  - Deleted `greeting.py` and its three tests: `test_the_greeting_prints_and_exits_0` in `tests/unit/test_cli.py`,
+    `tests/integration/test_main.py`, and the e2e greeting test. Cycle 6.17 writes `test_main.py` anew.
+  - `pytest tests/unit/test_cli.py`: 1 passed. `pytest tests/unit`: 86 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-01.
+  - Result: nothing to tidy; `main`'s reader gains its encoding in Cycle 6.17.
+    `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 86 passed, coverage 97%.
 
 ### Cycle 6.11 — no argument is a usage error
 
-- [ ] [AI] RED: write `test_no_argument_is_a_usage_error_exiting_2` in `tests/unit/test_cli.py`, with the smallest stub
+- [x] [AI] RED: write `test_no_argument_is_a_usage_error_exiting_2` in `tests/unit/test_cli.py`, with the smallest stub
       it imports, and run it; it fails on its assertion because `run` with no argument exits 0. Command:
       `pytest tests/unit/test_cli.py`. Proof: the failure message, recorded here. Acceptance: AC-04.
-- [ ] [AI] GREEN: Print the usage line to `err` and return 2. Command: `pytest tests/unit/test_cli.py`, then
+  - Done 05:57. Parametrized over no argument and two arguments, with a reader holding only the brief's stream. No new
+    stub.
+  - `pytest tests/unit/test_cli.py`: 2 failed, 1 passed, each on its assertion. No argument gave
+    `assert ('', '', 0) == ('', 'usage: ...am.csv>\n', 2)`, since `run` looped over no paths and exited 0. Two arguments
+    printed two reports and exited 0.
+- [x] [AI] GREEN: Print the usage line to `err` and return 2. Command: `pytest tests/unit/test_cli.py`, then
       `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance: AC-04.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:57. `run` checks for exactly one argument first, writes `USAGE` and a newline to `err`, and returns `2`; the
+    loop over paths became one read of `argv[0]`.
+  - `pytest tests/unit/test_cli.py`: 3 passed. `pytest tests/unit`: 88 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-04.
+  - Done 05:57. The first quick run failed lint with ruff `I001`, from a stray blank line the edit left after the
+    imports; `ruff check --fix` removed it. The rerun of `npx nx run account-ledger-cli:test:quick`: pyright 0 errors,
+    ruff all checks passed, 88 passed, coverage 97%.
 
 ### Cycle 6.12 — an unreadable file exits 2
 
-- [ ] [AI] RED: write `test_an_unreadable_file_exits_2` in `tests/unit/test_cli.py`, with the smallest stub it imports,
+- [x] [AI] RED: write `test_an_unreadable_file_exits_2` in `tests/unit/test_cli.py`, with the smallest stub it imports,
       and run it; it fails on its assertion because the reader's error escapes `run`. Command:
       `pytest tests/unit/test_cli.py`. Proof: the failure message, recorded here. Acceptance: AC-02.
-- [ ] [AI] GREEN: Catch the read failure in `run` and print `error: cannot read PATH: REASON`. Command:
+  - Done 05:58. Parametrized over a reader raising `FileNotFoundError` and one raising `PermissionError`. No new stub.
+  - `pytest tests/unit/test_cli.py`: 2 failed, 3 passed, each on the reader's own error escaping `run` as the item
+    states: `FileNotFoundError: [Errno 2] No such file or directory` and
+    `PermissionError: [Errno 13] Permission denied`.
+- [x] [AI] GREEN: Catch the read failure in `run` and print `error: cannot read PATH: REASON`. Command:
       `pytest tests/unit/test_cli.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance:
       AC-02.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:58. `run` catches `OSError` around the read and writes `error: cannot read PATH: REASON`. `_reason` gives
+    `no such file` for `FileNotFoundError` and the error's `strerror` otherwise.
+  - `pytest tests/unit/test_cli.py`: 5 passed. `pytest tests/unit`: 90 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-02.
+  - Result: nothing to tidy. `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 90
+    passed, coverage 97%.
 
 ### Cycle 6.13 — a malformed stream exits 2
 
-- [ ] [AI] RED: write `test_a_malformed_stream_exits_2_naming_the_line` in `tests/unit/test_cli.py`, with the smallest
+- [x] [AI] RED: write `test_a_malformed_stream_exits_2_naming_the_line` in `tests/unit/test_cli.py`, with the smallest
       stub it imports, and run it; it fails on its assertion because the `StreamError` is rendered as a report. Command:
       `pytest tests/unit/test_cli.py`. Proof: the failure message, recorded here. Acceptance: AC-03.
-- [ ] [AI] GREEN: Print the error and return 2. Command: `pytest tests/unit/test_cli.py`, then `pytest tests/unit`.
+  - Done 05:58. The test feeds the brief's stream with E2's amount changed to `950.00x`, on line 3. No new stub.
+  - `pytest tests/unit/test_cli.py`: 1 failed, 5 passed, on its assertion:
+    `At index 1 diff: '' != "error: line 3: amount '950.00x' is not a decimal number\n"`. Cycle 6.10's branch returned
+    `2` but wrote nothing, not the report the item expected; exit status and output already matched.
+- [x] [AI] GREEN: Print the error and return 2. Command: `pytest tests/unit/test_cli.py`, then `pytest tests/unit`.
       Proof: both passing runs, recorded here. Acceptance: AC-03.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:58. `run` writes `error: ` and the `StreamError` message to `err`.
+  - `pytest tests/unit/test_cli.py`: 6 passed. `pytest tests/unit`: 91 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-03.
+  - Result: nothing to tidy. `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 91
+    passed, coverage 97%.
 
 ### Cycle 6.14 — an internal failure exits 2
 
-- [ ] [AI] RED: write `test_an_internal_failure_exits_2_without_a_traceback` in `tests/unit/test_cli.py`, with the
+- [x] [AI] RED: write `test_an_internal_failure_exits_2_without_a_traceback` in `tests/unit/test_cli.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because an exception from the core escapes `run`.
       Command: `pytest tests/unit/test_cli.py`. Proof: the failure message, recorded here. Acceptance: AC-36.
-- [ ] [AI] GREEN: Catch it in `run`, print its type, and return 2. Command: `pytest tests/unit/test_cli.py`, then
+  - Done 05:59. The test replaces `cli.replay` with one raising `ZeroDivisionError`, standing for a bug in the core. No
+    new stub.
+  - `pytest tests/unit/test_cli.py`: 1 failed, 6 passed, on the stated reason: `ZeroDivisionError: a bug in the core`
+    escaped `run`.
+- [x] [AI] GREEN: Catch it in `run`, print its type, and return 2. Command: `pytest tests/unit/test_cli.py`, then
       `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance: AC-36.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:59. `run` wraps the work, now `_replay`, and turns any other `Exception` into
+    `error: internal failure: TYPE` and `2`. The report is rendered whole before it is written, so a failure prints none
+    of it.
+  - `pytest tests/unit/test_cli.py`: 7 passed. `pytest tests/unit`: 92 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-36.
+  - Result: nothing to tidy. `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 92
+    passed, coverage 97%.
 
 ### Cycle 6.15 — a closed pipe exits 141
 
-- [ ] [AI] RED: write `test_a_closed_pipe_exits_141_quietly` in `tests/unit/test_cli.py`, with the smallest stub it
+- [x] [AI] RED: write `test_a_closed_pipe_exits_141_quietly` in `tests/unit/test_cli.py`, with the smallest stub it
       imports, and run it; it fails on its assertion because `BrokenPipeError` escapes `run`. Command:
       `pytest tests/unit/test_cli.py`. Proof: the failure message, recorded here. Acceptance: AC-36.
-- [ ] [AI] GREEN: Catch it in `run` and return 141. Command: `pytest tests/unit/test_cli.py`, then `pytest tests/unit`.
+  - Done 05:59. The test's `ClosedPipe` output raises `BrokenPipeError` on write. No new stub.
+  - `pytest tests/unit/test_cli.py`: 1 failed, 7 passed, on its assertion:
+    `At index 0 diff: 'error: internal failure: BrokenPipeError\n' != ''`. Cycle 6.14's catch-all took the error, a
+    subclass of `Exception`, so it did not escape `run` as the item expected; it was reported as an internal failure and
+    exit 2 instead.
+- [x] [AI] GREEN: Catch it in `run` and return 141. Command: `pytest tests/unit/test_cli.py`, then `pytest tests/unit`.
       Proof: both passing runs, recorded here. Acceptance: AC-36.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 06:00. `run` catches `BrokenPipeError` ahead of the catch-all and returns `141`, printing nothing.
+  - `pytest tests/unit/test_cli.py`: 8 passed. `pytest tests/unit`: 93 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-36.
+  - Result: nothing to tidy. `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 93
+    passed, coverage 97%.
 
 ### Cycle 6.16 — an interrupt exits 130
 
-- [ ] [AI] RED: write `test_an_interrupt_exits_130` in `tests/unit/test_cli.py`, with the smallest stub it imports, and
+- [x] [AI] RED: write `test_an_interrupt_exits_130` in `tests/unit/test_cli.py`, with the smallest stub it imports, and
       run it; it fails on its assertion because `KeyboardInterrupt` escapes `run`. Command:
       `pytest tests/unit/test_cli.py`. Proof: the failure message, recorded here. Acceptance: AC-36.
-- [ ] [AI] GREEN: Catch it in `run` and return 130. Command: `pytest tests/unit/test_cli.py`, then `pytest tests/unit`.
+  - Done 06:00. The test's reader raises `KeyboardInterrupt`. No new stub.
+  - `pytest tests/unit/test_cli.py`: on the stated reason, the interrupt escaped `run`. It is not an `Exception`, so the
+    catch-all let it pass, and pytest stopped the session at `test_cli.py:109: KeyboardInterrupt` after 8 passed.
+- [x] [AI] GREEN: Catch it in `run` and return 130. Command: `pytest tests/unit/test_cli.py`, then `pytest tests/unit`.
       Proof: both passing runs, recorded here. Acceptance: AC-36.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 06:00. `run` catches `KeyboardInterrupt` and returns `130`, printing nothing.
+  - `pytest tests/unit/test_cli.py`: 9 passed. `pytest tests/unit`: 94 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-36.
+  - Result: nothing to tidy. `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 94
+    passed, coverage 97%.
 
 ### Cycle 6.17 — main reads a real file and a missing one
 
-- [ ] [AI] RED: write `test_main_reads_a_real_file_and_reports_a_missing_one` in `tests/integration/test_main.py`, with
+- [x] [AI] RED: write `test_main_reads_a_real_file_and_reports_a_missing_one` in `tests/integration/test_main.py`, with
       the smallest stub it imports, and run it; it fails on its assertion because `main` does not yet bind a UTF-8
       reader and the real streams. Command: `pytest tests/integration/test_main.py`. Proof: the failure message,
       recorded here. Acceptance: AC-02.
-- [ ] [AI] GREEN: Bind `main` to `sys.argv[1:]`, a UTF-8 reader, and UTF-8 standard streams, pointing standard output at
+  - Done 06:01. The test runs `main` from the application directory on `streams/challenge.csv`, then on the missing
+    `streams/missing.csv`, capturing the real descriptors with `capfd`. Standard output is an ASCII-encoded wrapper on
+    the real descriptor 1, standing for a non-UTF-8 locale. No new stub.
+  - `pytest tests/integration/test_main.py`: 1 failed, on its assertion:
+    `assert ('', 'error: ...deError\n', 2) == ('====...', '', 0)`. `main` wrote through the locale's encoding, so `−`
+    raised `UnicodeEncodeError` and `run` reported an internal failure.
+- [x] [AI] GREEN: Bind `main` to `sys.argv[1:]`, a UTF-8 reader, and UTF-8 standard streams, pointing standard output at
       the null device after a closed pipe. Command: `pytest tests/integration/test_main.py`, then `pytest tests/unit`.
       Proof: both passing runs, recorded here. Acceptance: AC-02.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 06:01. `main` reconfigures `sys.stdout` and `sys.stderr` to UTF-8 and reads files as UTF-8 through `_read`.
+    After `CLOSED_PIPE` it points standard output at the null device with `os.dup2`. The two statuses became the
+    constants `CLOSED_PIPE` and `INTERRUPTED`.
+  - `pytest tests/integration/test_main.py`: 1 passed. `pytest tests/unit`: 94 passed.
+  - A process-level check then found the closed pipe exiting 120 with `Exception ignored while flushing sys.stdout`. The
+    report only filled the buffer, so the pipe broke at the exit-time flush, outside `run`. The e2e test and the fix are
+    in the Execution Record.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-02.
-- [ ] [AI] Prove the integration reader can fail: stub the parser to succeed, point `main` at a file missing a column,
+  - Done 06:02. Nothing further to tidy. `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks
+    passed, 94 passed, coverage 96%.
+- [x] [AI] Prove the integration reader can fail: stub the parser to succeed, point `main` at a file missing a column,
       watch `test_main_reads_a_real_file_and_reports_a_missing_one`'s assertion on exit 2 fail, restore. Proof: the
       failing run's head. Acceptance: AC-02, AC-03.
-- [ ] [AI] GREEN, the outer tests: the golden run and the four error paths pass in `tests/e2e/test_program.py`. Command:
+  - Done 06:03, two mutations, each restored. (a) `main`'s reader made to succeed for every path, so a missing file
+    reads as the brief's stream. (b) As the item states, the parser stubbed to succeed and the test's second run pointed
+    at a file missing its `instalments` column.
+  - Each run of `pytest tests/integration/test_main.py` failed on the exit-2 assertion,
+    `assert ('', 0) == ('error: cann...ch file\\n', 2)`. After restoring, `pytest tests/integration` gave 2 passed, and
+    the temporary file was removed.
+- [x] [AI] GREEN, the outer tests: the golden run and the four error paths pass in `tests/e2e/test_program.py`. Command:
       `pytest tests/e2e`. Proof: the passing run. Acceptance: AC-01 to AC-04.
-- [ ] [AI] Prove the golden harness can fail: change one character of the expected text in the test's copy, run it,
+  - Done 06:03. `pytest tests/e2e`: 6 passed. They are the golden run, the four error paths, and the added closed-pipe
+    test; the greeting test was retired in Cycle 6.10.
+- [x] [AI] Prove the golden harness can fail: change one character of the expected text in the test's copy, run it,
       watch it fail with a diff naming the line, restore. Proof: the failing run's head. Acceptance: AC-01.
-- [ ] [AI] Make `run` pass `streams/challenge.csv`, and list `{workspaceRoot}/OUTPUT_TARGET.md` among the test targets'
+  - Done 06:03. The first try changed Day 6's `285.76` to `285.77` in the test's copy. It failed, but the tuple
+    comparison truncated the text and named no line. The golden assertion now compares the output line by line, then
+    standard error and the exit status on their own.
+  - Rerun with the same one-character change:
+    `At index 223 diff: '| Closing ledger balance  | 285.76 ...' != '| Closing ledger balance  | 285.77 ...'`, naming
+    the line. Restored; `pytest tests/e2e`: 6 passed.
+- [x] [AI] Make `run` pass `streams/challenge.csv`, and list `{workspaceRoot}/OUTPUT_TARGET.md` among the test targets'
       inputs in `project.json`, beside the streams Cycle 3.24 listed. Commands: `npx nx run account-ledger-cli:run`
       prints the report, and `npx nx show projects --affected --files=OUTPUT_TARGET.md` lists `account-ledger-cli`.
       Proof: both outputs; if the second does not, recovery item RC4. Today no project is affected by
       `OUTPUT_TARGET.md`, which is what this item changes. Acceptance: AC-01.
-- [ ] [AI] Add the sentence naming the stream files and `OUTPUT_TARGET.md` among the test targets' inputs to
+  - Done 06:04. `run` now runs `python -m account_ledger streams/challenge.csv`. `{workspaceRoot}/OUTPUT_TARGET.md`
+    joins the inputs of `test:unit`, `test:integration`, `test:e2e`, and `test:quick`, beside the streams.
+  - `npx nx run account-ledger-cli:run` printed the report, ending with Day 6's closing summary,
+    `| Closing ledger balance  | 285.76 ... | 10.008 |`. `npx nx show projects --affected --files=OUTPUT_TARGET.md`
+    printed `["account-ledger-cli"]`, so recovery item RC4 does not fire.
+- [x] [AI] Add the sentence naming the stream files and `OUTPUT_TARGET.md` among the test targets' inputs to
       `repo-governance/development/workflow/nx-workspace-policy.md`, through a Rules Propagation record at
       `local-tmp/rules-propagation-nx-inputs.md`, now that the item above lists them. Proof: the record and the md
       gates. Acceptance: AC-28.
-- [ ] [AI] Complete `architecture.md` as the C4 model tech-docs 006 states: context, containers, components with the
+  - Done 06:05. The Nx workspace policy's push-gate section gains one paragraph. Affected detection reads each target's
+    `inputs`, so a test target lists every file its tests read beyond its sources: for `account-ledger-cli`, the stream
+    files and the root `OUTPUT_TARGET.md`.
+  - Record: `local-tmp/rules-propagation-nx-inputs.md`, closed 06:05. Its conflict scan found only Task Runner Target
+    Standards' "Inputs are explicit" rule, which the sentence applies. `./rhino governance word-budget validate`: exit
+    0, no findings; `./rhino md internal-link validate`: no findings.
+- [x] [AI] Complete `architecture.md` as the C4 model tech-docs 006 states: context, containers, components with the
       shell, code, and the dynamic view of one day; drop the scaffold wording. Proof: every named module exists.
       Acceptance: AC-26.
-- [ ] [AI] Rewrite `apps/account-ledger-cli/README.md`: layout, commands, the exit statuses, and the floor tier (D13).
+  - Done 06:06. `specs/apps/account-ledger/cli/architecture.md` rewritten per tech-docs 006. L1 is the operator, the
+    stream file, and both standard streams with the exit statuses; L2 the process, the file, and the UTF-8 streams. L3
+    shows the shell of `cli`, `stream_csv`, and `render` around the core, dependencies pointing inward, with the
+    component table. L4 gives the types and their unions, and the as-built state diagram. The dynamic view traces one
+    day from processing to the flushed write, and the constraints add D7 and AMB-018. The scaffold wording and the
+    greeting are gone.
+  - Proof: each of the 14 components the table names is a module in `src/account_ledger/`, and every checked module
+    printed `ok`. `__init__` and `__main__` are the package and its entry, not components.
+    `./rhino md internal-link validate` found nothing, and `sh local-tmp/check-md.sh` passed.
+- [x] [AI] Rewrite `apps/account-ledger-cli/README.md`: layout, commands, the exit statuses, and the floor tier (D13).
       Proof: the md gates. Acceptance: AC-02 to AC-04, AC-29.
+  - Done 06:07. The README now covers what the program does and the layout, both rewritten. It gives the commands, with
+    `run` printing the report and a line for replaying another stream, and the stream file's header and fault rule. An
+    exit-status table publishes `0`, the four `2` cases with their standard-error texts, `141`, and `130`. It records
+    the floor tier (D13), and the table standing in for `--help` as D13's adaptation. `tests/support/cli_run.py`, unused
+    since the greeting went, was deleted.
+  - Proof: the README's replay line printed the report, and with no argument it printed the usage line and exited 2.
+    `sh local-tmp/check-md.sh` passed, and `./rhino md internal-link validate` checked 1365 links with no findings; the
+    heading-hierarchy and naming validators passed.
 
 ### Phase 6 Gate
 
-- [ ] [AI] Run every gate command below against the phase's combined state; each exits 0. Proof: each command and its
+- [x] [AI] Run every gate command below against the phase's combined state; each exits 0. Proof: each command and its
       exit status, recorded here. Acceptance: AC-01 to AC-04, AC-26, AC-36. Commands:
   - `npx nx run account-ledger-cli:test:quick`
   - `npx nx run account-ledger-cli:test:integration`
@@ -1917,8 +2175,13 @@ The renderer, the floor-tier shell, and the golden run ([input and output](tech-
   - `npm run -s check:hygiene`
   - `sh local-tmp/check-md.sh`
   - `./rhino md internal-link validate && ./rhino md heading-hierarchy validate && ./rhino md naming validate`
-- [ ] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
+  - Done 06:10, each exiting 0: `test:quick` 0 (94 passed, coverage 96%); `test:integration` 0 (2 passed); `test:e2e` 0
+    (6 passed); `npm run -s check:hygiene` 0; `sh local-tmp/check-md.sh` 0; `./rhino md internal-link validate` 0,
+    `heading-hierarchy validate` 0, `naming validate` 0.
+- [x] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
       Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
+  - Done 06:10: the row `2026-09-25 05:38–06:10`, "Plan execution, Phase 6: the report as text and the floor-tier CLI;
+    OUTPUT_TARGET exact", above Phase 5's.
 - [ ] [AI] Commit the phase as `feat(account-ledger-cli): print the daily report from a stream file`, then push to
       `origin/main`; the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof: the
       commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-01 to AC-04, AC-26,

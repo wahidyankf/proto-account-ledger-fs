@@ -48,7 +48,7 @@
       ]
     },
     "run": {
-      "command": "uv run --no-sync python -m account_ledger",
+      "command": "uv run --no-sync python -m account_ledger streams/challenge.csv",
       "options": {
         "cwd": "apps/account-ledger-cli",
         "env": {
@@ -72,7 +72,8 @@
         "{projectRoot}/.python-version",
         "{projectRoot}/tests/support/**/*.py",
         "{projectRoot}/tests/unit/**/*.py",
-        "{projectRoot}/streams/**/*.csv"
+        "{projectRoot}/streams/**/*.csv",
+        "{workspaceRoot}/OUTPUT_TARGET.md"
       ]
     },
     "test:integration": {
@@ -89,7 +90,8 @@
         "{projectRoot}/.python-version",
         "{projectRoot}/tests/support/**/*.py",
         "{projectRoot}/tests/integration/**/*.py",
-        "{projectRoot}/streams/**/*.csv"
+        "{projectRoot}/streams/**/*.csv",
+        "{workspaceRoot}/OUTPUT_TARGET.md"
       ]
     },
     "test:integration:watch": {
@@ -114,7 +116,8 @@
         "{projectRoot}/.python-version",
         "{projectRoot}/tests/support/**/*.py",
         "{projectRoot}/tests/e2e/**/*.py",
-        "{projectRoot}/streams/**/*.csv"
+        "{projectRoot}/streams/**/*.csv",
+        "{workspaceRoot}/OUTPUT_TARGET.md"
       ]
     },
     "test:e2e:watch": {
@@ -142,7 +145,8 @@
         "{projectRoot}/uv.lock",
         "{projectRoot}/.python-version",
         "{projectRoot}/tests/**/*.py",
-        "{projectRoot}/streams/**/*.csv"
+        "{projectRoot}/streams/**/*.csv",
+        "{workspaceRoot}/OUTPUT_TARGET.md"
       ]
     },
     "test:quick:watch": {

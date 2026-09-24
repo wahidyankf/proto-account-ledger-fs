@@ -1,12 +1,32 @@
-"""The real entry point on the process's real standard output, captured at the file-descriptor level."""
+"""The real entry point on real files and the process's real file descriptors, captured at the descriptor level."""
+
+import io
+import sys
+from pathlib import Path
 
 import pytest
 
 from account_ledger.cli import main
+from support.output_target import expected_output
+
+APP = Path(__file__).resolve().parents[2]
 
 
-def test_main_prints_the_greeting_and_exits_0(capfd: pytest.CaptureFixture[str]) -> None:
-    exit_code = main()
+def test_main_reads_a_real_file_and_reports_a_missing_one(
+    capfd: pytest.CaptureFixture[str], monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """AC-02: `main` reads the named file from disk and writes the report as UTF-8 whatever the locale, here an ASCII
+    standard output on the real descriptor 1; a missing file prints its reason to standard error and exits 2."""
+    monkeypatch.chdir(APP)
+    monkeypatch.setattr(sys, "stdout", io.TextIOWrapper(io.FileIO(1, "w", closefd=False), encoding="ascii"))
+    monkeypatch.setattr(sys, "argv", ["account-ledger-cli", "streams/challenge.csv"])
 
-    assert capfd.readouterr().out == "Hello, world!\n"
-    assert exit_code == 0
+    read = main()
+    sys.stdout.flush()
+    printed = capfd.readouterr()
+
+    monkeypatch.setattr(sys, "argv", ["account-ledger-cli", "streams/missing.csv"])
+    missing = main()
+
+    assert (printed.out, printed.err, read) == (expected_output(), "", 0)
+    assert (capfd.readouterr().err, missing) == ("error: cannot read streams/missing.csv: no such file\n", 2)

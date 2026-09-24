@@ -8,7 +8,7 @@ from account_ledger.events import IncomingEvent
 from account_ledger.ids import AccountId, AuthorizationId, Day, text
 from account_ledger.money import Amount
 from account_ledger.replay import replay
-from account_ledger.report import DayReport, Fired, NothingFired, Restatement
+from account_ledger.report import Capitalized, DayReport, Fired, NothingFired, Restatement, Step
 from support.brief_stream import brief_stream
 from support.streams import ACC_001, ACC_002, authorization, credit, debit, reversal
 from support.values import aed, bhd
@@ -104,6 +104,8 @@ def rows(day_report: DayReport) -> list[tuple[int, str, tuple[str, ...]]]:
         match row:
             case Fired(step=step, event=event):
                 found.append((step.value, text(event.id), (event.account.value,)))
+            case Capitalized(event=event):
+                found.append((Step.CAPITALIZATION.value, text(event.id), (event.account.value,)))
             case NothingFired(step=step, accounts=accounts, note=note):
                 found.append((step.value, note.value, tuple(account.value for account in accounts)))
     return found

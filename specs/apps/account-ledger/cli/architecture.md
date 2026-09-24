@@ -1,99 +1,146 @@
 # Account Ledger CLI — Architecture
 
-The current, as-built system. A change that alters an actor, a container, a component responsibility, a relationship, or
-a boundary updates this document in the same commit.
+The current, as-built system, as a C4 model in four levels and one dynamic view. A change that alters an actor, a
+container, a component responsibility, a relationship, or a boundary updates this document in the same commit.
 
 ## Scope
 
-`account-ledger-cli` is being built toward the ledger: its core reads a stream and replays it into an append-only log
-and a report per day, while the program still prints the greeting until the shell reads a stream. It runs locally, reads
-nothing from disk yet, and never reaches the network.
+`account-ledger-cli` is the in-memory ledger: it reads a CSV stream of account events, replays it day by day into an
+append-only log, and prints one report per day. It runs locally, reads only the file it is given, keeps nothing after it
+exits, and never reaches the network.
 
-## System Context
-
-```text
-+-------------+   argv    +--------------------+   text + exit code   +-----------------+
-|  Developer  | --------> | account-ledger-cli | -------------------> | terminal stdout |
-+-------------+           +--------------------+                      +-----------------+
-```
-
-One actor runs one executable, which writes one line to standard output and exits.
-
-## Containers
-
-| Container            | What it is              | How it is reached                   |
-| -------------------- | ----------------------- | ----------------------------------- |
-| `account-ledger-cli` | one Python 3.14 package | `npx nx run account-ledger-cli:run` |
-
-## Components
+## L1 — System Context
 
 ```text
-+--------------------------------+        +-----------------------------+
-| cli (imperative shell)         | -----> | greeting (functional core)  |
-| entry point, writes to a       |  calls | pure: returns the greeting  |
-| TextIO, returns exit code      |        | text, performs no I/O       |
-+--------------------------------+        +-----------------------------+
-
-                  +----------------------------------------+
-                  | stream_csv (shell edge)                |
-                  | text in; events or the first fault out |
-                  +----------------------------------------+
-                          | builds                | reads
-                          v                       v
-                  +----------------+      +----------------+
-                  | events         |      | config         |
-                  | incoming kinds |      | accounts,      |
-                  | and posting    |      | window, days   |
-                  +----------------+      +----------------+
-                          |                       |
-                          +-----------+-----------+
-                                      | both use money and ids
-                                      v
-                  +----------------+      +----------------+
-                  | money          | ---> | ids            |
-                  | Aed, Bhd,      |      | days, IDs,     |
-                  | Amount, split  |      | markers, count |
-                  +----------------+      +----------------+
+                  stream.csv (UTF-8 CSV)
++-------------+   argv: one path   +--------------------+   report (UTF-8)       +-----------------+
+|  Operator   | -----------------> | account-ledger-cli | ---------------------> | standard output |
++-------------+                    +--------------------+                        +-----------------+
+                                         |       ^         usage and errors        +-----------------+
+                                         |       +-------------------------------> | standard error  |
+                                         | reads                                   +-----------------+
+                                         v
+                                   +------------+
+                                   | the stream |   the brief's is streams/challenge.csv
+                                   | file       |
+                                   +------------+
 ```
 
-The ledger core sits above those types. `replay` feeds each event to `processing` on the day it arrives, closes each day
-through `end_of_day`, and asks `report` for that day's figures; every other component reads the log, and only
-`processing` and `end_of_day` append to it.
+One actor runs one executable with one stream file. The report goes to standard output; a usage error, an unreadable or
+malformed stream, or an internal failure goes to standard error with exit status 2. A closed pipe exits 141 and an
+interrupt 130, as the application README publishes.
+
+## L2 — Containers
+
+| Container            | What it is                              | How it is reached                                |
+| -------------------- | --------------------------------------- | ------------------------------------------------ |
+| `account-ledger-cli` | one Python 3.14 process, one package    | `python -m account_ledger PATH`, or its Nx `run` |
+| the stream file      | a UTF-8 CSV, header row, one event each | the path in `argv`; `streams/challenge.csv`      |
+| standard streams     | the process's output and error          | UTF-8 whatever the locale, since `−` is printed  |
+
+## L3 — Components
+
+The shell holds every effect and every raw value; the core is pure. Every dependency points inward, from the shell to
+the core and, inside the core, from the driver down to the types.
 
 ```text
-                  +-------------------------------------------------------+
-                  | replay (functional core)                              |
-                  | the stream in listed order, then each day's close     |
-                  +-------------------------------------------------------+
-                        | each event          | each close        | each day
-                        v                     v                   v
-                  +--------------+     +--------------+     +--------------+
-                  | processing   |     | end_of_day   |     | report       |
-                  | one entry    |     | fees, then   |     | closings,    |
-                  | per event    |     | interest,    |     | restated,    |
-                  |              |     | capitalizing |     | rows, errors |
-                  +--------------+     +--------------+     +--------------+
-                     |       |                |                   |
-       decides and   |       | available      | closing, accrued  | closing, available
-       settles       v       v                v                   v
-     +----------------+  reads  +--------------------------------------+
-     | authorizations | <------ | balances                             |
-     | the state      | states  | closing, holds, available, accrued,  |
-     | machine        |         | interest base                        |
-     +----------------+         +--------------------------------------+
-               |                   |
-               +---------+---------+
-                         | reads; processing and end_of_day also append
-                         v
-                  +----------------+
-                  | log            |
-                  | entries and    |
-                  | rejections     |
-                  +----------------+
+  shell   +--------------------------------------------------------------------------------+
+          | cli: run(argv, read_text, out, err) -> exit code; main binds the real effects   |
+          +--------------------------------------------------------------------------------+
+               | text               | events                   | reports
+               v                    v                          v
+          +--------------+   +--------------------------+   +--------------------------+
+          | stream_csv   |   | replay (driver)          |   | render                   |
+          | text -> the  |   | the stream in listed     |   | DayReport -> text, as    |
+          | events, or   |   | order, each day closed   |   | OUTPUT_TARGET prints it  |
+          | a StreamError|   | on time                  |   |                          |
+          +--------------+   +--------------------------+   +--------------------------+
+  --------------------------------------------------------------------------------------------- core
+                              | each event     | each close       | each day
+                              v                v                  v
+                        +------------+   +------------+     +------------+
+                        | processing |   | end_of_day |     | report     |
+                        | one entry  |   | fees, then |     | a day as   |
+                        | per event  |   | interest,  |     | data       |
+                        |            |   | capitalize |     |            |
+                        +------------+   +------------+     +------------+
+                           |      |           |                  |
+            decides and    |      v           v                  v
+            settles        |   +---------------------------------------+
+                           |   | balances: closing, holds, available,  |
+                           |   | accrued, accrued days, interest base  |
+                           |   +---------------------------------------+
+                           v                  |
+                   +----------------+  reads  |
+                   | authorizations | <-------+
+                   | the states and |
+                   | transition     |
+                   +----------------+
+                           |                  every component above reads the log;
+                           v                  only processing and end_of_day append
+                   +----------------+
+                   | log            |
+                   | entries and    |
+                   | rejections     |
+                   +----------------+
+                           |
+                           v
+          +----------+  +----------+  +----------+  +----------+
+          | events   |  | config   |  | money    |  | ids      |
+          | incoming |  | accounts,|  | Aed, Bhd,|  | days,    |
+          | and fired|  | window   |  | Amount   |  | IDs      |
+          +----------+  +----------+  +----------+  +----------+
 ```
 
-`authorizations` is a hand-written state machine: one frozen dataclass per state, and `transition` as one `match` over
-the state and its trigger, ending in `assert_never`. As built:
+| Component        | Responsibility                                                                                  |
+| ---------------- | ----------------------------------------------------------------------------------------------- |
+| `cli`            | `run` checks the arguments, reads, parses, replays, renders, and maps every failure to a status |
+| `stream_csv`     | parsing the stream file into incoming events, or the first fault with its line                  |
+| `render`         | the report as text: banners, box tables, amounts with `−` and separators, and every Detail text |
+| `replay`         | the stream in listed order, closing each day on time, with the log and report of every day      |
+| `processing`     | one entry per incoming event: idempotency first, then by kind, with reversal checks in order    |
+| `end_of_day`     | a day's close: fee re-evaluation, interest accruals and adjustments, then capitalization        |
+| `report`         | a day's processed events, end-of-day rows, closings, restated closings, holds, and errors       |
+| `balances`       | closing, holds, available, accrued interest and its days, and interest base, each over the log  |
+| `authorizations` | the authorization states, `decide`, `transition`, and the records replayed from the log         |
+| `log`            | the append-only tuple of entries, each kind holding only its outcome, and every `Rejection`     |
+| `events`         | the incoming event kinds, joined in `IncomingEvent`, and the fired kinds, in `FiredEvent`       |
+| `config`         | the accounts, each typed by its currency, the window of days, and the capitalization days       |
+| `money`          | `Aed` and `Bhd`, one type per currency; `Amount` above zero; the split, fee, and daily interest |
+| `ids`            | days, account and hold IDs, incoming IDs, fired-event markers, and instalment counts            |
+
+`log` imports `AuthorizationState` for annotations only, so the log and the state machine do not import each other at
+run time.
+
+## L4 — Code
+
+The types each component exposes and how they refer to one another. Every type is a frozen dataclass, a union of them,
+or an enum, and each constructor refuses an illegal value, so none can be built.
+
+```text
+money     Aed | Bhd = Money             Amount[M: (Aed, Bhd)], above zero      Direction: UP | DOWN
+ids       Day   AccountId   AuthorizationId   IncomingId   InstalmentCount
+          EventId = IncomingId | InstalmentId | FeeId | RefundId | InterestId | CapitalizationId
+events    IncomingEvent = Credit | Debit | Authorization | Settlement | Reversal     each holds an Amount
+          FiredEvent = Instalment | Fee | FeeRefund | InterestAccrual | InterestAdjustment | Capitalization
+config    Account[M] = id + opening M     LedgerConfig = accounts, first_day, last_day, capitalization_days
+log       LogEntry = Accepted | AuthorizationDecided | SettlementAccepted | Rejected | Duplicate
+          SettlementAccepted.effect = Captured(before, after) | ForcePosted
+          Rejected.reason: Rejection = IdReused | AlreadyReversed | ReversesAReversal | UnknownTarget
+                                       | MovedNoMoney | AlreadyUndone
+          Log = tuple[LogEntry, ...]
+auth      AuthorizationState = Approved(hold) | Declined(requested) | Settled(captured)
+          transition(state, SettleFinal) -> AuthorizationState | NoTransition
+          AuthorizationRecord = the Authorization + its state now
+report    DayReport = day, processed: Processed..., closing, available, restated: Restatement...,
+                      authorizations: AuthorizationRecord..., errors, end_of_day: (Fired | Capitalized
+                      | NothingFired)...
+replay    Replay = reports: DayReport..., logs: Log...     report(day), log_at(day)
+stream    parse_stream(text, config) -> tuple[IncomingEvent, ...] | StreamError(line, message)
+```
+
+`authorizations` is a hand-written state machine: `transition` is one `match` over the state and its trigger, ending in
+`assert_never`. As built:
 
 ```text
              available >= 0 after the hold            SettleFinal
@@ -107,31 +154,31 @@ the state and its trigger, ending in `assert_never`. As built:
 `Settled` and `Declined` have no transition for any trigger, so a settlement against either, or against an authorization
 the log does not know, is accepted as a force-post: it debits its amount and releases no hold.
 
-The shell owns every effect: it receives the output stream and returns the exit code. The core is pure, so unit tests
-call the shell in-process with an injected stream, integration tests run the entry point against the real standard
-output, and end-to-end tests run `python -m account_ledger` as a separate process. The stream reader is the one place
-text becomes domain values: each value is built through its type's `parse`, which returns a typed fault instead of an
-illegal value, so the core never checks a value again. `events` and `config` both use `money` and `ids`, and `money`
-uses `ids` for the instalment count.
+## Dynamic View — One Day
 
-| Component        | Responsibility                                                                                  |
-| ---------------- | ----------------------------------------------------------------------------------------------- |
-| `greeting`       | the greeting text; replaced by the ledger when the shell reads a stream                         |
-| `cli`            | `run` writes the greeting to its stream and returns `0`; `main` binds `stdout`                  |
-| `money`          | `Aed` and `Bhd`, one type per currency; `Amount` above zero; the split, fee, and daily interest |
-| `ids`            | days, account and hold IDs, incoming IDs, fired-event markers, and instalment counts            |
-| `config`         | the accounts, each typed by its currency, the window of days, and the capitalization days       |
-| `events`         | the incoming event kinds, joined in `IncomingEvent`, and the fired kinds, in `FiredEvent`       |
-| `stream_csv`     | parsing the stream file into incoming events, or the first fault with its line                  |
-| `log`            | the append-only tuple of entries, each kind holding only its outcome, and every `Rejection`     |
-| `balances`       | closing, holds, available, accrued interest, and interest base, each scanning the log whole     |
-| `authorizations` | the authorization states, `decide`, `transition`, and the records replayed from the log         |
-| `processing`     | one entry per incoming event: idempotency first, then by kind, with reversal checks in order    |
-| `replay`         | the stream in listed order, closing each day on time, with the log and report of every day      |
-| `end_of_day`     | a day's close: fee re-evaluation, interest accruals and adjustments, then capitalization        |
-| `report`         | a day's closings, restated closings, end-of-day rows, authorizations, and errors, as data       |
+```text
+replay, day D
+  1. for each event listed next whose booked day <= D:
+       processing.process(log, event, D) ---> log + one entry (+ the instalments a credit fires)
+         idempotency first; then by kind; a reversal checked against its target in order
+  2. end_of_day.close_day(log, D)
+       step 1  fees:     each day first..D: negative with no fee in force -> Fee; non-negative with one -> FeeRefund
+       step 2  interest: each day first..D: daily interest of its base, less what was fired for it
+                         -> InterestAccrual for D, InterestAdjustment for an earlier day
+       step 3  capitalization, on a capitalization day: accrued interest above zero -> Capitalization
+  3. report.report(log, D, reported) ---> DayReport: what D processed and fired, its closings, and each earlier
+       closing that changed since last reported
+cli, after the last day
+  4. render.render(reports) ---> the whole text, then one write and one flush to standard output
+```
+
+Every balance is recomputed from the log whenever it is asked for (D7), so a late event value-dated in the past changes
+every later closing without any stored balance being updated.
 
 ## Constraints
 
 - No web layer, persistence, UI, or database.
 - Every effect sits in the shell; the core stays pure and deterministic.
+- Balances are recomputed from the append-only log, never stored (D7); nothing in the log is changed or removed.
+- Holds never expire (AMB-018), the ledger's known weakness.
+- Every diagram is plain-text ASCII.

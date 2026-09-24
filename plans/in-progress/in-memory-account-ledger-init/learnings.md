@@ -65,5 +65,14 @@ Each entry records when, what was found, why it matters, and, once routed, its o
   later end-of-day step can move its figures.
 - **Owner.** Not yet routed.
 
+### L7 — A resolved rule with no figure in the stream needs its own test (2026-09-25 05:52)
+
+- **Found.** AMB-035 lets a reversal undo an interest event or a capitalization, but the brief's stream reverses
+  neither, and no planned test did. Phase 5's `interest_fired`, `accrued`, and `interest_base` ignored reversals
+  unnoticed until Cycle 6.8's day list read them.
+- **Why it matters.** A plan that derives its tests from the brief's figures misses every rule the stream never
+  exercises; each such clause of a resolution needs a test of its own.
+- **Owner.** Not yet routed.
+
 [capture]: ../../../repo-governance/conventions/structure/plans/008-knowledge-capture-and-archival.md
 [triage]: ../../../repo-governance/conventions/structure/plans/017-learning-triage.md

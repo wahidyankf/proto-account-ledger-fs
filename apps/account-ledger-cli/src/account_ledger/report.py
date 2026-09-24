@@ -7,9 +7,22 @@ from types import MappingProxyType
 from typing import assert_never
 
 from account_ledger.authorizations import AuthorizationRecord, records
-from account_ledger.balances import available_of, closing_of
-from account_ledger.config import LedgerConfig
-from account_ledger.events import Capitalization, Fee, FeeRefund, InterestAccrual, InterestAdjustment
+from account_ledger.balances import accrued_days_of, available_of, closing_of
+from account_ledger.config import AnyAccount, LedgerConfig
+from account_ledger.events import (
+    Authorization,
+    Capitalization,
+    Credit,
+    Debit,
+    Fee,
+    FeeRefund,
+    IncomingEvent,
+    Instalment,
+    InterestAccrual,
+    InterestAdjustment,
+    Reversal,
+    Settlement,
+)
 from account_ledger.ids import AccountId, Day, text
 from account_ledger.log import (
     Accepted,
@@ -17,12 +30,14 @@ from account_ledger.log import (
     AlreadyUndone,
     IdReused,
     Log,
+    LogEntry,
     LoggedEvent,
     MovedNoMoney,
     Rejected,
     Rejection,
     ReversesAReversal,
     UnknownTarget,
+    instalments_of,
 )
 from account_ledger.money import Money
 
@@ -55,7 +70,7 @@ class Note(Enum):
     NO_CAPITALIZATION = "no interest capitalized"
 
 
-type EndOfDayEvent = Fee | FeeRefund | InterestAccrual | InterestAdjustment | Capitalization
+type EndOfDayEvent = Fee | FeeRefund | InterestAccrual | InterestAdjustment
 
 
 @dataclass(frozen=True, slots=True)
@@ -64,6 +79,14 @@ class Fired:
 
     step: Step
     event: EndOfDayEvent
+
+
+@dataclass(frozen=True, slots=True)
+class Capitalized:
+    """Step 3's capitalization, with the days whose interest it pays."""
+
+    event: Capitalization
+    days: tuple[Day, ...]
 
 
 @dataclass(frozen=True, slots=True)
@@ -76,16 +99,26 @@ class NothingFired:
 
 
 @dataclass(frozen=True, slots=True)
+class Processed:
+    """An incoming event processed that day, the entry it made whatever its outcome, and the instalments it fired."""
+
+    event: IncomingEvent
+    entry: LogEntry
+    instalments: tuple[Instalment, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class DayReport:
     """One day's close; each per-account field maps an account ID to its money."""
 
     day: Day
+    processed: tuple[Processed, ...]
     closing: Mapping[AccountId, Money]
     available: Mapping[AccountId, Money]
     restated: tuple[Restatement, ...]
     authorizations: tuple[AuthorizationRecord, ...]
     errors: Mapping[AccountId, tuple[str, ...]]
-    end_of_day: tuple[Fired | NothingFired, ...]
+    end_of_day: tuple[Fired | Capitalized | NothingFired, ...]
 
 
 def report(log: Log, day: Day, config: LedgerConfig, reported: Reported) -> DayReport:
@@ -95,6 +128,7 @@ def report(log: Log, day: Day, config: LedgerConfig, reported: Reported) -> DayR
     availables: dict[AccountId, Money] = {account.id: available_of(log, account, day) for account in config.accounts}
     return DayReport(
         day,
+        _processed(log, day),
         MappingProxyType(closings),
         MappingProxyType(availables),
         _restated(log, day, config, reported),
@@ -104,26 +138,49 @@ def report(log: Log, day: Day, config: LedgerConfig, reported: Reported) -> DayR
     )
 
 
-def _end_of_day(log: Log, day: Day, config: LedgerConfig) -> tuple[Fired | NothingFired, ...]:
+def _processed(log: Log, day: Day) -> tuple[Processed, ...]:
+    """Every incoming event processed that day, in log order, with the instalments it fired (tech-docs 002)."""
+    processed: list[Processed] = []
+    for entry in log:
+        event = _incoming(entry)
+        if event is not None and entry.processed_day == day:
+            fired = instalments_of(log, event.id) if isinstance(entry, Accepted) else ()
+            processed.append(Processed(event, entry, fired))
+    return tuple(processed)
+
+
+def _incoming(entry: LogEntry) -> IncomingEvent | None:
+    match entry.event:
+        case Credit() | Debit() | Authorization() | Settlement() | Reversal() as event:
+            return event
+        case _:
+            return None
+
+
+def _end_of_day(log: Log, day: Day, config: LedgerConfig) -> tuple[Fired | Capitalized | NothingFired, ...]:
     """Each step's events in the order fired, with a row for a step that fired nothing of its kind (tech-docs 002)."""
     fired = [entry.event for entry in log if isinstance(entry, Accepted) and entry.processed_day == day]
     everyone = tuple(account.id for account in config.accounts)
     rows = _fee_rows(fired, everyone) + _interest_rows(fired, everyone)
     if day in config.capitalization_days:  # step 3 has no row on any other day
-        rows += _capitalization_rows(fired, everyone)
+        rows += _capitalization_rows(log, fired, config.accounts)
     return tuple(rows)
 
 
-def _fee_rows(fired: Sequence[LoggedEvent], everyone: tuple[AccountId, ...]) -> list[Fired | NothingFired]:
+def _fee_rows(
+    fired: Sequence[LoggedEvent], everyone: tuple[AccountId, ...]
+) -> list[Fired | Capitalized | NothingFired]:
     fees = [event for event in fired if isinstance(event, Fee | FeeRefund)]
-    rows: list[Fired | NothingFired] = [Fired(Step.FEES, event) for event in fees]
+    rows: list[Fired | Capitalized | NothingFired] = [Fired(Step.FEES, event) for event in fees]
     if not any(isinstance(event, Fee) for event in fees):
         rows.append(NothingFired(Step.FEES, everyone, Note.NO_NEW_FEE if fees else Note.NO_FEE))
     return rows
 
 
-def _interest_rows(fired: Sequence[LoggedEvent], everyone: tuple[AccountId, ...]) -> list[Fired | NothingFired]:
-    rows: list[Fired | NothingFired] = []
+def _interest_rows(
+    fired: Sequence[LoggedEvent], everyone: tuple[AccountId, ...]
+) -> list[Fired | Capitalized | NothingFired]:
+    rows: list[Fired | Capitalized | NothingFired] = []
     for account in everyone:
         interest = [e for e in fired if isinstance(e, InterestAccrual | InterestAdjustment) and e.account == account]
         rows.extend(Fired(Step.INTEREST, event) for event in interest)
@@ -132,13 +189,15 @@ def _interest_rows(fired: Sequence[LoggedEvent], everyone: tuple[AccountId, ...]
     return rows
 
 
-def _capitalization_rows(fired: Sequence[LoggedEvent], everyone: tuple[AccountId, ...]) -> list[Fired | NothingFired]:
-    rows: list[Fired | NothingFired] = []
-    for account in everyone:
-        paid = [event for event in fired if isinstance(event, Capitalization) and event.account == account]
-        rows.extend(Fired(Step.CAPITALIZATION, event) for event in paid)
+def _capitalization_rows(
+    log: Log, fired: Sequence[LoggedEvent], accounts: tuple[AnyAccount, ...]
+) -> list[Fired | Capitalized | NothingFired]:
+    rows: list[Fired | Capitalized | NothingFired] = []
+    for account in accounts:
+        paid = [event for event in fired if isinstance(event, Capitalization) and event.account == account.id]
+        rows.extend(Capitalized(event, accrued_days_of(log, account, event.id)) for event in paid)
         if not paid:
-            rows.append(NothingFired(Step.CAPITALIZATION, (account,), Note.NO_CAPITALIZATION))
+            rows.append(NothingFired(Step.CAPITALIZATION, (account.id,), Note.NO_CAPITALIZATION))
     return rows
 
 

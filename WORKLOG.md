@@ -8,6 +8,7 @@ earlier work is claimed.
 
 | When                   | What                                                                                        |
 | ---------------------- | ------------------------------------------------------------------------------------------- |
+| 2026-09-25 05:38–06:10 | Plan execution, Phase 6: the report as text and the floor-tier CLI; OUTPUT_TARGET exact     |
 | 2026-09-25 05:14–05:37 | Plan execution, Phase 5: fees, refunds, interest, capitalization, and the day report        |
 | 2026-09-25 04:42–05:13 | Plan execution, Phase 4: log, authorizations, settlements, reversals, and idempotency       |
 | 2026-09-25 04:21–04:42 | Plan execution, Phase 3: money, IDs, config, events, and the stream reader, test-first      |
