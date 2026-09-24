@@ -14,8 +14,8 @@ so its entry says what the value drives instead. A **chosen** constant is a desi
 | ----------------------- | ------------------------ | ------------------------------------------------------------- |
 | Window                  | Day 1 to Day 6           | six day-closes and accruals; capitalization on Day 6          |
 | Opening balances        | 0.00 / 0.000             | every closing is the sum of entries alone                     |
-| Overdraft fee           | AED 25.00                | 25.00 per fee day; at half, AMB-006's gap is 37.50, not 75.00 |
-| Fee cap                 | once per day per account | re-evaluation (AMB-003) can never charge a day twice          |
+| Overdraft fee           | AED 25.00                | 25.00 per fee day; at half, AMB-004's gap is 37.50, not 75.00 |
+| Fee cap                 | once per day per account | re-evaluation (AMB-002) can never charge a day twice          |
 | Daily interest rate     | 0.04% = 0.0004           | 465.00 accrues 0.186 → 0.19; at half, 0.093 → 0.09            |
 | Interest floor          | positive balances only   | a zero or negative closing accrues exactly 0                  |
 | Capitalization day      | Day 6                    | one credit per account, value-dated Day 6                     |
@@ -30,10 +30,10 @@ so its entry says what the value drives instead. A **chosen** constant is a desi
 | --------------------------- | --------------------- | ------------- |
 | Rate literal                | `Decimal("0.0004")`   | proposed      |
 | Decimal working precision   | 28 significant digits | proposed      |
-| Rounding mode               | half-even             | open, AMB-008 |
-| Instalment split            | 3.333, 3.333, 3.334   | open, AMB-010 |
-| Hold released on settlement | the full hold         | open, AMB-011 |
-| Day representation          | integers 1 to 6       | open, AMB-032 |
+| Rounding mode               | half-even             | open, AMB-006 |
+| Instalment split            | 3.333, 3.333, 3.334   | open, AMB-020 |
+| Hold released on settlement | the full hold         | open, AMB-013 |
+| Day representation          | integers 1 to 6       | open, AMB-001 |
 | Unit coverage floor         | 80% of lines          | in place      |
 
 ### Rate literal
@@ -49,7 +49,7 @@ before the deliberate quantize step.
 
 ### Rounding mode
 
-Open in AMB-008, which holds the options and the reason for half-even. A rounding mode has no half.
+Open in AMB-006, which holds the options and the reason for half-even. A rounding mode has no half.
 
 ### Instalment split
 
@@ -58,12 +58,12 @@ BHD, and 3.333 × 3 = 9.999 loses 0.001.
 
 ### Hold released on settlement
 
-Open in AMB-011, which holds the reason for releasing the whole hold. Releasing half of it, 100.00, would still reserve
+Open in AMB-013, which holds the reason for releasing the whole hold. Releasing half of it, 100.00, would still reserve
 funds no merchant can claim.
 
 ### Day representation
 
-Open in AMB-032, which holds the reason for plain integers. Halving does not apply: the window is given as six days.
+Open in AMB-001, which holds the reason for plain integers. Halving does not apply: the window is given as six days.
 
 ### Unit coverage floor
 

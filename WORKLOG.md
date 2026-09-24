@@ -25,3 +25,7 @@ claimed.
 | 2026-09-24 15:43 | Added Day 0, the opening state, to MOVEMENT and OUTPUT_TARGET; noted it under AMB-032          |
 | 2026-09-24 15:48 | Full rows for Day 0; restated closings on Days 5 and 6; AMB-011 and AMB-020 keyed on available |
 | 2026-09-24 15:49 | Day 0 now reports a closing ledger balance, in the same shape as every other day               |
+| 2026-09-24 15:53 | Listed the entries the ledger generates and each day's interest accrual in MOVEMENT            |
+| 2026-09-24 15:57 | Renumbered ambiguities by first appearance in MOVEMENT; earlier entries keep the old numbers   |
+| 2026-09-24 16:04 | Gave every MOVEMENT day three tables: events processed, EOD applied, and closing summary       |
+| 2026-09-24 16:05 | Moved fees, reversals, and capitalization out of the closing summary into EOD applied          |

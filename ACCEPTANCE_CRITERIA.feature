@@ -12,47 +12,47 @@ Feature: Acceptance criteria from the challenge brief
     And account "ACC-002" in BHD with an opening balance of 0.000
     And the event stream E1 to E10 from the brief
 
-  # Ambiguities: AMB-002, AMB-005
+  # Ambiguities: AMB-016, AMB-022
   @C1 @verdict-open
   Scenario: C1 - Day 2 closing ledger balance, evaluated at end of Day 5 before any fee
     When the stream is replayed through the end of Day 5
     Then the Day 2 closing ledger balance of "ACC-001", before any fee is assessed, is AED -370.00
 
-  # Ambiguities: AMB-003, AMB-004, AMB-005
+  # Ambiguities: AMB-002, AMB-003, AMB-016
   @C2 @verdict-open
   Scenario: C2 - E7 causes exactly one overdraft fee, on Day 2
     When the stream is replayed through the end of Day 5
     Then exactly one overdraft fee caused by E7 is assessed on "ACC-001"
     And that fee is assessed on Day 2
 
-  # Ambiguities: AMB-011
+  # Ambiguities: AMB-013
   @C3 @verdict-open
   Scenario: C3 - the Day 4 settlement of Auth-A is accepted
     When the stream is replayed through E5
     Then the settlement of "Auth-A" for AED 185.00 is accepted
 
-  # Ambiguities: AMB-013, AMB-014
+  # Ambiguities: AMB-012, AMB-029
   @C4 @verdict-open
   Scenario: C4 - a settlement with an authorization ID not in the ledger is rejected
     When the stream is replayed through E6
     Then the settlement referencing "Auth-Z" is rejected
     And no funds leave "ACC-001" because of it
 
-  # Ambiguities: AMB-015
+  # Ambiguities: AMB-021
   @C5 @verdict-open
   Scenario: C5 - an approved Auth-B hold reduces available balance but not ledger balance
     Given the authorization "Auth-B" for AED 90.00 is approved
     Then the available balance of "ACC-001" falls by AED 90.00
     And the ledger balance of "ACC-001" does not change
 
-  # Ambiguities: AMB-006, AMB-007
+  # Ambiguities: AMB-004, AMB-005
   @C6 @verdict-open
   Scenario: C6 - after E9, balances and fees return to their pre-E7 values
     When the stream is replayed through E9
     Then every balance returns to its value before E7
     And every fee returns to its value before E7
 
-  # Ambiguities: AMB-010
+  # Ambiguities: AMB-020
   @C7 @verdict-open
   Scenario: C7 - each of the three BHD instalments in E10 is BHD 3.334
     When the stream is replayed through E10
