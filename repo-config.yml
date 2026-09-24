@@ -109,6 +109,13 @@ harness:
 
 policies:
   markdown:
+    metadata:
+      surfaces:
+        - { glob: "repo-governance/**/*.md", schema: governance }
+        - { glob: "repo-governance/workflows/**/*.md", schema: workflow }
+        - { glob: ".agents/skills/*/SKILL.md", schema: skill }
+        - { glob: ".agents/agents/*.md", schema: agent }
+        - { glob: ".agents/**/README.md", schema: governance }
     internal-link:
       exclude-sources: ["specs/fixtures/**"]
   governance:
@@ -216,6 +223,12 @@ gates:
             { literal: directory-map },
             { literal: validate },
           ]
+      run-on: { pre-push: {}, pull-request: {}, main: {} }
+    - id: metadata
+      type: check
+      command:
+        executable: ./rhino
+        args: [{ literal: metadata }, { literal: validate }]
       run-on: { pre-push: {}, pull-request: {}, main: {} }
     - id: internal-link
       type: check
