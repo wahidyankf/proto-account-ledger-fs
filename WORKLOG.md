@@ -32,3 +32,41 @@ claimed.
 | 2026-09-24 16:08 | MOVEMENT no longer states the open EOD order or accrual status as settled                      |
 | 2026-09-24 16:09 | OUTPUT_TARGET prints the three MOVEMENT blocks per day; AMB-033 widened to match               |
 | 2026-09-24 16:15 | Gave every ambiguity where, why, options, status, and blank resolution and rationale           |
+| 2026-09-24 16:45 | Resolved AMB-001: integer days 1 to 6, each closing; Day 0 is the opening state                |
+| 2026-09-24 16:58 | Resolved AMB-002: every negative day since the value date is charged, each fee naming its day  |
+| 2026-09-24 17:06 | Resolved AMB-003: a retroactive fee is dated the day the check runs; Days 2 and 3 now fixed    |
+| 2026-09-24 17:19 | Resolved AMB-004: event-sourced log; fees refunded by new events dated Day 6                   |
+| 2026-09-24 17:29 | Named fired events by kind, account, and days; realigned every doc to the event log            |
+| 2026-09-24 17:29 | Resolved AMB-016 and AMB-024: fees fire at day close; the ledger is event-sourced              |
+| 2026-09-24 17:29 | Resolved AMB-005: interest fired as known each day, corrected by adjusting events              |
+| 2026-09-24 17:34 | Resolved AMB-020: divide by N, round down, remainder on the last; E10 is 3.333/3.333/3.334     |
+| 2026-09-24 17:34 | Resolved AMB-006: every amount rounds half-even; no figure in the stream moves                 |
+| 2026-09-24 17:35 | Resolved AMB-007: no compounding; accruals join the balance only at capitalization             |
+| 2026-09-24 17:39 | Resolved AMB-008: authorizations read the balance value-dated up to today                      |
+| 2026-09-24 18:32 | Resolved AMB-009: an authorization is decided on arrival, against what preceded it             |
+| 2026-09-24 18:34 | Resolved AMB-010: a hold reduces available balance from its value date                         |
+| 2026-09-24 18:38 | Resolved AMB-011: a fee counts toward later closings; one fee a day while negative             |
+| 2026-09-24 18:50 | Recommended accepting AMB-029's settlements as force-posts, in line with AMB-012               |
+| 2026-09-24 18:50 | Resolved AMB-012: E6 honoured as a force-post; Day 4 closes 285.00, interest 0.76              |
+| 2026-09-24 18:54 | Resolved AMB-013: a final settlement releases the whole hold; unmarked means final             |
+| 2026-09-24 18:57 | Resolved AMB-014: refused events stay in the log with their outcome                            |
+| 2026-09-24 19:04 | Resolved AMB-015: listed order; E10 arrives late and is processed on Day 6                     |
+| 2026-09-24 19:08 | Resolved AMB-017: all three E10 instalments value-dated Day 5; no schedule invented            |
+| 2026-09-24 19:10 | Resolved AMB-018: holds never expire, the weakness the failing test exposes                    |
+| 2026-09-24 19:15 | Resolved AMB-019: a declined authorization is a state; errors read none every day              |
+| 2026-09-24 19:17 | Resolved AMB-021: C5 refused as a claim about the stream; holds tested with Auth-A             |
+| 2026-09-24 19:20 | Resolved AMB-022: each day reports what it knew, plus earlier closings a late event restated   |
+| 2026-09-24 19:27 | Resolved AMB-023: fees, then interest, then capitalization; Day 6 closes 285.76 and 10.008     |
+| 2026-09-24 19:30 | Resolved AMB-025: every day lists both accounts and every known authorization                  |
+| 2026-09-24 19:31 | Resolved AMB-026: the CLI prints the report; the test suite asserts every figure               |
+| 2026-09-24 19:33 | Resolved AMB-027: a BHD account pays BHD 2.560, AED 25.00 at 0.10238257, XE on 2026-09-24      |
+| 2026-09-24 19:37 | Resolved AMB-028: a repeated reversal is idempotent; a conflicting one is refused              |
+| 2026-09-24 19:38 | Added AMB-034, open: an event whose ID arrives twice, for every kind of event                  |
+| 2026-09-24 21:07 | Resolved AMB-034: the event ID is the idempotency key; same ID, different content, refused     |
+| 2026-09-24 21:10 | Resolved AMB-029: a settlement with no active hold is a force-post, as E6 is                   |
+| 2026-09-24 21:13 | Resolved AMB-030: a settlement above its hold posts in full; excess goes to chargeback         |
+| 2026-09-24 21:18 | Resolved AMB-031: the failing test is a strict xfail in the regular suite; plan corrected      |
+| 2026-09-24 21:20 | Resolved AMB-032: NUMBERS lists given and chosen constants, each marked                        |
+| 2026-09-24 21:23 | Resolved AMB-033: three tables a day, drawn as plain-text boxes, beyond the four named items   |
+| 2026-09-24 21:25 | Opened each day in OUTPUT_TARGET with a banner between two full-width lines of =               |
+| 2026-09-24 21:32 | Aligned the assessment docs with every resolution; no entry is worded as open any more         |

@@ -26,15 +26,15 @@ per [Assessment Docs](../../../repo-governance/conventions/structure/assessment-
 
 - Scope: all of Part 1, plus an architecture trade-offs document at `docs/explanation/architecture-trade-offs.md` that
   feeds the Part 2 PDF; the PDF itself is out of scope.
-- The deliberately failing test runs under its own Nx target, outside `test:quick`, `test:integration`, `test:e2e`, and
-  the pre-push hook.
+- The deliberately failing test is a strict expected failure in the regular suite, as AMB-031 resolves; the guard
+  against `mark.xfail` is to be narrowed, through Rules Propagation, when the test is written.
 - Expected domain failures are typed result values, not exceptions.
 - The agent appends to `WORKLOG.md` with real timestamps as work happens; entries may also be added by hand.
 
 - `ACCEPTANCE_CRITERIA.feature` stays at the root, unexecuted, so it cannot break the test suite. It moves under
-  `specs/` only once no ambiguity blocks it, and only after the plan documents exist.
+  `specs/` only once every verdict is decided, and only after the plan documents exist.
 
-Open design questions are tracked in [AMBIGUITIES.md](../../../AMBIGUITIES.md) and settled one at a time.
+Design questions and their resolutions are in [AMBIGUITIES.md](../../../AMBIGUITIES.md), settled one at a time.
 
 ## Directory Map
 

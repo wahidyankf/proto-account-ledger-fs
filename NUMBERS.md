@@ -2,39 +2,43 @@
 
 Every constant the ledger uses, where it comes from, and why it has that value and not half of it. A value marked open
 depends on an entry still open in [AMBIGUITIES](AMBIGUITIES.md), which holds its options and reasoning; a value marked
-proposed is a chosen value no ambiguity covers, not yet confirmed. Figures here assume the current recommendations in
-AMBIGUITIES, as that file's own figures do.
+proposed is a chosen value no ambiguity covers, not yet confirmed; a value marked resolved follows a settled entry
+there. Figures here follow the resolutions in AMBIGUITIES.
 
 A **given** constant is fixed by the [challenge brief](challenge-raw.md); halving it would break a non-negotiable rule,
 so its entry says what the value drives instead. A **chosen** constant is a design decision and carries its own reason.
+Both are listed, as AMB-032 resolves.
 
 ## Given Constants
 
 | Constant                | Value                    | What it drives                                                |
 | ----------------------- | ------------------------ | ------------------------------------------------------------- |
 | Window                  | Day 1 to Day 6           | six day-closes and accruals; capitalization on Day 6          |
-| Opening balances        | 0.00 / 0.000             | every closing is the sum of entries alone                     |
+| Opening balances        | 0.00 / 0.000             | every closing is the sum of its events alone                  |
 | Overdraft fee           | AED 25.00                | 25.00 per fee day; at half, AMB-004's gap is 37.50, not 75.00 |
 | Fee cap                 | once per day per account | re-evaluation (AMB-002) can never charge a day twice          |
-| Daily interest rate     | 0.04% = 0.0004           | 465.00 accrues 0.186 → 0.19; at half, 0.093 → 0.09            |
-| Interest floor          | positive balances only   | a zero or negative closing accrues exactly 0                  |
+| Daily interest rate     | 0.04% = 0.0004           | 285.00 accrues 0.114 → 0.11; at half, 0.057 → 0.06            |
+| Interest floor          | positive balances only   | a zero or negative closing fires no accrual                   |
 | Capitalization day      | Day 6                    | one credit per account, value-dated Day 6                     |
 | AED precision           | 2 decimal places         | every AED amount is quantized to 0.01                         |
 | BHD precision           | 3 decimal places         | every BHD amount is quantized to 0.001                        |
-| Authorization threshold | available ≥ 0 after hold | Auth-A passes at 50.00; Auth-B fails at −245.00               |
+| Authorization threshold | available ≥ 0 after hold | Auth-A passes at 50.00; Auth-B fails at −425.00               |
 | Instalment count        | 3                        | fixes the instalment split below                              |
 
 ## Chosen Constants
 
-| Constant                    | Value                 | Status        |
-| --------------------------- | --------------------- | ------------- |
-| Rate literal                | `Decimal("0.0004")`   | proposed      |
-| Decimal working precision   | 28 significant digits | proposed      |
-| Rounding mode               | half-even             | open, AMB-006 |
-| Instalment split            | 3.333, 3.333, 3.334   | open, AMB-020 |
-| Hold released on settlement | the full hold         | open, AMB-013 |
-| Day representation          | integers 1 to 6       | open, AMB-001 |
-| Unit coverage floor         | 80% of lines          | in place      |
+| Constant                    | Value                                | Status            |
+| --------------------------- | ------------------------------------ | ----------------- |
+| Rate literal                | `Decimal("0.0004")`                  | proposed          |
+| Decimal working precision   | 28 significant digits                | proposed          |
+| Rounding mode               | half-even                            | resolved, AMB-006 |
+| Instalment split            | 3.333, 3.333, 3.334                  | resolved, AMB-020 |
+| Hold released on settlement | the full hold, on a final settlement | resolved, AMB-013 |
+| Day representation          | integers 1 to 6                      | resolved, AMB-001 |
+| End-of-day order            | fees, interest, then capitalization  | resolved, AMB-023 |
+| AED to BHD rate             | 1 AED = 0.10238257 BHD               | resolved, AMB-027 |
+| BHD overdraft fee           | BHD 2.560                            | resolved, AMB-027 |
+| Unit coverage floor         | 80% of lines                         | in place          |
 
 ### Rate literal
 
@@ -49,21 +53,42 @@ before the deliberate quantize step.
 
 ### Rounding mode
 
-Open in AMB-006, which holds the options and the reason for half-even. A rounding mode has no half.
+Resolved in AMB-006, which holds the options and the reason for half-even. A rounding mode has no half.
 
 ### Instalment split
 
-The only three-decimal split that sums to 10.000 with the parts as equal as possible. 3.334 × 3 = 10.002 invents 0.002
-BHD, and 3.333 × 3 = 9.999 loses 0.001.
+Resolved in AMB-020: divide by three, round down, and add the remainder to the last. It sums to 10.000 with the parts as
+equal as possible and the remainder on the last. 3.334 × 3 = 10.002 invents 0.002 BHD, and 3.333 × 3 = 9.999 loses
+0.001.
 
 ### Hold released on settlement
 
-Open in AMB-013, which holds the reason for releasing the whole hold. Releasing half of it, 100.00, would still reserve
-funds no merchant can claim.
+Resolved in AMB-013: a final settlement, which is every settlement without a marker, releases the whole hold, and one
+marked as followed by more captures keeps the rest. Releasing half of Auth-A's hold, 100.00, would still reserve funds
+no merchant can claim.
 
 ### Day representation
 
-Open in AMB-001, which holds the reason for plain integers. Halving does not apply: the window is given as six days.
+Resolved in AMB-001, which holds the reason for plain integers. Halving does not apply: the window is given as six days.
+
+### End-of-day order
+
+Resolved in AMB-023: fee re-evaluation, then interest, then, on Day 6 only, capitalization. Interest accrues on the
+closing the fee rule leaves, and capitalization pays every accrual in the window: AED 0.76 and BHD 0.008. An order has
+no half.
+
+### AED to BHD rate
+
+Resolved in AMB-027: the mid-market rate
+[XE](https://www.xe.com/en-us/currencyconverter/convert/?Amount=1&From=AED&To=BHD) showed on 2026-09-24 at 12:32 UTC,
+taken once and fixed, since the ledger never reaches the network. It matches the cross rate of the two US dollar pegs
+(0.376 BHD and 3.6725 AED to the dollar) to seven decimal places. At half the rate, a BHD account's fee would be worth
+AED 12.50, not AED 25.00.
+
+### BHD overdraft fee
+
+Resolved in AMB-027: AED 25.00 × 0.10238257 = 2.55956425, rounded half-even to three decimals, is BHD 2.560. It is
+charged under the same rules as the AED fee. ACC-002 never goes negative in this stream, so it is never charged.
 
 ### Unit coverage floor
 
@@ -72,5 +97,5 @@ At 40% (half), most of the core could go unexecuted by unit tests.
 
 ## Derived Figures
 
-Figures derived from these constants are not repeated here. [MOVEMENT](MOVEMENT.md) holds each day's figures where every
-open option agrees, and [AMBIGUITIES](AMBIGUITIES.md) holds the figures each option gives.
+Figures derived from these constants are not repeated here. [MOVEMENT](MOVEMENT.md) holds each day's figures, and
+[AMBIGUITIES](AMBIGUITIES.md) holds the figures each option would give.

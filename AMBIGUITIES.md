@@ -11,15 +11,17 @@ Each entry has the same six parts:
 - **Resolution**: the reading chosen, left blank while the entry is open.
 - **Rationale**: why that reading was chosen over the others, left blank while the entry is open.
 
-Every entry is open, and entries are settled one at a time; a recommendation is not a resolution. Entries are numbered
-in the order they first bear on [MOVEMENT](MOVEMENT.md)'s days, from Day 0 onwards, then on its other sections; entries
-MOVEMENT never cites come last. Figures come from a scratch replay of the event stream, not from the ledger code, which
-does not exist yet; every figure is re-derived by the test suite once it does.
+Entries are settled one at a time, each by an explicit decision; a recommendation is not a resolution. Entries were
+numbered, when [MOVEMENT](MOVEMENT.md) was drafted, in the order they first bore on its days, from Day 0 onwards, then
+on its other sections; an entry keeps its number when a later change cites it elsewhere, and entries added later, such
+as AMB-034, come last. Figures come from a scratch replay of the event stream, not from the ledger code, which does not
+exist yet; every figure is re-derived by the test suite once it does.
 
-Unless an entry says otherwise, figures assume the current recommendation of every other open entry. Those that move
-figures most: fees re-evaluated for every day (AMB-002), dated on the day they are for (AMB-003), reversed when E9 makes
-the day non-negative (AMB-004), interest computed from final value-dated balances (AMB-005), E6 rejected (AMB-012), and
-fees booked at day close (AMB-016). [MOVEMENT](MOVEMENT.md) holds only the figures every open option agrees on.
+Every entry is resolved, and every figure follows the resolutions. Those that move figures most: fees re-evaluated for
+every day (AMB-002), dated on the day the check runs (AMB-003), refunded on Day 6 once E9 makes their days non-negative
+(AMB-004), interest accrued as known and corrected by later events (AMB-005), E6 honoured as a force-post (AMB-012),
+fees fired at day close (AMB-016), and the end-of-day order that capitalizes last (AMB-023). [MOVEMENT](MOVEMENT.md)
+holds every figure.
 
 Reference balances for ACC-001 before E7 arrives, by value date:
 
@@ -28,7 +30,7 @@ Reference balances for ACC-001 before E7 arrives, by value date:
 | 1   | 250.00        |
 | 2   | 250.00        |
 | 3   | 650.00        |
-| 4   | 465.00        |
+| 4   | 285.00        |
 
 ## AMB-001 — What a "day" is
 
@@ -48,13 +50,19 @@ events closes at all, and where the report starts from.
 - Calendar dates, with business days and a cut-off time.
 - Days close only when an event arrives on them.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** Days are plain integers, Day 1 to Day 6, with no calendar, time zone, or cut-off, and every day in the
+window closes whether or not events arrive. Day 0 reports the opening state in the same shape as every other day, with
+the opening balance as its closing, and sits outside the window, so it assesses no fee and accrues no interest.
 
-**Rationale.**
+**Rationale.** The brief names days only as "Day 1 through Day 6", and no rule consults a calendar, so dates, business
+days, or a cut-off would add assumptions without changing a figure. Closing every day keeps "0.04% per day" and the fee
+"assessed once per day per account" true on a day without events, which days close only on events would not. Day 0 shows
+the opening balances Day 1 starts from, in the report's own shape; keeping it outside the window adds no fee or interest
+the brief does not ask for.
 
-## AMB-002 — Which days a backdated entry makes liable for an overdraft fee
+## AMB-002 — Which days a backdated event makes liable for an overdraft fee
 
 **Where.** The fee is assessed when "that day's closing ledger balance (all entries with value_date ≤ that day) is
 negative". E7 arrives on Day 5 with value date Day 2.
@@ -67,41 +75,63 @@ every later closing. Criterion 2 ("exactly one overdraft fee … on Day 2") turn
 
 | Option                                       | Fees caused by E7 | ACC-001 Day 5 closing |
 | -------------------------------------------- | ----------------- | --------------------- |
-| Re-evaluate every day up to today, in order  | Day 2, 4, 5       | −230.00               |
-| Evaluate the backdated value date plus today | Day 2, 5          | −205.00               |
-| Evaluate today only                          | Day 5             | −180.00               |
+| Re-evaluate every day up to today, in order  | Day 2, 4, 5       | −410.00               |
+| Evaluate the backdated value date plus today | Day 2, 5          | −385.00               |
+| Evaluate today only                          | Day 5             | −360.00               |
 
-Re-evaluating in order matters: Day 2's fee (−370.00 → −395.00) leaves Day 3 at +5.00, so Day 3 stays fee-free, while
-Day 4 falls to −180.00 and Day 5 to −205.00 before their own fees.
+Each fee is value-dated on the day the check runs (AMB-003), so before any fee Day 2 closes at −370.00, Day 3 at +30.00,
+and Days 4 and 5 at −335.00.
 
 **Recommended**: re-evaluate every day. It is the only option under which no day ends with a negative value-dated
 closing balance and no fee, which is what the rule defines.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** Every end of day re-evaluates each day of the window up to today, in value-date order, and assesses one
+AED 25.00 fee for each day whose closing ledger balance is negative and that has no fee yet; a day at or above zero is
+skipped. E7 makes Days 2, 4, and 5 liable, three fees in all, and leaves Day 3 without one. Each fee names the day it is
+for, such as "for Day 2", so a retroactive fee reads as a past day's charge recognised when the ledger learns of it.
 
-**Rationale.**
+**Rationale.** The rule makes a day liable by "that day's closing ledger balance (all entries with value_date ≤ that
+day)", so a backdated event that turns a past day negative makes that day liable however late it arrives. Checking only
+today, or only the value date and today, leaves Day 2 or Day 4 negative with no fee, which the rule does not allow.
+"Once per day per account" keeps a day from being charged twice when it is re-evaluated again, and naming the day each
+fee is for keeps that visible though AMB-003 dates all three on Day 5. Day 5 is negative at its own close under every
+option, so none gives criterion 2's "exactly one overdraft fee"; its verdict is decided separately.
 
 ## AMB-003 — The value date of a retroactive fee
 
 **Where.** "Booked with value_date equal to the day assessed."
 
 **Why it is problematic.** The phrase "the day assessed" can mean the day whose closing is negative (Day 2) or the day
-the check runs (Day 5). The choice moves the fee between days, which changes the Day 2 to Day 5 closings, which later
-days end negative, and the interest they accrue.
+the check runs (Day 5). The fees for Days 2 and 4 are charged either way (AMB-002); the choice moves them between value
+dates. Dated Day 2 and Day 4, they restate Day 2 to −395.00, Day 3 to +5.00, and Day 4 to −360.00; dated Day 5, those
+days stay at −370.00, +30.00, and −335.00, and Day 5 carries three fees. Day 5's closing is −410.00 either way; if
+interest is computed from final balances (AMB-005), Day 3's interest differs too.
 
 **Options.**
 
-- The day whose closing is negative. **Recommended**: dating Day 2's fee on Day 5 would leave Day 2's value-dated
-  closing at −370.00 with no fee against it, and would push Day 5 further negative for a Day 2 event.
-- The day the assessment runs.
+- The day whose closing is negative. **Recommended**: the brief itself uses "assessed" this way. Criterion 2 speaks of a
+  fee "assessed, on Day 2" that only E7, booked on Day 5, can cause, and criterion 1 evaluates Day 2's closing "before
+  any fee is assessed", which matters only if a fee can land on Day 2. Dated Day 5, Day 2 would keep a negative
+  value-dated closing with no fee against it.
+- The day the assessment runs, each fee naming the day it is for, such as "for Day 2": a retroactive fee is a past day's
+  charge recognised when the ledger learns of it, and a past day's value-dated closing moves only by the backdated event
+  itself.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** A fee is value-dated on the day the check that assesses it runs, and names the day it is for, such as
+"for Day 2". The fees E7 makes due for Days 2, 4, and 5 are all value-dated Day 5, so a past day's value-dated closing
+moves only by the backdated event itself.
 
-**Rationale.**
+**Rationale.** "The day assessed" reads as the day the assessment runs as readily as the day it looks at. On that
+reading a retroactive fee is a past day's charge recognised when the ledger learns of it, and a restated day shows only
+what the backdated event did to it: Day 2 stays at −370.00, Day 3 at +30.00, and Day 4 at −335.00, while Day 5 closes at
+−410.00 under either reading. Naming the day each fee is for keeps "once per day per account" checkable, though three
+fees share Day 5's value date. The cost is accepted: criterion 1's "before any fee is assessed" and criterion 2's fee
+"assessed, on Day 2" sit more naturally with the other reading, and Day 2 keeps a negative value-dated closing with no
+fee dated on it.
 
 ## AMB-004 — What happens to fees once E9 reverses E7
 
@@ -109,25 +139,39 @@ days end negative, and the interest they accrue.
 
 **Why it is problematic.** After E9, the days that earned fees are no longer negative, so the fees no longer match the
 rule that charged them, yet the ledger cannot delete them. Criterion 6 ("all balances and fees return to their pre-E7
-values") turns on this, and a reversal's own value date moves the interest.
+values") turns on this, and a refund's own value date moves the interest.
 
 **Options.** Figures are ACC-001, in AED, with interest on the hindsight basis (AMB-005).
 
-| Option                                         | Day 6 before interest | Interest | Day 6 after capitalization |
-| ---------------------------------------------- | --------------------- | -------- | -------------------------- |
-| Reverse the fee of each day no longer negative | 465.00                | 1.03     | 466.03                     |
-| Keep the fees                                  | 390.00                | 0.93     | 390.93                     |
+| Option                                        | Day 6 before interest | Interest | Day 6 after capitalization |
+| --------------------------------------------- | --------------------- | -------- | -------------------------- |
+| Refund, dated on the fee's value date (Day 5) | 285.00                | 0.79     | 285.79                     |
+| Refund, dated the day it is fired (Day 6)     | 285.00                | 0.76     | 285.76                     |
+| Keep the fees                                 | 210.00                | 0.73     | 210.73                     |
 
-**Recommended**: book fee reversals, each booked on Day 6 and value-dated on the day of the fee it reverses, so the fee
-and its reversal cancel in every closing they touch; the figures above assume that dating. The fee rule is defined on
-the value-dated closing balance, which after E9 is non-negative on Days 2, 4, and 5; keeping the fees contradicts the
-rule as the ledger now states it. Reversal entries are new records, so nothing is mutated.
+Dated on the fee's value date, Day 5 (AMB-003), a refund and its fee cancel in every closing they touch; dated Day 6,
+Day 5's value-dated closing keeps its fees at 210.00, and accrues 0.08 instead of 0.11.
 
-**Status.** Open.
+**Recommended**: refund each fee on Day 6, value-dated on the value date of the fee it cancels. The fee rule is defined
+on the value-dated closing balance, which after E9 is non-negative on Days 2, 4, and 5; keeping the fees contradicts the
+rule as the ledger now states it. Refunds are new records, so nothing is mutated.
 
-**Resolution.**
+**Status.** Resolved.
 
-**Rationale.**
+**Resolution.** The ledger is event-sourced: an append-only log of events, including the fees and refunds it fires at
+end of day, and balances that are aggregations over the log by value date, recomputed when a late event arrives. After
+E9, Day 6's end-of-day check finds Days 2, 4, and 5 no longer negative and fires one AED 25.00 fee refund for each,
+naming the day it is for and value-dated Day 6; the fees stay in the log. A later correction to interest follows the
+same rule: a new event, dated the day it is recognised.
+
+**Rationale.** It is the principle of AMB-002 and AMB-003 applied to undoing a charge: the log is never edited, and what
+the ledger fires never reaches back into a past day, so a correction is a new event on the day it is recognised, as a
+production ledger fires it at end of day. E9 still restates Days 2 to 5, because the brief value-dates it Day 2. The fee
+rule reads value-dated closings, which after E9 are non-negative, so keeping the fees would leave charges the rule no
+longer supports. The cost is accepted: Day 5's value-dated closing stays at 210.00, with its fees on Day 5 and their
+refunds on Day 6, and interest (AMB-005) totals 0.76 instead of 0.79, so criterion 6's "all balances and fees return to
+their pre-E7 values" holds for Day 6's closing and the net fees but not for Day 5 or the interest; its verdict is
+decided separately.
 
 ## AMB-005 — Which balance daily interest accrues on
 
@@ -141,19 +185,31 @@ different totals.
 
 | Option                                                                 | ACC-001 total | ACC-002 total |
 | ---------------------------------------------------------------------- | ------------- | ------------- |
-| Hindsight: at capitalization, from final value-dated closings          | 1.03          | 0.008         |
-| As known: each day's accrual fixed at that day's close, never restated | 0.84          | 0.008         |
+| Hindsight: at capitalization, from final value-dated closings          | 0.76          | 0.008         |
+| As known: each day's accrual fixed at that day's close, never restated | 0.68          | 0.008         |
+| As known, corrected: a late event fires an adjusting accrual           | 0.76          | 0.008         |
 
-The as-known figure is 0.10 + 0.10 + 0.26 + 0.19 + 0.00 (Day 5 as known was −230.00) + 0.19.
+The as-known figure is 0.10 + 0.10 + 0.26 + 0.11 + 0.00 (Day 5 as known was −410.00) + 0.11. Corrected, E7 fires −0.46
+on Day 5 for Days 2 to 4, and E9 fires +0.54 on Day 6 for Days 2 to 5, each dated the day it is recognised, as AMB-004's
+resolution does for fees; the total then matches hindsight.
 
-**Recommended**: hindsight. Accruals are not booked until capitalization, so there is no record to restate; the credit
-reflects the balances the ledger finally holds, and the rounded dailies still sum exactly to it.
+**Recommended**: as known, corrected. It follows AMB-004's resolution: each accrual printed on a day is final, and a
+late event corrects interest with a new event instead of restating an old one, while the total still reflects the
+balances the ledger finally holds.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** Each day's accrual is an event fired at that day's close, on the closing ledger balance as known then.
+When a late event changes a past day's closing, the end-of-day check that sees it fires an adjusting accrual for that
+day, value-dated the day it is recognised and naming the day it is for. ACC-001 accrues 0.68 as known, adjusted by −0.46
+on Day 5 for E7 and +0.54 on Day 6 for E9, 0.76 in all; ACC-002 accrues 0.008.
 
-**Rationale.**
+**Rationale.** It is AMB-004's principle applied to interest: an accrual is fired when its day closes, on what the
+ledger knew, so the accrual printed that day is final, and a correction is a new event rather than a restatement. The
+corrections bring the total to what the final value-dated closings earn, as hindsight would, so interest still follows
+"the closing ledger balance" once the ledger knows it; never correcting would leave 0.68 and ignore balances the ledger
+later knows to be true. Every daily accrual and adjustment is a rounded event, so together they sum exactly to the
+capitalized total.
 
 ## AMB-006 — Rounding mode
 
@@ -161,58 +217,78 @@ reflects the balances the ledger finally holds, and the rounded dailies still su
 
 **Why it is problematic.** No rounding mode is named, and every accrual is rounded. A value that falls exactly halfway
 rounds differently under half-up and half-even. No figure in this stream is a tie (the unrounded accruals are 0.1, 0.26,
-0.186, and 0.004), so both give identical results here, but a different stream would not.
+0.114, 0.012, 0.084, and 0.004), so both give identical results here, but a different stream would not.
 
 **Options.**
 
 - Half-even. **Recommended**: it carries no upward bias across many small accruals.
 - Half-up.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** Every amount is rounded to its currency's precision half-even: a value exactly halfway goes to the even
+digit, and any other value to the nearer one. A split into instalments rounds down instead, as AMB-020 resolves.
 
-**Rationale.**
+**Rationale.** The brief names no mode, and daily accruals are rounded many times. Half-up pushes every halfway value
+up, a small bias that grows with the number of accruals; half-even sends half of them each way, so the rounded accruals
+carry no bias. It is also the default of Python's Decimal. The cost is accepted: rounding each daily accrual leaves an
+account's capitalized total slightly off the interest on unrounded amounts, by at most half a minor unit a day (0.03 AED
+over this six-day window, 0.15 AED over a thirty-day month), because the brief makes the capitalized total the sum of
+the rounded dailies. Under half-even each of those differences is as likely down as up, so across many accounts and days
+they cancel: their expected sum is zero, and their spread grows only with the square root of the number of accruals
+while the interest grows with the number itself, so the relative difference shrinks as the book grows. Half-up adds a
+small upward bias on every halfway value that never cancels. No unrounded accrual in this stream is a tie, so no figure
+moves; a test with a halfway value pins the mode.
 
 ## AMB-007 — Whether daily interest compounds before capitalization
 
 **Where.** "Accruals capitalize as a single credit at end of Day 6."
 
-**Why it is problematic.** The brief does not say whether a day's accrual joins the next day's interest base, which also
-decides whether an accrual is a ledger entry before Day 6. Compounding changes no rounded accrual in this stream
-(ACC-001 still totals 1.03), but it would in a longer or larger one.
+**Why it is problematic.** The brief does not say whether a day's accrual joins the next day's interest base. Every
+accrual is an event (AMB-005), so the question is whether it joins the ledger balance before Day 6. Compounding changes
+no rounded accrual in this stream (ACC-001 still totals 0.76), but it would in a longer or larger one.
 
 **Options.**
 
-- No compounding: an accrual is not a ledger entry until it capitalizes, so it is part of no closing before Day 6.
-  **Recommended**: it follows the brief's single credit at end of Day 6.
+- No compounding: accrual events accumulate apart from the ledger balance until they capitalize, so they are part of no
+  closing before Day 6. **Recommended**: it follows the brief's single credit at end of Day 6.
 - Daily compounding: each accrual joins the next day's base.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** No compounding. Accrual events build up in a separate accrued-interest total, apart from the ledger
+balance, and join it only when the capitalization event fires at the end of Day 6; each day's interest is on that day's
+closing ledger balance alone.
 
-**Rationale.**
+**Rationale.** The brief puts interest on "the closing ledger balance" and has accruals "capitalize as a single credit
+at end of Day 6", so until then they are not part of the balance interest is computed on. It is also how banking usually
+works: daily interest is simple, an absolute amount accrued on each day's balance, not a rate compounded on interest
+already earned. Compounding would change no rounded accrual in this stream, but it would in a longer or larger one.
 
 ## AMB-008 — The ledger balance an authorization is checked against
 
 **Where.** "available balance — ledger balance minus active holds".
 
-**Why it is problematic.** With value-dated entries, the ledger balance at an authorization could mean the entries
-value-dated up to that day, or every entry booked so far, including any value-dated in the future. No entry in this
+**Why it is problematic.** With value-dated events, the ledger balance at an authorization could mean the events
+value-dated up to that day, or every event booked so far, including any value-dated in the future. No event in this
 stream is future-dated, so both give the same figures, but the model has to pick one.
 
 **Options.**
 
-- Entries value-dated on or before the current day, which includes E7 when E8 is checked. **Recommended**: it is the
-  same balance the fee rule reads.
-- Every booked entry, whatever its value date.
+- Events value-dated on or before the current day, which includes E7 when E8 is checked. **Recommended**: it is the same
+  balance the fee rule reads.
+- Every booked event, whatever its value date.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** An authorization is checked against the ledger balance as the aggregation of events value-dated on or
+before the current day, minus active holds; E8 therefore sees E7. An event value-dated in the future counts from its
+value date only.
 
-**Rationale.**
+**Rationale.** It is the same aggregation the fee rule and the closing summary read, so the ledger has one definition of
+"ledger balance". A future-dated event, such as a scheduled debit, is dealt with when its day comes: it is rejected, or
+it goes through and the fee rule charges the overdraft, if the funds are not there then. How a scheduled event is
+refused is left for later, since the stream holds none.
 
 ## AMB-009 — When an authorization is decided
 
@@ -229,17 +305,21 @@ both readings decline Auth-B.
   needs the answer.
 - At the close of the day it arrives on.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** An authorization is decided the moment it arrives, against the ledger balance (AMB-008) and the active
+holds as they stand then, before any later event of that day. The decision is final, and an approved hold is active from
+that moment.
 
-**Rationale.**
+**Rationale.** A card network needs the answer when the card is presented, not at the end of the day, so the ledger can
+only weigh what preceded the request. A credit arriving later that day cannot rescue a decline, which is how card
+authorization works. In this stream Auth-A is approved against 50.00 and Auth-B declined against −425.00.
 
 ## AMB-010 — What a value date means on an authorization
 
 **Where.** "E3 — Day 2 — AUTHORIZATION — ACC-001 Auth-A hold AED 200.00 — value_date Day 2", and E8 likewise.
 
-**Why it is problematic.** A hold is not a ledger entry and moves no ledger balance, so a value date on it has no
+**Why it is problematic.** A hold is an event that moves no ledger balance (AMB-024), so a value date on it has no
 defined effect: it could date the hold, start its lifetime, or mean nothing. Both authorizations are value-dated on
 their booked day, so no figure depends on this here.
 
@@ -249,30 +329,41 @@ their booked day, so no figure depends on this here.
   debit. **Recommended**: no rule reads it.
 - The hold takes effect from its value date.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** An approved hold reduces the available balance from the authorization's value date onwards, in the
+aggregation by value date that every other event follows. The decision itself is still made on arrival (AMB-009). E3 and
+E8 are value-dated on the day they are booked, so Auth-A's hold counts from Day 2, and Auth-B, declined, holds nothing.
 
-**Rationale.**
+**Rationale.** The value date is on the event, and in an event-sourced ledger every event's effect lands on its value
+date; holds then follow the same rule as debits, credits, and fees, rather than being the one event whose value date
+means nothing. The cost is accepted: a backdated authorization reserves funds in past days' available balances, and a
+future-dated one reserves nothing until its day although the merchant already has an approval; neither occurs in this
+stream.
 
 ## AMB-011 — Whether a fee counts towards later days' closings
 
 **Where.** The fee is assessed on "all entries with value_date ≤ that day".
 
 **Why it is problematic.** A fee can itself turn a later day negative and earn another fee, a cascade the brief neither
-allows nor forbids. This stream is unaffected: without counting fees, Day 3 is +30.00 instead of +5.00 and Day 5 is
-−155.00 instead of −205.00, and the same days end negative.
+allows nor forbids. This stream is unaffected: every fee is value-dated Day 5 (AMB-003), so the fees for Days 2 and 4
+reach no closing before Day 5's, which is negative with or without them (−385.00 or −335.00).
 
 **Options.**
 
-- A fee is an ordinary entry and counts. **Recommended**: the rule reads "all entries".
+- A fee is an event like any other and counts. **Recommended**: the rule reads "all entries".
 - Fees are left out of the closing the fee rule reads.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** A fee counts. It is an event in the log like any other, so it is part of every later closing the fee
+rule reads, and a day that a fee leaves negative is charged again, once, as long as its closing stays below zero.
 
-**Rationale.**
+**Rationale.** The rule reads "all entries with value_date ≤ that day", and a fee is one of them; the fee is charged
+"once per day per account" for as long as a day's closing is negative, and counting fees keeps that closing the one the
+report prints, so the ledger has a single aggregation. The cost is accepted: a fee can keep an account negative that its
+own events would have lifted above zero, so fees can follow one another, at most one a day. No figure in this stream
+moves, since Day 5 is negative with or without the fees for Days 2 and 4, and Day 5 is non-negative after E9 either way.
 
 ## AMB-012 — Settlements with no authorization, in production
 
@@ -290,11 +381,16 @@ decides criterion 4.
   gap in the architecture document.
 - Honour E6 as a force-post and debit 180.00.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** E6 is honoured as a force-post: it debits AED 180.00 from ACC-001, value-dated Day 4, although Auth-Z
+was never authorized, and releases no hold. Day 4 closes at 285.00, and no error is reported for E6.
 
-**Rationale.**
+**Rationale.** In production a settlement can arrive with no authorization in the ledger, such as an offline purchase on
+a flight, a toll, or a capture after its authorization lapsed, and card scheme rules have the issuer post it and pursue
+any dispute through a chargeback rather than refuse it; the model follows production. The cost is accepted: criterion
+4's "must be rejected and the funds must not leave the account" cannot hold, so its verdict is decided separately, and
+the model has no chargeback, so a force-post that should not have been honoured stays until a later event reverses it.
 
 ## AMB-013 — A settlement smaller than its hold
 
@@ -308,32 +404,48 @@ hold. The choice changes ACC-001's available balance from Day 4 onwards.
 - The settlement debits 185.00 and releases the whole hold. **Recommended**: keeping 15.00 on hold would reserve funds
   no merchant can still claim.
 - The unused 15.00 stays on hold until it lapses (AMB-018).
+- The settlement says whether it is final: a final one releases the whole hold, and one marked as followed by more
+  captures keeps the rest on hold.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** A settlement carries whether it is final. A final settlement debits its amount and releases the whole
+hold; a settlement marked as followed by more captures debits its amount and keeps the rest on hold until a later
+capture or its lapse (AMB-018). A settlement that carries no marker, as every one in the brief, is final, so E5 debits
+185.00 and releases all 200.00 of Auth-A's hold.
 
-**Rationale.**
+**Rationale.** It is how card networks settle: most transactions capture once, such as a fuel pump or a hotel bill below
+its deposit, and the unused hold goes back to the customer at once, while a merchant shipping an order in parts marks
+the earlier captures as partial so the rest stays reserved for it. Releasing always would drop a later capture's
+reservation, and keeping always would lock funds no merchant claims, behind a lifetime the brief never gives. The
+brief's events carry no marker, so the model adds the field and treats its absence as final, which gives every figure in
+this stream the same value as releasing the whole hold.
 
 ## AMB-014 — Whether rejected and declined events are recorded
 
-**Where.** "The ledger is append-only. No event record is ever mutated or deleted." E6 is rejected and E8 declined.
+**Where.** "The ledger is append-only. No event record is ever mutated or deleted." E8 is declined, and a refused event,
+such as a conflicting reversal (AMB-028) or a clashing ID (AMB-034), is rejected.
 
 **Why it is problematic.** The brief does not say whether a refused event becomes a record at all. That decides whether
 the report's errors have anything to point at, and whether "append-only" covers refusals.
 
 **Options.**
 
-- Every incoming event is recorded with its outcome, and only accepted events produce ledger entries. **Recommended**:
-  discarding refused events would leave the errors with nothing to point at, and an auditor with no trace of what was
-  refused.
+- Every incoming event is appended to the log with its outcome, and only accepted events move a balance.
+  **Recommended**: discarding refused events would leave the errors with nothing to point at, and an auditor with no
+  trace of what was refused.
 - Refused events are discarded.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** Every incoming event is appended to the one log with its outcome, accepted, approved, declined, or
+rejected, and the aggregations count only the events that were accepted or approved. E8 is in the log as declined and
+moves no balance and holds nothing.
 
-**Rationale.**
+**Rationale.** Discarding a refused event deletes an event record in all but name, which "No event record is ever
+mutated or deleted" forbids. With the outcome in the log, a report line such as "Auth-B declined" points at the event
+behind it, replaying the log rebuilds every report exactly, and an auditor can see what was refused, when, and why. A
+second log for refusals would keep the ledger's log to money-moving events, at the cost of two sources that must agree.
 
 ## AMB-015 — Replay order when booked days are out of sequence
 
@@ -344,47 +456,62 @@ backdated arrival or an error; following the booked days departs from "in this o
 only ACC-002, so the two commute: ACC-001 is identical under every option, and only ACC-002's day-by-day view and
 possibly its interest change.
 
-**Options.** Figures are ACC-002, in BHD; the interest columns follow the two bases in AMB-005.
+**Options.** Figures are ACC-002, in BHD, with interest as AMB-005 resolves it.
 
-| Option                             | Day 5 report | Day 6 report           | Hindsight interest | As-known interest |
-| ---------------------------------- | ------------ | ---------------------- | ------------------ | ----------------- |
-| Sort by booked day (E10 before E9) | 10.000       | 10.000                 | 0.008              | 0.008             |
-| Listed order; E10 late, backdated  | 0.000        | 10.000; Day 5 restated | 0.008              | 0.004             |
-| Listed order; E10 rejected         | 0.000        | 0.000, plus an error   | 0.000              | 0.000             |
+| Option                             | Day 5 report | Day 6 report           | Interest |
+| ---------------------------------- | ------------ | ---------------------- | -------- |
+| Sort by booked day (E10 before E9) | 10.000       | 10.000                 | 0.008    |
+| Listed order; E10 late, backdated  | 0.000        | 10.000; Day 5 restated | 0.008    |
+| Listed order; E10 rejected         | 0.000        | 0.000, plus an error   | 0.000    |
 
-In the late-arrival option, E10 is processed on Day 6 with value date Day 5, so Day 6's report restates Day 5 to 10.000.
+In the late-arrival option, E10 is processed on Day 6 with value date Day 5, so Day 6's report restates Day 5 to 10.000
+and fires an interest adjustment of 0.004 for Day 5.
 
 **Recommended**, held loosely: sort by booked day. The booked day is a business fact about when the bank recorded the
 event, while list position is presentation; because the events commute, the deviation from "in this order" changes no
 account balance. The late-arrival reading is the strongest alternative: it honours the wording literally and reuses the
 backdating machinery E7 and E9 already need.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** The stream is replayed in the order it is listed. E10, booked Day 5, arrives after E9 and after Day 5
+has closed, so it is processed on Day 6 as a late event value-dated Day 5: Day 5's report shows ACC-002 at 0.000, and
+Day 6's restates its Day 5 to the instalments value-dated Day 5 and fires Day 5's interest as an adjustment. A day
+closes on time and never waits for an event that may still come.
 
-**Rationale.**
+**Rationale.** The listed order is the order the ledger receives events, and in production that order is guaranteed only
+within a partition, typically per account: E9 on ACC-001 and E10 on ACC-002 can arrive in either order, and a lagging
+consumer delivers E10 after E9. Waiting for a partition to catch up before closing a day needs a sign that it has, and
+ACC-002 sends no later event to give one, so a close would wait forever or time out and still meet late events. Closing
+on time and handling a late event as backdated reuses the machinery E7 and E9 already need, and follows the rule that an
+event is recognised when it arrives. Rejecting E10 would take a customer's credit for an ordering fault that is not
+theirs. ACC-001 is identical under every option, since E9 and E10 touch different accounts.
 
 ## AMB-016 — When a retroactive fee is booked
 
 **Where.** Criterion 1: "evaluated at end of Day 5 and before any fee is assessed". Nothing says whether a fee is
-assessed the moment a backdated entry arrives or at the close of the day it arrives on.
+assessed the moment a backdated event arrives or at the close of the day it arrives on.
 
 **Why it is problematic.** Assessed on arrival, retroactive fees land mid-day, before later events such as E8; assessed
-at day close, they come after. That changes the available balance Auth-B is checked against (−245.00 without the fees,
-−295.00 with the Day 2 and Day 4 fees; declined either way, AMB-021), and what "before any fee" in criterion 1 means.
+at day close, they come after. That changes the available balance Auth-B is checked against (−425.00 without the fees,
+−475.00 with the Day 2 and Day 4 fees; declined either way, AMB-021), and what "before any fee" in criterion 1 means.
 
 **Options.**
 
 - At day close. **Recommended**: criterion 1's "at end of Day 5 and before any fee is assessed" only makes sense if
   assessment is a day-close step.
-- The moment the backdated entry arrives.
+- The moment the backdated event arrives.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** Fees and their refunds fire only in the end-of-day fee step, as events in the log, after every event
+booked that day; a backdated event that arrives mid-day assesses nothing until its day closes. E7's fees fire at the
+close of Day 5, after E8.
 
-**Rationale.**
+**Rationale.** A fee is an event the ledger fires at the end of the day, as a production ledger runs its fee job at day
+close, not a side effect of whichever event happens to arrive. Criterion 1's "evaluated at end of Day 5 and before any
+fee is assessed" describes exactly that moment. Auth-B is then checked against −425.00, without the fees, and is
+declined either way (AMB-021).
 
 ## AMB-017 — Whether the E10 instalments are spread over days
 
@@ -399,18 +526,21 @@ Spreading them over Days 5, 6, and 7 would put the third outside the window and 
 - All three instalments value-dated Day 5. **Recommended**: it is the value date E10 states.
 - One instalment on each of Days 5, 6, and 7.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** All three instalments are value-dated Day 5, the value date E10 states: E10 is posted as three credit
+events of 3.333, 3.333, and 3.334 (AMB-020), each value-dated Day 5.
 
-**Rationale.**
+**Rationale.** The brief does not say what unit the instalments are spread over, days, weeks, or months, so any schedule
+would be invented, and it would contradict the one value date E10 does give. Reading "instalments" as how the credit is
+posted, three events rather than one, takes the brief at its word without concluding anything it does not say.
 
 ## AMB-018 — How long a hold lives
 
 **Where.** "Auth-B is never settled inside the window." No hold lifetime is given.
 
 **Why it is problematic.** An unsettled hold would reduce available balance indefinitely. In this stream no hold is left
-open (Auth-B is declined, and Auth-A is settled), so it matters only if AMB-013 keeps part of a hold.
+open: Auth-B is declined, and Auth-A is settled finally, so AMB-013 keeps none of its hold.
 
 **Options.**
 
@@ -418,11 +548,18 @@ open (Auth-B is declined, and Auth-A is settled), so it matters only if AMB-013 
   should lapse never does. **Recommended**: the brief gives no lifetime to model.
 - A fixed lifetime after which an unsettled hold lapses.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** No hold expires: an approved hold stays active until a settlement releases it. This is the design
+limitation the deliberately failing test exposes: it replays a hold left unsettled past a card network's usual lifetime
+and asserts that the hold has lapsed, which it never does. The fix, a lifetime after which the ledger fires a
+hold-expiry event, is described in the architecture document.
 
-**Rationale.**
+**Rationale.** The brief gives no hold lifetime, and any number would be invented and would need its own defence in
+NUMBERS; a lifetime of six days or more would change nothing in this window anyway. The brief also asks for "One failing
+test against your own design", and a hold that never lapses is a real, easily explained weakness: in production it locks
+a customer's funds for as long as a merchant never claims them. No figure in this stream moves, since Auth-A is settled
+finally and Auth-B holds nothing.
 
 ## AMB-019 — Whether a declined authorization is an "authorization state" or an "error"
 
@@ -432,15 +569,21 @@ open (Auth-B is declined, and Auth-A is settled), so it matters only if AMB-013 
 
 **Options.**
 
-- A state (`DECLINED`), while a rejected settlement such as E6 is an error. **Recommended**: declining is the rule
-  working as intended; a rejected settlement is an instruction the ledger could not carry out.
+- A state (`DECLINED`), while an event the ledger cannot carry out, such as a rejected settlement, is an error.
+  **Recommended**: declining is the rule working as intended; a rejected settlement is an instruction the ledger could
+  not carry out.
 - An error.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** A declined authorization is an authorization state, printed with the others, and Auth-B shows as
+declined from Day 5. The errors line is kept for events the ledger cannot carry out, and no event in this stream is one,
+so every day's errors line reads none.
 
-**Rationale.**
+**Rationale.** The brief lists "authorization states" apart from "errors", and declined is one of an authorization's
+states, beside approved and settled. A decline is the approval rule working as intended, since Auth-B would leave the
+available balance at −425.00; reporting it as an error would mix a business outcome with a failure to process, and hide
+real failures among routine declines.
 
 ## AMB-020 — How BHD 10.000 splits into "three equal instalments"
 
@@ -457,11 +600,15 @@ cannot all be equal and still sum to 10.000. Criterion 7's 3.334 × 3 = 10.002 i
 - 3.334, 3.333, and 3.333, with the extra 0.001 first.
 - 3.334 each, as criterion 7 states, summing to 10.002.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** An amount posted as N equal instalments gives each instalment the amount divided by N, rounded down to
+the currency's precision, and adds what remains to the last one. E10's BHD 10.000 is 3.333, 3.333, and 3.334.
 
-**Rationale.**
+**Rationale.** No three-decimal amount divides 10.000 into three, so exact instalments need one to differ. Rounding down
+and giving the last the remainder keeps the sum at exactly 10.000, invents no money, and works for any N and precision;
+rounding down, rather than half-even (AMB-006), keeps the remainder from ever being negative. Criterion 7's 3.334 each
+sums to 10.002, crediting 0.002 BHD that E10 never posted, so it cannot hold; its verdict is decided separately.
 
 ## AMB-021 — Auth-B: declined, yet "never settled"
 
@@ -469,36 +616,44 @@ cannot all be equal and still sum to 10.000. Criterion 7's 3.334 × 3 = 10.002 i
 balance but not ledger balance."
 
 **Why it is problematic.** The wording suggests Auth-B was approved, but the replay declines it: E7 lands earlier on Day
-5 than E8, so available balance at E8 is −155.00 − 90.00 = −245.00. Without E7 it would have been 375.00 and approved.
+5 than E8, so available balance at E8 is −335.00 − 90.00 = −425.00. Without E7 it would have been 195.00 and approved.
 Criterion 5 is a conditional whose premise is false here, and this entry decides it.
 
 **Options.**
 
 - Accept criterion 5 as a statement of hold semantics, prove those semantics with Auth-A (ledger 250.00, available 50.00
-  on Day 2), and state that Auth-B never holds anything. **Recommended**: the criterion is vacuously true, and its
-  semantics are still testable.
+  on Day 2), and state that Auth-B never holds anything: the criterion is vacuously true.
 - Reject criterion 5, because its premise never holds.
+- Reject criterion 5 as a claim about this stream, and still test the hold semantics it describes with Auth-A.
+  **Recommended**: accepting it vacuously passes over the trap, and rejecting it outright reads as rejecting a hold rule
+  the ledger does follow.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** Criterion 5 is refused as a claim about this stream, and the hold semantics it describes are tested with
+Auth-A instead: on Day 2 Auth-A's hold of 200.00 leaves the ledger balance at 250.00 and the available balance at 50.00.
+The refusal and its reason are recorded in [REJECTED](REJECTED.md).
 
-**Rationale.**
+**Rationale.** The criterion describes Auth-B approved, and the replay declines it, since E7 lands before E8 on Day 5
+and leaves an available balance of −425.00; a criterion about an event that never happens cannot be checked against this
+stream, and accepting it as vacuously true would pass over what the brief is testing. The rule it states, that a hold
+reduces available balance and not ledger balance, is still the ledger's rule, so a test pins it with the one hold that
+does exist.
 
-## AMB-022 — What a day's report shows once backdated entries exist
+## AMB-022 — What a day's report shows once backdated events exist
 
-**Where.** The report "prints, per day: closing ledger balance …", alongside value-dated entries that arrive days late
+**Where.** The report "prints, per day: closing ledger balance …", alongside value-dated events that arrive days late
 (E7, E9).
 
 **Why it is problematic.** Once E7 and E9 rewrite past days, the closing for Day N can mean what was known at the end of
-Day N or what the ledger holds for Day N later. After E7, Day 2 reads 250.00 as known on Day 2 but −370.00 before fees
-as restated on Day 5, and an authorization decision can look inconsistent with the balance printed beside it.
+Day N or what the ledger holds for Day N later. After E7, Day 2 reads 250.00 as known on Day 2 but −370.00 as restated
+on Day 5, and an authorization decision can look inconsistent with the balance printed beside it.
 
 **Options.**
 
 | Option                          | What Day N's report shows                                                    |
 | ------------------------------- | ---------------------------------------------------------------------------- |
-| Point-in-time, with restatement | what was known at end of Day N, plus restated closings a backdated entry hit |
+| Point-in-time, with restatement | what was known at end of Day N, plus restated closings a backdated event hit |
 | Hindsight only                  | one final table by value date, printed after the whole stream                |
 | Point-in-time, plus final table | what was known at end of Day N; one hindsight table after Day 6              |
 
@@ -507,35 +662,49 @@ actually saw, it matches criterion 1's framing ("evaluated at end of Day 5"), an
 happened. Hindsight only makes Auth-A's Day 2 approval look inconsistent with a restated Day 2 of −370.00; a final table
 alone hides each restatement from the day it happened.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** Point-in-time, with restatement. Each day's report shows the ledger as known at the end of that day, and
+when a backdated event changes an earlier closing, that day's report adds a restated closing for each earlier day it
+changed. Day 5 prints Day 2 restated to −370.00, Day 3 to 30.00, and Day 4 to −335.00; Day 6 prints them back at 250.00,
+650.00, and 285.00, and Day 5 at 210.00. No earlier report is reprinted, and no final table is added.
 
-**Rationale.**
+**Rationale.** The ledger is an append-only log, and a day's report is the aggregation over that log at the end of the
+day (AMB-024): what was printed on Day 2 stays what was known on Day 2, and a late event shows up on the day it arrives,
+as a restatement. Every authorization decision then stays explainable from the balance it actually saw, Auth-A's Day 2
+approval against 250.00 among them, and criterion 1's "evaluated at end of Day 5" reads straight off Day 5's report.
 
 ## AMB-023 — End-of-day ordering and the Day 6 capitalization
 
 **Where.** "Accruals capitalize as a single credit at end of Day 6", while fees are assessed on each day's closing. No
 order is given for what happens at the end of a day.
 
-**Why it is problematic.** Fees, fee reversals, interest, and capitalization all happen at the end of a day. Their order
+**Why it is problematic.** Fees, fee refunds, interest, and capitalization all happen at the end of a day. Their order
 decides whether interest accrues on the closing before or after that day's fees, and whether Day 6's accrual includes
 the capitalization credit.
 
 **Options.**
 
-- Fee re-evaluation, which assesses new fees and reverses any whose day is no longer negative (AMB-004); then the day's
-  interest accrual on the resulting closing; then, on Day 6 only, capitalization as one credit value-dated Day 6.
-  **Recommended**: interest then accrues on the closing the fee rule leaves, and never on itself; the printed Day 6
-  closing includes the credit.
+- Fee re-evaluation, which fires new fees and refunds any whose day is no longer negative (AMB-004); then the interest
+  step, which fires the day's accrual on the resulting closing and any adjustment (AMB-005); then, on Day 6 only,
+  capitalization as one credit value-dated Day 6. **Recommended**: interest then accrues on the closing the fee rule
+  leaves, and never on itself; the printed Day 6 closing includes the credit.
 - Interest accrual before fee re-evaluation.
 - Capitalization before Day 6's accrual.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** Every day closes in three steps: fee re-evaluation, then interest, then, on Day 6 only, capitalization.
+On Day 6 the refunds for Days 2, 4, and 5 fire first and bring ACC-001 to 285.00; interest then accrues 0.11 for Day 6
+and fires the adjustments E9 makes due; capitalization last credits every accrual, AED 0.76 as `CAP-001@D6` and BHD
+0.008 as `CAP-002@D6`, both value-dated Day 6. Day 6 closes at 285.76 and 10.008.
 
-**Rationale.**
+**Rationale.** Accrual is interest earned and recorded, capitalization is that interest paid into the balance, as a day
+worker's wages are recorded daily and paid on payday. Interest then accrues on the closing the fee rule leaves: accruing
+first would earn on 210.00, a balance still carrying three fees the same day's step refunds, and pay 0.73. Capitalizing
+last pays everything accrued in the window, as "Accruals capitalize as a single credit at end of Day 6" asks; before Day
+6's interest step it would pay AED 0.11 and BHD 0.000, and leave AED 0.65 and BHD 0.008 accrued but never credited. The
+rounded accruals then sum exactly to each capitalized total.
 
 ## AMB-024 — What "append-only" covers
 
@@ -547,16 +716,25 @@ brief does not say how far "record" reaches.
 
 **Options.**
 
-- Event records and ledger entries are immutable; balances, holds, and authorization states are derived by folding over
-  them and never stored as mutable fields; every state change, such as a hold settled or a fee reversed, is a new
-  record. **Recommended**: nothing the ledger holds can then be edited.
+- Every event, from the brief or fired by the ledger, is immutable; balances, holds, and authorization states are
+  derived by folding over them and never stored as mutable fields; every state change, such as a hold settled or a fee
+  refunded, is a new record. **Recommended**: nothing the ledger holds can then be edited.
 - Only event records are immutable; derived state is stored and updated in place.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** The ledger is event-sourced, as AMB-004 records: every event, from the brief or fired by the ledger, is
+appended to a log and never mutated or deleted; balances, holds, and authorization states are aggregations over the log,
+never stored as mutable fields; and every change, such as a hold settled, a fee refunded, or interest corrected, is a
+new event. An event the ledger fires is named by kind, account, the day it is for, and the day it fires, such as
+`FEE-001-D2@D5`, and a step that would move nothing fires no event.
 
-**Rationale.**
+**Rationale.** "No event record is ever mutated or deleted" then holds in spirit as well as in letter, because nothing
+the ledger holds is edited in place, and any day's view can be rebuilt by replaying the log. A backdated event, a
+refund, or an interest correction is a new event that every aggregation picks up. The marker keeps the ledger's own
+events apart from E1 to E10 and stays stable when a late event adds or removes a fired event, where a running number
+would shift; firing nothing when nothing moves keeps the log to events that change a balance, as interest accrues on
+"positive balances only".
 
 ## AMB-025 — What each day's report lists
 
@@ -572,11 +750,17 @@ no activity, and whether an authorization appears only on the day it changes or 
   active hold on Day 3); and that day's errors. **Recommended**: every figure can be checked on every day.
 - Only what changed that day. Shorter, but it hides an active hold on days it does nothing.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** Every day's report lists both accounts, each in its own currency, even on a day with no activity; every
+authorization known by the end of that day, with its state then; the fees and refunds fired that day, each naming the
+day it is for; and that day's errors, or none. Day 3 therefore shows Auth-A approved with its hold of 200.00, and
+ACC-002 prints 0.000 on Days 1 to 4.
 
-**Rationale.**
+**Rationale.** Each day's report then stands on its own: Day 3's available balance of 450.00 is explained by the hold
+printed beside it, and no figure needs an earlier report to be checked. ACC-001 and ACC-002 hold different currencies,
+so their balances cannot be combined into one line. Printing only what changed would be shorter, but it would drop
+Auth-A from Day 3 and leave the 200.00 gap between closing and available unexplained.
 
 ## AMB-026 — Test suite or script
 
@@ -592,11 +776,17 @@ assertion with presentation.
 - A test suite that prints.
 - A script only.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** Both. The command-line program, `account-ledger-cli`, replays the stream and prints the daily report
+exactly as [OUTPUT_TARGET](OUTPUT_TARGET.md) shows it. The test suite replays the same stream and asserts every figure:
+unit and integration tests check the scenarios in `ACCEPTANCE_CRITERIA.feature`, and an end-to-end test runs the program
+through its process boundary and compares its output with OUTPUT_TARGET.
 
-**Rationale.**
+**Rationale.** Each does one job: the program shows the replay, and the tests prove it. A script alone asserts nothing,
+so a Day 6 closing of 285.73 instead of 285.76 would fail nothing; a test suite that prints buries the report in test
+output and leaves nothing a reader can run to see it. The repository already holds both, a runnable app and three test
+levels bound to the same feature files, and the failing test the brief asks for needs a suite to live in.
 
 ## AMB-027 — An overdraft fee on a BHD account
 
@@ -612,30 +802,49 @@ ACC-002 never goes negative in this stream, so this is not triggered.
 - Convert AED 25.00 at a chosen rate.
 - Charge BHD 25.000.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** Convert AED 25.00 at a fixed rate of 1 AED = 0.10238257 BHD, the mid-market rate XE showed on 2026-09-24
+at 12:32 UTC: 25.00 × 0.10238257 = 2.55956425, rounded half-even to BHD 2.560 (AMB-006). A BHD account is charged BHD
+2.560 on each negative day, under the same rules as an AED account. The rate and the fee are recorded in
+[NUMBERS](NUMBERS.md) as chosen constants. ACC-002 never goes negative in this stream, so no figure moves.
 
-**Rationale.**
+**Rationale.** "Assessed once per day per account" reaches every account, so a BHD account is charged too, and the fee's
+value is kept in the currency it is charged in. Charging BHD 25.000 would cost about ten times as much. The rate is
+taken once and fixed, not read daily, because the ledger is in-memory and never reaches the network. It matches the
+cross rate of the two US dollar pegs, 0.376 BHD and 3.6725 AED, to seven decimal places, so it is unlikely to drift.
 
 ## AMB-028 — Reversing a reversal
 
 **Where.** E9 "reverses E7"; the brief does not say what a reversal may target. Not in this stream.
 
-**Why it is problematic.** Reversing a reversal, or reversing the same entry twice, would let a debit be undone more
+**Why it is problematic.** Reversing a reversal, or reversing the same event twice, would let a debit be undone more
 than once.
 
 **Options.**
 
-- Reject a reversal of an entry that is itself a reversal, and a second reversal of the same entry. **Recommended**: a
-  debit can then be undone at most once.
-- Allow both.
+- Idempotent, with conflicts refused: the same reversal arriving again, under the same event ID, is recognised as
+  already processed and has no effect and no error; a different reversal of an event already reversed is refused and
+  reported as an error; a reversal of a reversal is refused, and a mistaken reversal is corrected by a new event.
+  **Recommended**: a debit can then be undone at most once, a retry raises no false alarm, and a conflict stays visible.
+- Refuse every second reversal alike, repeated or new, as an error, and refuse a reversal of a reversal.
+- Allow a reversal only of an event still in effect, so a reversal of a reversal reinstates the original.
+- Allow everything, so a debit can be undone more than once.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** Idempotent, with conflicts refused. A reversal arriving again under an event ID already processed, with
+the same content, such as E9 delivered twice, is the same event (AMB-034): it has no effect and is not an error. A new
+reversal of an event already reversed, such as an E12 that reverses E7 after E9, is refused, recorded in the log with
+its outcome (AMB-014), and printed as that day's error. A reversal whose target is itself a reversal is refused the same
+way; a mistaken reversal is corrected by a new debit or credit that names what it corrects. Neither case occurs in this
+stream, so no figure moves.
 
-**Rationale.**
+**Rationale.** In production a reversal names the event it undoes, and each event is undone at most once. A reversal
+sent again after a timeout is routine, so treating it as an error would raise false alarms, while a second, different
+reversal of the same event is a conflict someone must see. Correcting a mistaken reversal with a new event, rather than
+reversing the reversal, keeps the log readable: each event has one purpose, and no chain of reversals has to be followed
+to know what is in effect. AMB-034 extends the same rule to every kind of event.
 
 ## AMB-029 — A settlement against a declined or already-settled authorization
 
@@ -646,15 +855,22 @@ silent on it.
 
 **Options.**
 
-- Reject, and debit nothing, exactly as for an unknown ID. **Recommended**: without an active hold there are no reserved
-  funds to settle against.
-- Accept, as for a force-post.
+- Accept, as a force-post, as AMB-012 resolves for an unknown ID. **Recommended**: a merchant claiming against an
+  authorization the ledger knows has at least as good a claim as one the ledger has never seen, as with a second capture
+  for a split shipment; rejecting it while honouring E6 would treat the stronger claim worse.
+- Reject, and debit nothing: without an active hold there are no reserved funds to settle against.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** Accept, as a force-post. A new settlement against an authorization that was declined, or whose hold a
+final settlement already released, posts its debit and releases no hold, as E6 does (AMB-012). The same settlement
+delivered again is a retry and has no effect (AMB-034), and one after a settlement marked partial meets the hold that
+remains (AMB-013). Neither case occurs in this stream, so no figure moves.
 
-**Rationale.**
+**Rationale.** E6 is honoured though the ledger has never seen its authorization, so a merchant whose authorization the
+ledger does know cannot be treated worse; refusing it would give the weaker claim the better outcome. Second captures
+occur in production, as with a split shipment or an offline transaction. The debit can take the balance negative and
+incur the overdraft fee, exactly as E6 could.
 
 ## AMB-030 — A settlement larger than its hold
 
@@ -671,11 +887,19 @@ can drive the balance negative.
 - Reject it.
 - Accept up to the hold and reject the rest.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** Accept and debit the full amount. A settlement above its hold posts its whole amount and releases the
+hold, as AMB-013 resolves; the balance may go negative, and the fee rule then applies as for any negative day. Nothing
+settles above its hold in this stream, so no figure moves.
 
-**Rationale.**
+**Rationale.** In production the authorization reserves funds and the settlement moves them: by the time a settlement
+reaches the bank, the card network has already paid the merchant, so the ledger records the full amount or stops
+matching the money that moved. Settling above the hold is routine, as with a restaurant tip, a fuel pump, or a hotel
+minibar, and card schemes allow it within limits; an excess beyond them is disputed through a chargeback, outside the
+ledger core, not refused at posting. A settlement with no hold at all is honoured (AMB-012, AMB-029), so one with a
+smaller hold cannot be refused. The cost is that a customer can be charged above what was approved, and the bank carries
+the risk of a negative balance.
 
 ## AMB-031 — How a deliberately failing test coexists with a runnable suite
 
@@ -692,11 +916,21 @@ block all delivery; marking it as an expected failure would turn the run green, 
 - Mark it as an expected failure in the regular suite.
 - Keep it failing in the regular suite.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** Mark it as an expected failure in the regular suite, with `@pytest.mark.xfail(strict=True, reason=…)`,
+the reason naming the weakness AMB-018 records: holds never expire. The test runs on every push, its assertion fails,
+and pytest reports it as `XFAIL`, so the run stays green; once the weakness is fixed the test passes, pytest reports
+`XPASS(strict)`, and the run turns red until the marker is removed. When the test is written, Rules Propagation narrows
+the guard that fails every test target on `mark.xfail`, and the application README that states it, to allow this one
+test, and gives the test-driven development rule that a deliberately failing test is "never a finished state" an
+exception for it.
 
-**Rationale.**
+**Rationale.** An expected failure is the idiomatic pytest form for a known weakness: the test is still run, its failure
+is still observed, and its `reason` is the inline annotation the brief asks for. Strict mode keeps the marker honest,
+since a fix cannot go unnoticed. The cost is that the run is green, where the brief says "One failing test", so the
+report must point the reader to the `XFAIL` line. The repository forbids marking an intermittent test as an expected
+failure; this one fails deterministically, by design, so that rule does not reach it.
 
 ## AMB-032 — Which constants belong in NUMBERS
 
@@ -711,11 +945,15 @@ why not half of it does not apply to them; listing only chosen constants hides t
   argue why that value and not half it. **Recommended**: every value a figure rests on is then in one place.
 - List chosen constants only.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** List both, marked given or chosen, as [NUMBERS](NUMBERS.md) already does: a given constant's entry says
+what its value drives, and every chosen constant argues why that value and not half it.
 
-**Rationale.**
+**Rationale.** The brief's question, why that value and not half it, is answered for every constant chosen here, as it
+asks. The given constants, the fee, the rate, the precisions, and the capitalization day, drive most figures in
+[MOVEMENT](MOVEMENT.md); listing them beside the chosen ones, clearly marked, lets a reader derive any figure from one
+file without going back to the brief.
 
 ## AMB-033 — What the report prints beyond the four named items
 
@@ -727,13 +965,54 @@ closing can be traced to what moved it.
 
 **Options.**
 
-- Also print, for each day, the events processed, every end-of-day step with the entry it books (fees, fee reversals,
-  interest accruals, and the capitalization), and each account's available balance. **Recommended**: every printed
-  figure can then be verified from the output alone.
+- Also print, for each day, the events processed, every end-of-day step with the events it fires (fees, fee refunds,
+  interest accruals and adjustments, and the capitalization), and each account's available balance. **Recommended**:
+  every printed figure can then be verified from the output alone.
 - Exactly the four items.
 
-**Status.** Open.
+**Status.** Resolved.
 
-**Resolution.**
+**Resolution.** The report prints the four named items and more. Each day prints three tables: the events processed;
+every end-of-day step with the events it fires, fees, fee refunds, interest accruals and adjustments, and the
+capitalization; and a closing summary with the closing ledger balance, the available balance, any restated earlier
+closings (AMB-022), authorization states, and errors, for both accounts (AMB-025). Each day opens with a banner, its
+name between two full-width lines of `=`, and every table is drawn as a plain-text box, with `+`, `-`, and `|` borders,
+as [OUTPUT_TARGET](OUTPUT_TARGET.md) shows; a block with nothing in it prints none.
 
-**Rationale.**
+**Rationale.** The brief's "prints, per day" names what the report must hold, not everything it may. With only the four
+items, Auth-B's decline could not be checked without the available balance, and Day 5's −410.00 and its fee for Day 2
+could not be traced to E7; with the events and steps printed, every figure can be verified from the output alone. The
+banners mark where one day ends and the next begins, and drawing each table as a box keeps its columns readable in a
+terminal while staying plain text.
+
+## AMB-034 — An event whose ID arrives twice
+
+**Where.** Every event in the stream carries an ID, such as "E4 — Day 3 — CREDIT — ACC-001 AED 400.00 — value_date Day
+3", and "The ledger is append-only. No event record is ever mutated or deleted." Not in this stream.
+
+**Why it is problematic.** The brief does not say whether an event ID can arrive twice, as a retry after a timeout would
+send it. Appending E4 a second time would credit 400.00 twice; refusing it as an error would raise an alarm for a
+routine retry. AMB-028 settles this for a reversal only.
+
+**Options.**
+
+- Idempotent by event ID: an ID already in the log, with the same content, is recognised as already processed and has no
+  effect and no error; the same ID with different content is refused and reported as an error. **Recommended**: it
+  extends AMB-028's rule to every kind of event, so a retry never moves a balance twice and a clash stays visible.
+- Refuse every repeated ID as an error, whatever its content.
+- Append every event as it arrives, so a repeated ID moves the balance again.
+
+**Status.** Resolved.
+
+**Resolution.** Idempotent by event ID. The event ID is the idempotency key: an event whose ID is already in the log,
+with the same content, has no effect and is not an error; one whose ID is already in the log with different content is
+refused, recorded with its outcome (AMB-014), and printed as that day's error. The rule covers every event, from the
+brief or fired by the ledger, and AMB-028's rule for a repeated reversal is this rule applied to a reversal. Nothing
+repeats in this stream, so no figure moves.
+
+**Rationale.** An event already carries an ID, so it is the natural key: a retry after a timeout delivers the same ID
+and content and must not move a balance twice, and an alarm for it would be false. The same ID with different content
+cannot be a retry, so dropping it silently could lose a real transaction; it is a clash someone must see. The ledger's
+own markers, such as `FEE-001-D2@D5`, are built from kind, account, and days (AMB-024), so re-running a day's close
+fires the same IDs and cannot charge a fee twice. The rule relies on the sender keeping IDs unique, which the brief does
+not state; a sender that reuses an ID for a new event sees it refused, not applied.

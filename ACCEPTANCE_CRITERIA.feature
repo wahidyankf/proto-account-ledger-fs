@@ -1,10 +1,10 @@
 Feature: Acceptance criteria from the challenge brief
   The eight acceptance criteria the brief lists, restated as Gherkin in the brief's order and wording. The brief says
-  some of them are wrong. Each verdict belongs in REJECTED.md, and until one is given every scenario carries the
-  verdict-open tag and asserts only what the brief asserts. The ambiguities each scenario depends on are named above
-  it.
+  some of them are wrong. Each verdict belongs in REJECTED.md; a scenario carries the
+  verdict-rejected tag once its criterion is refused there, and the verdict-open tag until then, and asserts only what
+  the brief asserts. The ambiguities each scenario depends on are named above it.
 
-  This file is a draft and is not executed. It moves under specs/ once no ambiguity blocks it, and each scenario is
+  This file is a draft and is not executed. It moves under specs/ once every verdict is decided, and each scenario is
   then rewritten to state the behaviour the ledger actually adopts.
 
   Background:
@@ -39,7 +39,7 @@ Feature: Acceptance criteria from the challenge brief
     And no funds leave "ACC-001" because of it
 
   # Ambiguities: AMB-021
-  @C5 @verdict-open
+      @C5 @verdict-rejected
   Scenario: C5 - an approved Auth-B hold reduces available balance but not ledger balance
     Given the authorization "Auth-B" for AED 90.00 is approved
     Then the available balance of "ACC-001" falls by AED 90.00
