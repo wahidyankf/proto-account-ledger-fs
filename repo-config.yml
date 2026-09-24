@@ -191,6 +191,17 @@ gates:
         executable: ./rhino
         args: [{ literal: repo-config }, { literal: validate }]
       run-on: { main: {} }
+    - id: word-budget
+      type: check
+      command:
+        executable: ./rhino
+        args:
+          [
+            { literal: governance },
+            { literal: word-budget },
+            { literal: validate },
+          ]
+      run-on: { pre-push: {}, pull-request: {}, main: {} }
     - id: internal-link
       type: check
       command:
