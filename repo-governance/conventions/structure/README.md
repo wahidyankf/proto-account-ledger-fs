@@ -15,6 +15,7 @@ mechanically.
 | Convention                                                  | Governs                                                                                  |
 | ----------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | [Artifact Metadata](artifact-metadata.md)                   | the frontmatter every governed artifact family carries                                   |
+| [Assessment Docs](assessment-docs.md)                       | the root documents answering the challenge brief, and how they stay in agreement         |
 | [File Naming](file-naming.md)                               | how files and directories are named, and how a document splits                           |
 | [Repository Configuration](repository-configuration.md)     | what a repository is, and what must pass before a change lands                           |
 | [Plans](plans.md)                                           | the plan system: lifecycle, documents, delivery, and archival                            |
@@ -36,6 +37,7 @@ mechanically.
 - [Artifact Metadata](artifact-metadata.md)
 - [Artifact Metadata Modules](artifact-metadata/README.md) — schemas by path, shared value rules, and the portable tiers
   and capabilities
+- [Assessment Docs](assessment-docs.md) — the owner of each fact across the assessment docs, and how they agree
 - [File Naming](file-naming.md)
 - [File Naming Modules](file-naming/README.md) — portable characters, dated and numbered names, and source filenames
 - [Repository Configuration](repository-configuration.md)

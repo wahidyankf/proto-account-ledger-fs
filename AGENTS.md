@@ -32,6 +32,8 @@ catalog artifacts only through [adopt-artifact](repo-governance/workflows/adopti
 - `apps/` runnable applications; `libs/` reusable libraries (none yet).
 - `specs/` Gherkin behaviours and architecture; every test level binds the same feature files.
 - `plans/` delivery plans; `docs/` Diátaxis documentation for people.
+- Root assessment docs, such as `AMBIGUITIES.md` and `NUMBERS.md`, answer the challenge brief and must agree with one
+  another; see [assessment docs](repo-governance/conventions/structure/assessment-docs.md).
 - `.agents/` canonical agents and skills; `.claude/`, `.codex/`, and `.opencode/` are generated adapters.
 
 ## Commands
