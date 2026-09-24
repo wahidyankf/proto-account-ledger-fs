@@ -59,7 +59,7 @@
       "cache": false
     },
     "test:unit": {
-      "command": "if grep -rnE --include='*.py' 'pytest\\.skip|mark\\.skip|skipif|mark\\.xfail' tests; then echo 'ERROR: a skipped or expected-failure test is marked above'; exit 1; fi && uv run --no-sync pytest tests/unit --cov=account_ledger --cov-report=term-missing --cov-fail-under=80",
+      "command": "if grep -rnE --include='*.py' 'pytest\\.skip|mark\\.skip|skipif|strict *= *False' tests; then echo 'ERROR: a skipped or non-strict expected-failure test is marked above'; exit 1; fi && uv run --no-sync pytest tests/unit --cov=account_ledger --cov-report=term-missing --cov-fail-under=80",
       "options": {
         "cwd": "apps/account-ledger-cli"
       },
@@ -77,7 +77,7 @@
       ]
     },
     "test:integration": {
-      "command": "if grep -rnE --include='*.py' 'pytest\\.skip|mark\\.skip|skipif|mark\\.xfail' tests; then echo 'ERROR: a skipped or expected-failure test is marked above'; exit 1; fi && uv run --no-sync pytest tests/integration",
+      "command": "if grep -rnE --include='*.py' 'pytest\\.skip|mark\\.skip|skipif|strict *= *False' tests; then echo 'ERROR: a skipped or non-strict expected-failure test is marked above'; exit 1; fi && uv run --no-sync pytest tests/integration",
       "options": {
         "cwd": "apps/account-ledger-cli"
       },
@@ -103,7 +103,7 @@
       "cache": false
     },
     "test:e2e": {
-      "command": "if grep -rnE --include='*.py' 'pytest\\.skip|mark\\.skip|skipif|mark\\.xfail' tests; then echo 'ERROR: a skipped or expected-failure test is marked above'; exit 1; fi && uv run --no-sync pytest tests/e2e",
+      "command": "if grep -rnE --include='*.py' 'pytest\\.skip|mark\\.skip|skipif|strict *= *False' tests; then echo 'ERROR: a skipped or non-strict expected-failure test is marked above'; exit 1; fi && uv run --no-sync pytest tests/e2e",
       "options": {
         "cwd": "apps/account-ledger-cli"
       },

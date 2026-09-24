@@ -46,5 +46,6 @@ npx nx run account-ledger-cli:test:e2e:watch          # pytest-watcher on tests/
 
 Run only one copy of each watcher: Nx refuses to start a task that is already running in another process.
 
-A test is never skipped: every test target fails if `pytest.skip`, `mark.skip`, `skipif`, or `mark.xfail` appears under
-`tests/`.
+A test is never skipped: every test target fails if `pytest.skip`, `mark.skip`, or `skipif` appears under `tests/`. An
+expected failure is allowed only as a strict one, which records a known weakness with its reason: `xfail_strict = true`
+makes every `mark.xfail` strict, and every test target fails if `strict=False` appears under `tests/`.

@@ -6,6 +6,7 @@ and file creation times; no earlier work is claimed.
 
 | When             | What                                                                                           |
 | ---------------- | ---------------------------------------------------------------------------------------------- |
+| 2026-09-24 21:38 | Allowed strict xfail in every test target; TDD rule gains the design-weakness exception        |
 | 2026-09-24 21:32 | Aligned the assessment docs with every resolution; no entry is worded as open any more         |
 | 2026-09-24 21:27 | Listed WORKLOG newest first; new rows go on top, and no row is edited or removed               |
 | 2026-09-24 21:25 | Opened each day in OUTPUT_TARGET with a banner between two full-width lines of =               |

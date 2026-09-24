@@ -921,10 +921,10 @@ block all delivery; marking it as an expected failure would turn the run green, 
 **Resolution.** Mark it as an expected failure in the regular suite, with `@pytest.mark.xfail(strict=True, reason=…)`,
 the reason naming the weakness AMB-018 records: holds never expire. The test runs on every push, its assertion fails,
 and pytest reports it as `XFAIL`, so the run stays green; once the weakness is fixed the test passes, pytest reports
-`XPASS(strict)`, and the run turns red until the marker is removed. When the test is written, Rules Propagation narrows
-the guard that fails every test target on `mark.xfail`, and the application README that states it, to allow this one
-test, and gives the test-driven development rule that a deliberately failing test is "never a finished state" an
-exception for it.
+`XPASS(strict)`, and the run turns red until the marker is removed. Through Rules Propagation, the guard on every test
+target no longer refuses `mark.xfail` but refuses `strict=False`, so every expected failure is strict, and the
+test-driven development rule that a deliberately failing test is "never a finished state" carries an exception for a
+strict expected failure that records a known design weakness.
 
 **Rationale.** An expected failure is the idiomatic pytest form for a known weakness: the test is still run, its failure
 is still observed, and its `reason` is the inline annotation the brief asks for. Strict mode keeps the marker honest,

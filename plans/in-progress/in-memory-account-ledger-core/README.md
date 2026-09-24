@@ -26,8 +26,8 @@ per [Assessment Docs](../../../repo-governance/conventions/structure/assessment-
 
 - Scope: all of Part 1, plus an architecture trade-offs document at `docs/explanation/architecture-trade-offs.md` that
   feeds the Part 2 PDF; the PDF itself is out of scope.
-- The deliberately failing test is a strict expected failure in the regular suite, as AMB-031 resolves; the guard
-  against `mark.xfail` is to be narrowed, through Rules Propagation, when the test is written.
+- The deliberately failing test is a strict expected failure in the regular suite, as AMB-031 resolves; every test
+  target refuses a non-strict expected failure instead of every expected failure.
 - Expected domain failures are typed result values, not exceptions.
 - The agent adds each `WORKLOG.md` entry at the top, newest first, with real timestamps as work happens; entries may
   also be added by hand.

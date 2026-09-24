@@ -50,7 +50,8 @@ red: well-formed input is accepted    -> green -> refactor
 ```
 
 After the final cycle, run the fast gate from [Test Boundaries and Gates](../test-boundaries-and-gates.md) to catch
-regressions elsewhere. A deliberately failing test is evidence in progress during red, never a finished state.
+regressions elsewhere. A deliberately failing test is red evidence in progress, never a finished state, except per
+[Test Design](002-test-design.md#record-a-known-weakness-as-a-strict-expected-failure).
 
 A behaviour that is checked by hand follows the same order: write the expected observations, observe them fail, change
 the code, and repeat the whole check. Automate it once automating it is cheap.

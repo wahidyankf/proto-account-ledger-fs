@@ -56,3 +56,13 @@ leave the number unchanged. It also fails closed where it should not, since a le
 with nothing wrong.
 
 Whenever a test asserts how many, ask which set it is really about, and derive that set.
+
+## Record a Known Weakness as a Strict Expected Failure
+
+A test may stay failing in the suite only as a strict expected failure that records a known design weakness, with its
+reason inline. Followed: the test runs on every change, reports as an expected failure, and fails the run once it
+passes. Violated: a non-strict expected failure, a skipped test, or a strict one with no reason. An intermittent test is
+never marked this way; see [Intermittent Failures](004-intermittent-failures.md).
+
+Reason: a weakness kept as a running test stays visible and cannot outlive its fix unnoticed. This repository adds the
+rule to the adopted standard because its assessment asks for one failing test against its own design (AMB-031).
