@@ -1,0 +1,166 @@
+{
+  "schemaVersion": 1,
+  "profile": "claude",
+  "sources": [
+    {
+      "id": "agent/plan-checker",
+      "path": ".agents/agents/plan-checker.md",
+      "digest": "457b7231ee587d80dae3a09fdf11c2f676faba34cb857dd7e7ab9c8149b0c09d"
+    },
+    {
+      "id": "agent/plan-execution-checker",
+      "path": ".agents/agents/plan-execution-checker.md",
+      "digest": "11973708eca4f161ae4f526455966a8e617bbb6d0e05427c9507e7761d6d10b5"
+    },
+    {
+      "id": "agent/plan-maker",
+      "path": ".agents/agents/plan-maker.md",
+      "digest": "f5d462e692827de6fdb8e37344623b0a2b466912ffc7848eb1909a2ace4bcdeb"
+    },
+    {
+      "id": "agent/repo-explorer",
+      "path": ".agents/agents/repo-explorer.md",
+      "digest": "f860550c4340954ae5429483c00a4bfd672ba4e0bd706ab667d455f74cb062e2"
+    },
+    {
+      "id": "agent/repo-rules-checker",
+      "path": ".agents/agents/repo-rules-checker.md",
+      "digest": "e1fc540da22ec3c7d777a055765ede2580e2a1409fb0ffaffa705dfc96366396"
+    },
+    {
+      "id": "agent/repo-rules-fixer",
+      "path": ".agents/agents/repo-rules-fixer.md",
+      "digest": "d4409d74de1d00e4c59f9c7225a62d42166db5fc211e2b3d63939d36952c4cf5"
+    },
+    {
+      "id": "agent/repo-rules-maker",
+      "path": ".agents/agents/repo-rules-maker.md",
+      "digest": "217122b84b550fe464fe5c8d04c4d2ee5e2fce17d1aff974c7fc768a4560b67a"
+    },
+    {
+      "id": "agent/swe-code-checker",
+      "path": ".agents/agents/swe-code-checker.md",
+      "digest": "327ad3dfac38858e1796116e4ebed86a89e82831ecdd579fc518a60f29b432c2"
+    },
+    {
+      "id": "agent/swe-code-fixer",
+      "path": ".agents/agents/swe-code-fixer.md",
+      "digest": "0103fb2cdeeaba22833ccbd67f24dffeb456ae0bf23ea965879c28f8c618b87a"
+    },
+    {
+      "id": "agent/swe-code-maker",
+      "path": ".agents/agents/swe-code-maker.md",
+      "digest": "501d140fe28336f26f0fe3a0fa06257409a8bf1ce1b346078692522fee6cac8b"
+    },
+    {
+      "id": "skill/adopt-artifact",
+      "path": ".agents/skills/adopt-artifact/SKILL.md",
+      "digest": "6dd96c5d6f939997f05b38cb22c2fe8ecae901a5070f3c6866a020cac48469d2"
+    },
+    {
+      "id": "skill/applying-content-quality",
+      "path": ".agents/skills/applying-content-quality/SKILL.md",
+      "digest": "24569a5536d1f9f712c05ca3eb141d69155b9e9071e67c60c0771e456580a472"
+    },
+    {
+      "id": "skill/applying-maker-checker-fixer",
+      "path": ".agents/skills/applying-maker-checker-fixer/SKILL.md",
+      "digest": "c596b0be906c1d5bb586a417926f7ee5a72dcce7bb6403095984c5537034f6b9"
+    },
+    {
+      "id": "skill/assess-alignment",
+      "path": ".agents/skills/assess-alignment/SKILL.md",
+      "digest": "b1bcff59da06356f0c8849d148cfefba7b055b57d790131a5c32c24223a6faa3"
+    },
+    {
+      "id": "skill/assessing-criticality-confidence",
+      "path": ".agents/skills/assessing-criticality-confidence/SKILL.md",
+      "digest": "c9ae1eeae698e8cd2b36c2b50bad18de7600bbd42c029df3bf64fa1c4f561f60"
+    },
+    {
+      "id": "skill/building-command-line-interfaces",
+      "path": ".agents/skills/building-command-line-interfaces/SKILL.md",
+      "digest": "aabf3effcd22ef4a0f579dc84b2f6f447e6a158f6dc9b4901e3306c4f58eadfe"
+    },
+    {
+      "id": "skill/developing-applications",
+      "path": ".agents/skills/developing-applications/SKILL.md",
+      "digest": "28dbab13b84df18ee6c18431e414df13715ede3f2ab83265ae35a37b6bfe5375"
+    },
+    {
+      "id": "skill/generating-validation-reports",
+      "path": ".agents/skills/generating-validation-reports/SKILL.md",
+      "digest": "238da78a9d9cfbfaff0c2d49d95b6b7907c9c7fe995a4fabab412c6624b939d2"
+    },
+    {
+      "id": "skill/grill-me",
+      "path": ".agents/skills/grill-me/SKILL.md",
+      "digest": "1e8a9218b9c7287c3cccf430bbd4749f5a591da0b97c05e8f58142e423a84a09"
+    },
+    {
+      "id": "skill/plan-creating-project-plans",
+      "path": ".agents/skills/plan-creating-project-plans/SKILL.md",
+      "digest": "3ad655624e32b8678c249f748afadc402db4b618b15a49e996a27631f4f63b7b"
+    },
+    {
+      "id": "skill/plan-grooming-idea-briefs",
+      "path": ".agents/skills/plan-grooming-idea-briefs/SKILL.md",
+      "digest": "0254b1e46aab5461ce3c637472ae6210c950df780ef3d325458126423bfbb2f5"
+    },
+    {
+      "id": "skill/plan-validating-quality",
+      "path": ".agents/skills/plan-validating-quality/SKILL.md",
+      "digest": "9a30cd24cfc11be0842fe218f5a6aa8d7e15fc129e219eca3b44f8be6d035513"
+    },
+    {
+      "id": "skill/plan-verifying-execution",
+      "path": ".agents/skills/plan-verifying-execution/SKILL.md",
+      "digest": "1bf36e33d8a8e7e6eee592a91c66ab86d57273652c394e5469e59206fe85604a"
+    },
+    {
+      "id": "skill/plan-writing-gherkin-criteria",
+      "path": ".agents/skills/plan-writing-gherkin-criteria/SKILL.md",
+      "digest": "104c13f8ca1d7ea78a90022765d4a039c19cb06504016a7aebb574da0fe5c36f"
+    },
+    {
+      "id": "skill/practicing-trunk-based-development",
+      "path": ".agents/skills/practicing-trunk-based-development/SKILL.md",
+      "digest": "61912460e55afe17a60bde8200fdfd6dfdc41f74503c1628478f371bf5257434"
+    },
+    {
+      "id": "skill/programming-fsharp",
+      "path": ".agents/skills/programming-fsharp/SKILL.md",
+      "digest": "0e3b993c88c6359f1d369f0d23f8a8a91acae78f36c51f080b05f839856b41eb"
+    },
+    {
+      "id": "skill/propagating-rules",
+      "path": ".agents/skills/propagating-rules/SKILL.md",
+      "digest": "7e50a2c2c89949243f36b694fb28645bbab1b57549a206561cc0e5cde5882766"
+    },
+    {
+      "id": "skill/understanding-governance-architecture",
+      "path": ".agents/skills/understanding-governance-architecture/SKILL.md",
+      "digest": "78a2b0aed13dd378cd5d2b1e03d31c3edbe72a59ae9ee58c3dced1b804bc7ae0"
+    },
+    {
+      "id": "skill/understanding-shared-vocabulary",
+      "path": ".agents/skills/understanding-shared-vocabulary/SKILL.md",
+      "digest": "9b4d349e5db3dbea4f82178b6c081ef17a7de42c9ca07fbe58285d5522b89138"
+    },
+    {
+      "id": "skill/validating-governance-rules",
+      "path": ".agents/skills/validating-governance-rules/SKILL.md",
+      "digest": "77020f140edf367f6d937150d77dabcb68aec23e775edac080bbdd167b9e8457"
+    },
+    {
+      "id": "skill/writing-readme-files",
+      "path": ".agents/skills/writing-readme-files/SKILL.md",
+      "digest": "e1d56e9bf7463e221cdc83048740aba8ab6deedaae385a0dbba65aeadca17c40"
+    },
+    {
+      "id": "instruction",
+      "path": "AGENTS.md",
+      "digest": "33f1bdbbbbadfc826c7f9d12dd35f245c4d9e72fa362647210ddfe38f46906bb"
+    }
+  ]
+}

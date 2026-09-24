@@ -106,6 +106,60 @@ harness:
         identity: { name: name, description: description }
         fixed: { sandbox_mode: read-only }
         absent: [model]
+    - id: opencode
+      supports:
+        capabilities: [repository-read, repository-write, shell]
+        constraints: []
+        routes: [canonical-import]
+        identities: [description]
+      agent-adapter:
+        path: ".opencode/agents/{name}.md"
+        format: front-matter
+        route-field: body
+        route:
+          "Before acting, read the complete canonical agent definition at the
+          repository-root path {path} and follow it as authoritative. If it
+          cannot be read, stop and report the missing path."
+        identity: { description: description }
+        fixed: { mode: subagent }
+        translations:
+          - { when: always, field: permission, entries: { read: allow } }
+          - {
+              when: requires,
+              capability: repository-read,
+              field: permission,
+              entries: { glob: allow, grep: allow },
+            }
+          - {
+              when: requires,
+              capability: repository-write,
+              field: permission,
+              entries: { edit: allow },
+            }
+          - {
+              when: requires,
+              capability: shell,
+              field: permission,
+              entries: { bash: allow },
+            }
+          - {
+              when: denies,
+              capability: repository-write,
+              field: permission,
+              entries: { edit: deny },
+            }
+          - {
+              when: denies,
+              capability: shell,
+              field: permission,
+              entries: { bash: deny },
+            }
+          - {
+              when: denies,
+              capability: nested-agent,
+              field: permission,
+              entries: { task: deny },
+            }
 
 policies:
   markdown:
@@ -146,6 +200,7 @@ policies:
         - { glob: ".agents/README.md", fail: 750 }
         - { glob: ".claude/README.md", fail: 750 }
         - { glob: ".codex/README.md", fail: 750 }
+        - { glob: ".opencode/README.md", fail: 750 }
     directory-map:
       trees:
         - { path: repo-governance }

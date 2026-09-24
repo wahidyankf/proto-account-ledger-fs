@@ -13,10 +13,10 @@ Evidence standards. They answer what a claim, a finding, or a measurement has to
 
 ## Directory Map
 
-priority, and report contents re-validation, priority and reporting
-
+- [Finding Criticality and Confidence](finding-criticality-and-confidence.md) — ratings, re-validation before a fix,
+  priority, and report contents
+- [Finding Criticality and Confidence Modules](finding-criticality-and-confidence/README.md) — levels, confidence and
+  re-validation, priority and reporting
 - [Plan Anti-Hallucination](plan-anti-hallucination.md) — grounding, confidence labels, and refusal for plan claims
 - [Plan Anti-Hallucination Modules](plan-anti-hallucination/README.md) — grounding and labels, absence and completeness,
-  anti-patterns already failing investigation and pipeline availability them with contracts, tests, and documentation in
-  the same change, and recording a verified no-op path, and can respond to the change before it justifies a decision and
-  lasting assertions
+  anti-patterns

@@ -1,0 +1,19 @@
+# Project-scoped Codex settings. Codex loads this layer only for a trusted
+# project, and it sits above the user config in precedence. Codex reads
+# AGENTS.md for repository rules; this file holds tool settings only. Custom
+# agents in .codex/agents/ are generated from .agents/ by
+# `npm run generate:bindings`.
+
+# The owner authors every commit: no co-author trailer or other attribution to
+# Codex. An empty string disables the trailer.
+commit_attribution = ""
+
+[agents]
+# Subagents stay available so the generated roles in .codex/agents/ can be
+# spawned in this repository.
+enabled = true
+
+[features]
+# The grill-me skill asks structured decision questions through
+# request_user_input, which Codex keeps off by default.
+default_mode_request_user_input = true
