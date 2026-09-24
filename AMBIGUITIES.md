@@ -339,7 +339,8 @@ a rule, so its entry says what the value drives; only chosen constants carry a "
 **Where.** The report prints "closing ledger balance, fee assessments, authorization states, and errors"; nothing says
 whether it may print more.
 
-**Status: Open.** Recommendation: also print each account's available balance every day and, on Day 6, the interest
-capitalized. Every authorization is decided against the available balance, so without it Auth-A's approval and Auth-B's
-decline cannot be checked from the output; the capitalized interest is the total the rounded daily accruals must sum to.
-The alternative, exactly the four items, matches the brief's list but leaves both unverifiable from the output.
+**Status: Open.** Recommendation: also print, for each day, the events processed, every end-of-day step with the entry
+it books (fees, fee reversals, interest accruals, and the capitalization), and each account's available balance. Every
+authorization is decided against the available balance, so without it Auth-A's approval and Auth-B's decline cannot be
+checked from the output; the events and end-of-day steps let every closing be traced to what moved it. The alternative,
+exactly the four items, matches the brief's list but leaves those figures unverifiable from the output.

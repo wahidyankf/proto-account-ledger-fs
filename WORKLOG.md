@@ -30,3 +30,4 @@ claimed.
 | 2026-09-24 16:04 | Gave every MOVEMENT day three tables: events processed, EOD applied, and closing summary       |
 | 2026-09-24 16:05 | Moved fees, reversals, and capitalization out of the closing summary into EOD applied          |
 | 2026-09-24 16:08 | MOVEMENT no longer states the open EOD order or accrual status as settled                      |
+| 2026-09-24 16:09 | OUTPUT_TARGET prints the three MOVEMENT blocks per day; AMB-033 widened to match               |
