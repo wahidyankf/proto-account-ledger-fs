@@ -15,7 +15,8 @@ Each entry records when, what was found, why it matters, and, once routed, its o
 - **Why it matters.** Every mutation proof in this plan restores code the same way; a stale cache turns a restored green
   into a false red, or a mutation into a false green.
 - **Handling.** After each mutation's restore, delete `__pycache__` under `src` and `tests` before the confirming run.
-- **Owner.** Not yet routed.
+- **Owner.** Governance: `repo-governance/development/quality/stacks/python-standards.md`, Mutation Proofs, landed
+  through Rules Propagation on 2026-09-25 at 06:55. Kept: nothing caught a same-second restore before.
 
 ### L2 — Editing AGENTS.md changes the generated adapters (2026-09-25 04:15)
 
@@ -25,7 +26,8 @@ Each entry records when, what was found, why it matters, and, once routed, its o
 - **Why it matters.** tech-docs 007 says no adapter changes, so `npm run generate:bindings` is not needed; that is wrong
   for any phase that edits `AGENTS.md`, Phase 2 included.
 - **Handling.** Regenerate the bindings in each phase that edits `AGENTS.md`, and commit the adapters with it.
-- **Owner.** Not yet routed.
+- **Owner.** Discarded: already covered. `check:hygiene`'s `harness-adapters` gate failed on it in Phase 1 and names the
+  regeneration, so the repository already catches it.
 
 ### L3 — `decide` takes the available balance, not the log (2026-09-25 04:47)
 
@@ -34,7 +36,8 @@ Each entry records when, what was found, why it matters, and, once routed, its o
   cycle. Cycle 4.4 wrote `decide(available, amount)`, and `processing.py` computes the available balance first.
 - **Why it matters.** The rule is unchanged (AMB-008, AMB-009): the decision still reads the balance value-dated up to
   the processed day less the active holds; only where that balance is computed moved.
-- **Owner.** Not yet routed.
+- **Owner.** Discarded: specific to this plan. The rule is unchanged, the code states the signature as built, and no
+  rule would catch a different split next time.
 
 ### L4 — Pyright proves exhaustiveness only on the matched subject itself (2026-09-25 04:55)
 
@@ -46,7 +49,8 @@ Each entry records when, what was found, why it matters, and, once routed, its o
   pyright narrows the subject to `Never`.
 - **Handling.** Match the inner attribute in its own `match`; bind a tuple subject to a name, `pair = state, trigger`,
   and end with `case _: assert_never(pair)`.
-- **Owner.** Not yet routed.
+- **Owner.** Discarded: already covered. Strict pyright reports the unexhausted match, and python-standards requires
+  each match over a closed set to end in `assert_never`.
 
 ### L5 — `AuthorizationRecord` holds the authorization, not its fields (2026-09-25 04:53)
 
@@ -55,7 +59,8 @@ Each entry records when, what was found, why it matters, and, once routed, its o
   cycle reads a last event.
 - **Why it matters.** The record carries the same facts without copying them; a later phase that renders the last event
   adds that field then.
-- **Owner.** Not yet routed.
+- **Owner.** Discarded: specific to this plan. The architecture's L4 view shows `AuthorizationRecord` as built, the
+  authorization and its state.
 
 ### L6 — Rule tests with incidental overdrafts break once fees exist (2026-09-25 05:17)
 
@@ -63,7 +68,8 @@ Each entry records when, what was found, why it matters, and, once routed, its o
   consequence before fees, and each asserted a closing that now carried a fee. Their streams now open with a credit.
 - **Why it matters.** A rule test should keep every day at or above zero unless the fee rule is what it tests, or each
   later end-of-day step can move its figures.
-- **Owner.** Not yet routed.
+- **Owner.** Discarded: already covered. The suite failed at once when fees landed, and the four streams were fixed; any
+  later rule that moves a figure fails its tests the same way.
 
 ### L7 — A resolved rule with no figure in the stream needs its own test (2026-09-25 05:52)
 
@@ -72,7 +78,9 @@ Each entry records when, what was found, why it matters, and, once routed, its o
   unnoticed until Cycle 6.8's day list read them.
 - **Why it matters.** A plan that derives its tests from the brief's figures misses every rule the stream never
   exercises; each such clause of a resolution needs a test of its own.
-- **Owner.** Not yet routed.
+- **Owner.** Governance: `repo-governance/development/quality/testing/behaviour-driven-development.md`, This
+  Repository's Binding, landed through Rules Propagation on 2026-09-25 at 06:55. Kept: no rule mapped tests to clauses,
+  only to entries.
 
 [capture]: ../../../repo-governance/conventions/structure/plans/008-knowledge-capture-and-archival.md
 [triage]: ../../../repo-governance/conventions/structure/plans/017-learning-triage.md

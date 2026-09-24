@@ -46,7 +46,9 @@ covers the code, a characterization test first records its current behaviour, so
 This repository writes no Gherkin: behaviour is specified by plain pytest tests, each named for what it proves and
 written test-first, because a scenario beside each test would be a second statement of it that drifts. Discovery and
 Scenarios, Bindings and Exemptions, Compliance and Reporting, and Scenario First above are not applicable, since no
-corpus exists for them to govern. Layers and Adapters stays adopted, reading "every test" for "every scenario".
+corpus exists for them to govern. Layers and Adapters stays adopted, reading "every test" for "every scenario". A plan
+maps each clause of an [AMBIGUITIES](../../../../AMBIGUITIES.md) resolution that states what the ledger does to a test
+of its own, whether or not the brief's stream exercises it.
 
 ## Modules
 

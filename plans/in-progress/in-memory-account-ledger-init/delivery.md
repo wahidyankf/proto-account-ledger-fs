@@ -78,11 +78,16 @@ first.
   a partial capture keeps the rest of its hold, and every state and trigger follows the table. Last gate passed:
   Phase 8. Next: Phase 9.
 - Phase 8 committed as `378a7a1` and pushed, `6a1e713..378a7a1`.
-- Phase 9: the assessment docs name their tests (MOVEMENT's 10, REJECTED's refusals, 34 AMBIGUITIES entries, 52 distinct
-  names, each found); R4 retired `ACCEPTANCE_CRITERIA.feature` from the assessment-docs convention; the root README
-  gained its run-and-read section. Gate 06:32–06:35, every command exit 0.
+- Phase 9 (06:27–06:36): the assessment docs name their tests (MOVEMENT's 10, REJECTED's refusals, 34 AMBIGUITIES
+  entries, 52 distinct names, each found); R4 retired `ACCEPTANCE_CRITERIA.feature` from the assessment-docs convention;
+  the root README gained its run-and-read section. Gate 06:32–06:35, every command exit 0. Last gate passed: Phase 9.
+  Next: Phase 10.
 - Phase 9 commits: `58e690d` (the feature file's deletion only, a failed `git add`) and `02ce7aa` (the rest), pushed as
   `378a7a1..02ce7aa`.
+- Phase 10 (06:38–06:47): `docs/explanation/architecture-trade-offs.md` written from the built code with the brief's
+  four sections, its scale figures measured; the Gherkin search found no live requirement; every AC-29 choice located.
+  Gate 06:45–06:47, every command exit 0; unit coverage 96%. Last gate passed: Phase 10. Next: archival.
+- Phase 10 commit: `7f75045`, pushed as `02ce7aa..7f75045`.
 
 ## Execution Checkout
 
@@ -2516,8 +2521,11 @@ done
   - Run 06:32–06:35, every command exit 0 (logs local-tmp/p9-1.log to p9-7.log): test:quick 0 (All checks passed; 111
     passed, 1 xfailed; coverage TOTAL 96%); test:integration 0 (2 passed); test:e2e 0 (6 passed); check:hygiene 0;
     check-md 0; internal-link && heading-hierarchy && naming 0; word-budget 0.
-- [ ] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
+- [x] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
       Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
+  - Added at the top with the Phase 9 commit (`02ce7aa`): `2026-09-25 06:27–06:36`, "Plan execution, Phase 9: the
+    assessment docs name their tests; the feature file is retired". Start from the transcript's first Phase 9 command,
+    06:27; end from `date` before the commit. This tick was missed at the time and made at the Phase 10 close.
 - [x] [AI] Commit the phase as `docs(assessment): name the test behind every criterion and rule`, then push to
       `origin/main`; the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof: the
       commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-24, AC-25.
@@ -2623,11 +2631,16 @@ grep -rniE 'gherkin|pytest-bdd|\.feature' AGENTS.md README.md repo-governance sp
       AC-30.
   - 96% line coverage (`TOTAL 1252 55 96%` in `local-tmp/p10-1.log`, the `test:unit` step of `test:quick`), above the
     80% gate.
-- [ ] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
+- [x] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
       Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
-- [ ] [AI] Commit the phase as `docs(explanation): write the architecture trade-offs`, then push to `origin/main`; the
+  - Added at the top with the Phase 10 commit (`7f75045`): `2026-09-25 06:38–06:47`, "Plan execution, Phase 10: the
+    architecture trade-offs, measured; final verification". Start and end from `date`.
+- [x] [AI] Commit the phase as `docs(explanation): write the architecture trade-offs`, then push to `origin/main`; the
       pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof: the commit hash and the
       pushed range, recorded here and in the Execution Record. Acceptance: AC-27 to AC-30.
+  - `7f75045` (06:48), `docs(explanation): write the architecture trade-offs`. `/usr/bin/git push origin main`:
+    `02ce7aa..7f75045  main -> main`; the pre-push hook's gates passed, and Nx ran no test task, since no project is
+    affected by a documentation-only change.
 
 Pause safety: the phase leaves every substantive item terminal. Re-verify with
 `npx nx run account-ledger-cli:test:quick`.
@@ -2641,29 +2654,51 @@ Dormant until their trigger fires; each closes with a disposition at reconciliat
       Procedure: stop the phase; record both figures and the trace in `learnings.md`; put the choice to the owner with
       grill-me; apply the decision to MOVEMENT, OUTPUT_TARGET, and AMBIGUITIES in its own commit, with a WORKLOG entry.
       Proof: the golden run passes against the corrected text.
+  > Not triggered — 2026-09-25: Every criterion test and the golden run passed at each gate from Phase 3 to Phase 10,
+  > the rendering equalled OUTPUT_TARGET byte for byte from Cycle 6.5 on, and no figure in MOVEMENT or OUTPUT_TARGET
+  > changed.
 - [ ] [AI] RC2 — Fall back from partial capture. Trigger: a Phase 8 cycle reaches its repair ceiling, or the owner calls
       time. Decision owner: the owner. Procedure: discard Phase 8's uncommitted work with `/usr/bin/git restore`; put
       the rewording of AMB-013 as not built to the owner and apply it; add partial capture to "What you cut and why" in
       Phase 10 and to REJECTED's abandoned approaches; record AC-21 as not applicable by the owner's dated decision.
       Proof: the gates pass with the header at eight columns.
+  > Not triggered — 2026-09-25: Phase 8 spent one repair of its budget (Cycle 8.5) and never reached the ceiling, the
+  > owner did not call time, and partial capture landed in `378a7a1`.
 - [ ] [AI] RC3 — Revert a pushed unit. Trigger: a later phase shows a pushed unit broke behaviour its own gate did not
       cover. Decision owner: the executor. Procedure: `/usr/bin/git revert <commit>` for the unit's commits, push, and
       redo the unit's items. Proof: the gates pass after the revert.
+  > Not triggered — 2026-09-25: No pushed unit broke behaviour. The one defect a later phase found, Phase 5's interest
+  > and capitalization ignoring reversals (Execution Record, Cycle 6.8), was a resolved rule never built, not a
+  > regression; it was fixed forward in Phase 6, test-first with three failing tests, since a revert would have removed
+  > Phase 5's correct behaviour and left the rule still unbuilt.
 - [ ] [AI] RC4 — Make a change to OUTPUT_TARGET affect the project. Trigger:
       `npx nx show projects --affected --files=OUTPUT_TARGET.md` does not list `account-ledger-cli` in Phase 6. Decision
       owner: the executor. Procedure: add the file to the named inputs of every test target so Nx attributes it, per the
       [Nx workspace policy](../../../repo-governance/development/workflow/nx-workspace-policy.md); if it still is not
       listed, set `cache: false` on `test:e2e`, the target that reads it, and record the finding and the choice in
       `learnings.md`. Proof: the command lists the project, or the target's configuration shows `cache: false`.
+  > Not triggered — 2026-09-25: In Phase 6, `npx nx show projects --affected --files=OUTPUT_TARGET.md` printed
+  > `["account-ledger-cli"]`, as recorded there.
 
 ## Archival
 
 After every substantive phase is terminal. Nothing here starts before the Phase 10 gate. The completion gate is the
 execution check alone (D11).
 
-- [ ] [AI] Give each dormant recovery item its dated disposition. Proof: every item carries one.
-- [ ] [AI] Triage `learnings.md`: route each entry to one owner or discard it with a reason, or write the empty-log
+- [x] [AI] Give each dormant recovery item its dated disposition. Proof: every item carries one.
+  - Done 06:49. RC1 to RC4 each carry a dated `Not triggered — 2026-09-25` disposition with the evidence that its
+    trigger stayed false, and each stays unticked, as the plans convention's module 014, Dependency Graph and Recovery,
+    requires.
+- [x] [AI] Triage `learnings.md`: route each entry to one owner or discard it with a reason, or write the empty-log
       record. Proof: no entry left unresolved.
+  - Done 06:55. Seven entries, each resolved by the keep test: L1 routed to governance, python-standards' Mutation
+    Proofs (`local-tmp/rules-propagation-mutation-bytecode.md`); L7 routed to governance, behaviour-driven-development's
+    binding, which now makes a plan map each clause of a resolution to its own test
+    (`local-tmp/rules-propagation-clause-tests.md`). L2, L4, and L6 discarded as already covered, by the
+    harness-adapters gate, strict pyright, and the suite's own failure; L3 and L5 discarded as specific to this plan. No
+    entry reads "Not yet routed".
+  - Both rules passed word-budget 0 (229 files, no findings), internal-link 0, heading-hierarchy 0, and `check:hygiene`
+    0; neither needs a harness adapter regenerated.
 - [ ] [AI] Run [Execution Check](../../../repo-governance/workflows/plan/plan-execution-check.md) and record its
       terminal verdict; archival needs a permitting one. Proof: the verdict. Acceptance: AC-30.
 - [ ] [AI] Run [Dev Artifact Clean-Up](../../../repo-governance/workflows/maintenance/dev-artifact-clean-up.md) and

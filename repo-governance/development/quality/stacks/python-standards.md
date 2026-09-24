@@ -51,7 +51,13 @@ This repository records **returned result values**: an expected failure is retur
 with the success value, and exceptions are left for bugs and the shell. Under either option, a failure has a named type,
 never a bare string; an unexpected fault is handled at the shell; and no code uses a bare `except:`.
 
+## Mutation Proofs
+
+Once a mutation is restored, every `__pycache__` under `src` and `tests` is deleted before the confirming run, because
+CPython reuses bytecode whose source kept its size and modification second.
+
 ## Enforcement
 
-The `lint`, `typecheck`, and `test:*` Nx targets enforce the gates in hooks. Review applies the domain shapes and
-failure rules. Test levels and coverage follow [Test Boundaries and Gates](../testing/test-boundaries-and-gates.md).
+The `lint`, `typecheck`, and `test:*` Nx targets enforce the gates in hooks. Review applies the domain shapes, the
+failure rules, and the mutation-proof step. Test levels and coverage follow
+[Test Boundaries and Gates](../testing/test-boundaries-and-gates.md).
