@@ -41,6 +41,13 @@ A step that passes before the code exists proves only that its binding checks no
 A refactor that changes no behaviour leaves every scenario unchanged and starts from a passing run. Where no scenario
 covers the code, a characterization test first records its current behaviour, so the refactor has something to preserve.
 
+## This Repository's Binding
+
+This repository writes no Gherkin: behaviour is specified by plain pytest tests, each named for what it proves and
+written test-first, because a scenario beside each test would be a second statement of it that drifts. Discovery and
+Scenarios, Bindings and Exemptions, Compliance and Reporting, and Scenario First above are not applicable, since no
+corpus exists for them to govern. Layers and Adapters stays adopted, reading "every test" for "every scenario".
+
 ## Modules
 
 1. [Discovery and Scenarios](behaviour-driven-development/001-discovery-and-scenarios.md)

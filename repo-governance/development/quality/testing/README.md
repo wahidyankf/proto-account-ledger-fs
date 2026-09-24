@@ -14,7 +14,7 @@ Testing standards. They answer which test proves a behaviour, where it runs, and
 ## Directory Map
 
 - [Behaviour-Driven Development](behaviour-driven-development.md) — Gherkin corpora, scenario-first changes, strict
-  bindings, scoped exemptions
+  bindings, scoped exemptions; this repository binds only its layers
 - [Behaviour-Driven Development Modules](behaviour-driven-development/README.md) — discovery, layers, bindings and
   exemptions, compliance
 - [Test Boundaries and Gates](test-boundaries-and-gates.md) — what each test boundary excludes, separate suites, gates

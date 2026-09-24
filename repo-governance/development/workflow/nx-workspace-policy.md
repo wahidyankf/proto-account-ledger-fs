@@ -38,8 +38,7 @@ introduces it.
 | `run`              | running an application locally                                                    | no     |
 | `<test>:watch`     | rerunning `test:quick`, `test:integration`, or `test:e2e` on every change         | no     |
 
-Test levels follow [Test Boundaries and Gates](../quality/testing/test-boundaries-and-gates.md). Test targets list their
-Gherkin feature files among their inputs, so a scenario change invalidates the cache.
+Test levels follow [Test Boundaries and Gates](../quality/testing/test-boundaries-and-gates.md).
 
 ## The Push Gate
 

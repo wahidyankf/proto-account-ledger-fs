@@ -1,8 +1,8 @@
 # Documentation
 
 Human-facing documentation, organized by the Diátaxis framework: each section answers one kind of need. Rules for agents
-and people live in [repo-governance/](../repo-governance/README.md); behaviour specifications live in
-[specs/](../specs/README.md).
+and people live in [repo-governance/](../repo-governance/README.md); the as-built architecture lives in
+[specs/](../specs/README.md), and behaviour is specified by the tests.
 
 ## Directory Map
 

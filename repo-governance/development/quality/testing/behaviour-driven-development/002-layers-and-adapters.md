@@ -47,6 +47,11 @@ reads as a decision rather than a gap.
 Never define a target that only prints a message or exits successfully without testing anything: a no-op target reports
 coverage that does not exist.
 
+## This Repository's Binding
+
+No scenario corpus exists here (see the parent standard's binding), so each layer proves plain pytest tests: read "every
+test" wherever this module says "every scenario", and "its tests" for its scenario corpus.
+
 ## Adopter Decisions
 
 | Decision                         | Option                                                | Gains                                | Costs                                              |

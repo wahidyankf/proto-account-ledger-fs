@@ -9,10 +9,7 @@ dependencies = []
 [dependency-groups]
 dev = [
   "pyright>=1.1.414",
-  # pytest-bdd 8.1.0 calls fixture APIs that pytest 9.1 deprecates, so every run warns PytestRemovedIn10Warning.
-  # Lift the cap once a pytest-bdd release after 8.1.0 ships pytest-dev/pytest-bdd#827.
-  "pytest>=9.0,<9.1",
-  "pytest-bdd>=8.1",
+  "pytest>=9.0",
   "pytest-cov>=7.0",
   "pytest-watcher>=0.4",
   "ruff>=0.16.8",
@@ -26,8 +23,6 @@ minversion = "9.0"
 pythonpath = ["src", "tests"]
 addopts = ["--import-mode=importlib", "--strict-config", "--strict-markers", "-ra"]
 xfail_strict = true
-# Every test level binds the same Gherkin files, kept in the repository's root specification tree.
-bdd_features_base_dir = "../../specs/apps/account-ledger/cli/behaviours"
 
 [tool.ruff]
 line-length = 120

@@ -9,6 +9,8 @@ first.
 - Phase 0 (2026-09-25 04:04–04:08): baseline green, `test:quick`, `test:integration`, `test:e2e`, and `check:hygiene`
   all exit 0, unit coverage 90.00%, at 07e72d9. The quality gate returned PASS_WITH_FINDINGS after one repair cycle,
   every finding fixed in 07e72d9.
+- Phase 1 (04:07–04:17): Gherkin and pytest-bdd retired, R1 applied; the greeting proven by three plain tests. Last gate
+  passed: Phase 1. Next: Phase 2.
 
 ## Execution Checkout
 
@@ -114,9 +116,10 @@ PY
 - [x] [AI] Run `sh local-tmp/check-md.sh`, `./rhino md internal-link validate`, `./rhino md heading-hierarchy validate`,
       and `./rhino md naming validate`. Proof: each exit status. Acceptance: AC-30.
   - Result (04:06): check-md 0, internal-link 0, heading-hierarchy 0, naming 0.
-- [ ] [AI] Add the `WORKLOG.md` entry for the baseline, then commit this file's Phase 0 record and the entry as
+- [x] [AI] Add the `WORKLOG.md` entry for the baseline, then commit this file's Phase 0 record and the entry as
       `docs(plan): record the ledger plan's baseline` and push. Command: `/usr/bin/git push origin main`. Proof: the
       commit hash and pushed range. Acceptance: AC-24.
+  - Result: WORKLOG entry "Plan execution, Phase 0"; commit c5afbb0, pushed 07e72d9..c5afbb0.
 
 Pause safety: the baseline is recorded on `origin/main`. Re-verify with `npx nx run account-ledger-cli:test:quick`.
 
@@ -126,33 +129,55 @@ Retires pytest-bdd and the behaviour-driven rules (D12, D12c; rule change R1 in
 [the rule changes](tech-docs/006-specification-and-rule-changes.md)). The greeting's behaviour is kept, proven by plain
 tests first, so the suite never goes a commit without covering it.
 
-- [ ] [AI] Open the Rules Propagation run for R1, recording its record at
+- [x] [AI] Open the Rules Propagation run for R1, recording its record at
       `local-tmp/rules-propagation-retire-gherkin.md` with every file R1 names. Proof: the record exists. Acceptance:
       AC-28.
-- [ ] [AI] Characterize the greeting at the unit layer: `test_the_greeting_prints_and_exits_0` in
+  - Result: `local-tmp/rules-propagation-retire-gherkin.md` opened 04:08, listing every file R1 names and the two
+    catalog texts left unchanged.
+- [x] [AI] Characterize the greeting at the unit layer: `test_the_greeting_prints_and_exits_0` in
       `tests/unit/test_cli.py` calls `run` with a `StringIO`. It passes on arrival, since the behaviour exists; break
       the greeting text, watch it fail, restore. Command: `pytest tests/unit/test_cli.py`. Proof: the passing run and
       the mutation's failure. Acceptance: AC-28.
-- [ ] [AI] Characterize it at the integration layer in `tests/integration/test_main.py` (`main` with `capfd`) and end to
+  - Result: `test_the_greeting_prints_and_exits_0` passes on arrival. Mutation: greeting text changed to "Hello,
+    there!", the test failed on its assertion
+    (`FAILED tests/unit/test_cli.py::test_the_greeting_prints_and_exits_0 - AssertionError`), text restored,
+    `git diff -- src` empty.
+- [x] [AI] Characterize it at the integration layer in `tests/integration/test_main.py` (`main` with `capfd`) and end to
       end in `tests/e2e/test_program.py` (a subprocess), each with the same mutation proof. Command:
       `pytest tests/integration tests/e2e`. Proof: the runs. Acceptance: AC-28.
-- [ ] [AI] Remove Gherkin from the application: delete `tests/conftest.py`, the three
+  - Result: `test_main_prints_the_greeting_and_exits_0` and `test_the_program_prints_the_greeting_and_exits_0` pass (3
+    passed with the unit test). The same mutation failed both on their assertions (3 failed); restored.
+- [x] [AI] Remove Gherkin from the application: delete `tests/conftest.py`, the three
       `tests/*/steps/test_greeting_steps.py` files, and `specs/apps/account-ledger/cli/behaviours/`; drop `pytest-bdd`,
       `bdd_features_base_dir`, and the pytest cap with its pytest-bdd comment from `pyproject.toml`; regenerate
       `uv.lock` with `uv lock` and sync with `uv sync`; drop the feature glob from every target's inputs and `*.feature`
       from the watch targets' `--patterns` in `project.json`; drop the Gherkin layout and bindings from
       `apps/account-ledger-cli/README.md`. Command: `pytest tests`. Proof: the passing run, and
       `/usr/bin/git grep -n -E "pytest_bdd|pytest-bdd|\.feature" -- apps` printing nothing. Acceptance: AC-28.
-- [ ] [AI] Apply R1's rule edits: `AGENTS.md`; `behaviour-driven-development.md` and its `002-layers-and-adapters.md`;
+  - Result: deleted `tests/conftest.py`, the three steps files, and `specs/apps/account-ledger/cli/behaviours/` (README
+    and `greeting.feature`); `pyproject.toml` drops `pytest-bdd`, the `<9.1` cap with its comment, and
+    `bdd_features_base_dir`; `uv lock` removed pytest-bdd 8.1.0, parse-type, and six, keeping pytest 9.0.3;
+    `project.json` drops the feature glob from four targets, `tests/conftest.py` from three, and `*.feature` from both
+    watch patterns; the app README drops the step layout and the corpus sentence.
+  - `pytest tests`: 3 passed, after clearing a stale bytecode cache (learnings L1).
+    `/usr/bin/git grep -n -E "pytest_bdd|pytest-bdd|\.feature" -- apps` printed nothing (exit 1).
+- [x] [AI] Apply R1's rule edits: `AGENTS.md`; `behaviour-driven-development.md` and its `002-layers-and-adapters.md`;
       the testing `README.md`; `specification-tree.md`; `nx-workspace-policy.md`, dropping only its feature-file
       sentence; and the root `README.md` prerequisites. Close the Rules Propagation record. Command:
       `./rhino governance word-budget validate`. Proof: exit 0 and the closed record. Acceptance: AC-28.
-- [ ] [AI] Carry R1 into the documents it makes stale: `specs/README.md`, `specs/apps/account-ledger/cli/README.md`, and
+  - Result: AGENTS.md (specs line; Testing: plain pytest, test-first, BDD binds only its layers);
+    `behaviour-driven-development.md` and `002-layers-and-adapters.md` each gain a "This Repository's Binding" section;
+    the testing README index line; `specification-tree.md` binding, `behaviours/` not applicable;
+    `nx-workspace-policy.md` drops only the feature-file sentence; root README prerequisites drop pytest-bdd.
+    `./rhino governance word-budget validate` exit 0; record closed at 04:10 with its conflict scan.
+- [x] [AI] Carry R1 into the documents it makes stale: `specs/README.md`, `specs/apps/account-ledger/cli/README.md`, and
       `docs/README.md`. Proof: the md gates below. Acceptance: AC-28.
+  - Result: `specs/README.md` (as-built architecture, no `behaviours/` tree), `specs/apps/account-ledger/cli/README.md`
+    (Behaviours link removed), and `docs/README.md` reworded; md gates exit 0.
 
 ### Phase 1 Gate
 
-- [ ] [AI] Run every gate command below against the phase's combined state; each exits 0. Proof: each command and its
+- [x] [AI] Run every gate command below against the phase's combined state; each exits 0. Proof: each command and its
       exit status, recorded here. Acceptance: AC-28, AC-30. Commands:
   - `npx nx run account-ledger-cli:test:quick`
   - `npx nx run account-ledger-cli:test:integration`
@@ -161,8 +186,13 @@ tests first, so the suite never goes a commit without covering it.
   - `sh local-tmp/check-md.sh`
   - `./rhino md internal-link validate && ./rhino md heading-hierarchy validate && ./rhino md naming validate`
   - `./rhino governance word-budget validate`
-- [ ] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
+  - Result (04:10–04:16): `test:quick` 0 (1 passed, coverage 90%), `test:integration` 0, `test:e2e` 0; `check:hygiene`
+    first failed `harness-adapters`, since the adapters record a digest of `AGENTS.md` (learnings L2), then 0 after
+    `npm run generate:bindings`; `sh local-tmp/check-md.sh` 0; internal-link, heading-hierarchy, naming, and
+    word-budget 0.
+- [x] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
       Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
+  - Result: entry "Plan execution, Phase 1".
 - [ ] [AI] Commit the phase as one commit,
       `test(account-ledger-cli): replace Gherkin with plain pytest and retire its rules`, then push to `origin/main`;
       the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof: the commit hash and the

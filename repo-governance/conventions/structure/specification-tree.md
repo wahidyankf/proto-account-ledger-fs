@@ -79,6 +79,11 @@ and the as-built rule, since none of them depends on a format. Its `architecture
 notation, `contracts/` holds whatever contract format the owner serves, and `behaviours/` holds the owner's behaviour
 specifications in the declared form. Only the requirement that they be `.feature` files belongs to the format.
 
+## This Repository's Binding
+
+`behaviours/` is not applicable: this repository writes no Gherkin, so each owner's corpus is its README and its
+`architecture.md`, and plain pytest tests specify behaviour.
+
 ## Principles
 
 This convention implements [One Source Per Fact](../../principles/one-source-per-fact.md), because each contract and

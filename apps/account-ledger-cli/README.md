@@ -7,20 +7,19 @@ Specification: [specs/apps/account-ledger/cli/](../../specs/apps/account-ledger/
 
 ## Layout
 
-| Path                                 | Holds                                                                        |
-| ------------------------------------ | ---------------------------------------------------------------------------- |
-| `src/account_ledger/greeting.py`     | functional core: pure values and functions, no I/O                           |
-| `src/account_ledger/cli.py`          | imperative shell: `run` writes to an injected stream; `main` binds `stdout`  |
-| `src/account_ledger/__main__.py`     | `python -m account_ledger`; the only file outside the coverage denominator   |
-| `tests/unit/`                        | steps call `run` with an injected `io.StringIO`                              |
-| `tests/integration/`                 | steps call `main` against the real standard output, captured with `capfd`    |
-| `tests/e2e/`                         | steps run `python -m account_ledger` as a subprocess                         |
-| `tests/conftest.py`, `tests/support` | the Then steps and the `CliRun` record every level shares                    |
-| `pyproject.toml`, `uv.lock`          | uv project (`package = false`), pinned dev tools, pytest/ruff/pyright config |
-| `project.json`                       | Nx targets                                                                   |
+| Path                             | Holds                                                                          |
+| -------------------------------- | ------------------------------------------------------------------------------ |
+| `src/account_ledger/greeting.py` | functional core: pure values and functions, no I/O                             |
+| `src/account_ledger/cli.py`      | imperative shell: `run` writes to an injected stream; `main` binds `stdout`    |
+| `src/account_ledger/__main__.py` | `python -m account_ledger`; the only file outside the coverage denominator     |
+| `tests/unit/`                    | plain pytest tests that call `run` with an injected `io.StringIO`              |
+| `tests/integration/`             | tests that call `main` against the real standard output, captured with `capfd` |
+| `tests/e2e/`                     | tests that run `python -m account_ledger` as a subprocess                      |
+| `tests/support`                  | shared test support: the `CliRun` record of one run                            |
+| `pyproject.toml`, `uv.lock`      | uv project (`package = false`), pinned dev tools, pytest/ruff/pyright config   |
+| `project.json`                   | Nx targets                                                                     |
 
-Every level runs `scenarios("greeting.feature")` against `specs/apps/account-ledger/cli/behaviours/` (the
-`bdd_features_base_dir`), so one scenario drives all three.
+Every level is plain pytest, written test-first; there is no Gherkin corpus and no step binding.
 
 ## Commands
 
@@ -36,7 +35,7 @@ npx nx run account-ledger-cli:test:quick        # typecheck, lint, test:unit in 
 ```
 
 For a test-driven loop, run each watcher in its own terminal pane. Each runs once, then again on every change to a `.py`
-file or to a `.feature` file under `specs/`:
+file:
 
 ```bash
 npx nx run account-ledger-cli:test:quick:watch        # nx watch: typecheck, lint, test:unit

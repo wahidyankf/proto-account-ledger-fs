@@ -8,12 +8,12 @@ The repository is an Nx monorepo. Rhino and husky gate every commit and push, an
 
 ## Prerequisites
 
-| Tool         | Version                                | Pinned by                                 |
-| ------------ | -------------------------------------- | ----------------------------------------- |
-| Node.js      | 24.x                                   | `.nvmrc`, `package.json`                  |
-| uv           | 0.12 or later                          | installed separately                      |
-| Python       | 3.14.x                                 | `apps/account-ledger-cli/.python-version` |
-| Python tools | ruff, pyright, pytest, pytest-bdd, cov | `apps/account-ledger-cli/uv.lock`         |
+| Tool         | Version                    | Pinned by                                 |
+| ------------ | -------------------------- | ----------------------------------------- |
+| Node.js      | 24.x                       | `.nvmrc`, `package.json`                  |
+| uv           | 0.12 or later              | installed separately                      |
+| Python       | 3.14.x                     | `apps/account-ledger-cli/.python-version` |
+| Python tools | ruff, pyright, pytest, cov | `apps/account-ledger-cli/uv.lock`         |
 
 ## Getting Started
 

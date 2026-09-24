@@ -30,7 +30,7 @@ catalog artifacts only through [adopt-artifact](repo-governance/workflows/adopti
 ## Project Structure
 
 - `apps/` runnable applications; `libs/` reusable libraries (none yet).
-- `specs/` Gherkin behaviours and architecture; every test level binds the same feature files.
+- `specs/` the as-built architecture; behaviour is specified by the plain pytest tests that prove it.
 - `plans/` delivery plans; `docs/` Diátaxis documentation for people.
 - Root assessment docs, such as `AMBIGUITIES.md` and `NUMBERS.md`, answer the challenge brief and must agree with one
   another; see [assessment docs](repo-governance/conventions/structure/assessment-docs.md).
@@ -74,12 +74,12 @@ never Mermaid; see [diagrams](repo-governance/conventions/writing/diagrams.md).
 
 ## Testing
 
-Specify behaviour as Gherkin in `specs/` and implement it test-first, one scenario per red-green-refactor cycle; see
-[test-driven development](repo-governance/development/quality/testing/test-driven-development.md) and
-[behaviour-driven development](repo-governance/development/quality/testing/behaviour-driven-development.md). `test:unit`
-runs in-process with every OS-facing dependency injected and enforces 80% line coverage; `test:integration` uses real,
-isolated local resources and never the network; `test:e2e` runs the CLI through its public process boundary. All three
-consume the same feature files. Never skip a test.
+Implement behaviour test-first as plain pytest tests, one behaviour per red-green-refactor cycle; see
+[test-driven development](repo-governance/development/quality/testing/test-driven-development.md). No Gherkin is written
+or bound: [behaviour-driven development](repo-governance/development/quality/testing/behaviour-driven-development.md)
+binds only its layers here. `test:unit` runs in-process with every OS-facing dependency injected and enforces 80% line
+coverage; `test:integration` uses real, isolated local resources and never the network; `test:e2e` runs the CLI through
+its public process boundary. Never skip a test.
 
 ## Commits and Integration
 

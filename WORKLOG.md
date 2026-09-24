@@ -8,6 +8,7 @@ earlier work is claimed.
 
 | When                   | What                                                                                       |
 | ---------------------- | ------------------------------------------------------------------------------------------ |
+| 2026-09-25 04:07–04:17 | Plan execution, Phase 1: Gherkin and pytest-bdd retired; plain pytest proves the greeting  |
 | 2026-09-25 04:04–04:07 | Plan execution, Phase 0: baseline green at 07e72d9, unit coverage 90%                      |
 | 2026-09-25 03:40–04:02 | Plan quality gate: FAIL, repaired once, then PASS_WITH_FINDINGS, its findings fixed; AC-37 |
 | 2026-09-24 23:18–03:40 | Plan rewritten: D11 revised, D19 to D23, two audits fixed; AC-31 to AC-36 added            |

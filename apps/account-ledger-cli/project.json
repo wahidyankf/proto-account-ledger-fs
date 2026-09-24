@@ -70,10 +70,8 @@
         "{projectRoot}/pyproject.toml",
         "{projectRoot}/uv.lock",
         "{projectRoot}/.python-version",
-        "{projectRoot}/tests/conftest.py",
         "{projectRoot}/tests/support/**/*.py",
-        "{projectRoot}/tests/unit/**/*.py",
-        "{workspaceRoot}/specs/apps/account-ledger/cli/behaviours/**/*.feature"
+        "{projectRoot}/tests/unit/**/*.py"
       ]
     },
     "test:integration": {
@@ -88,14 +86,12 @@
         "{projectRoot}/pyproject.toml",
         "{projectRoot}/uv.lock",
         "{projectRoot}/.python-version",
-        "{projectRoot}/tests/conftest.py",
         "{projectRoot}/tests/support/**/*.py",
-        "{projectRoot}/tests/integration/**/*.py",
-        "{workspaceRoot}/specs/apps/account-ledger/cli/behaviours/**/*.feature"
+        "{projectRoot}/tests/integration/**/*.py"
       ]
     },
     "test:integration:watch": {
-      "command": "uv run --no-sync ptw --now --clear --patterns '*.py,*.feature' --ignore-patterns '*/node_modules/*,*/.venv/*,*/.nx/*,*/.git/*,*/local-tmp/*' ../.. tests/integration",
+      "command": "uv run --no-sync ptw --now --clear --patterns '*.py' --ignore-patterns '*/node_modules/*,*/.venv/*,*/.nx/*,*/.git/*,*/local-tmp/*' ../.. tests/integration",
       "options": {
         "cwd": "apps/account-ledger-cli"
       },
@@ -114,14 +110,12 @@
         "{projectRoot}/pyproject.toml",
         "{projectRoot}/uv.lock",
         "{projectRoot}/.python-version",
-        "{projectRoot}/tests/conftest.py",
         "{projectRoot}/tests/support/**/*.py",
-        "{projectRoot}/tests/e2e/**/*.py",
-        "{workspaceRoot}/specs/apps/account-ledger/cli/behaviours/**/*.feature"
+        "{projectRoot}/tests/e2e/**/*.py"
       ]
     },
     "test:e2e:watch": {
-      "command": "uv run --no-sync ptw --now --clear --patterns '*.py,*.feature' --ignore-patterns '*/node_modules/*,*/.venv/*,*/.nx/*,*/.git/*,*/local-tmp/*' ../.. tests/e2e",
+      "command": "uv run --no-sync ptw --now --clear --patterns '*.py' --ignore-patterns '*/node_modules/*,*/.venv/*,*/.nx/*,*/.git/*,*/local-tmp/*' ../.. tests/e2e",
       "options": {
         "cwd": "apps/account-ledger-cli"
       },
@@ -144,8 +138,7 @@
         "{projectRoot}/pyproject.toml",
         "{projectRoot}/uv.lock",
         "{projectRoot}/.python-version",
-        "{projectRoot}/tests/**/*.py",
-        "{workspaceRoot}/specs/apps/account-ledger/cli/behaviours/**/*.feature"
+        "{projectRoot}/tests/**/*.py"
       ]
     },
     "test:quick:watch": {
