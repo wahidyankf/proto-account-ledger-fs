@@ -50,14 +50,14 @@ def test_an_unconfigured_transition_leaves_the_state_unchanged(state: Authorizat
 
 def test_amb_029_a_settlement_against_a_declined_authorization_is_force_posted() -> None:
     """AMB-029: a settlement against a declined authorization posts its debit and releases no hold, as E6 does."""
-    later = settlement("E2", 3, "Auth-A", "30.00")
-    stream = (authorization("E1", 2, "Auth-A", "50.00"), later)
+    later = settlement("E3", 3, "Auth-A", "10.00")
+    stream = (credit("E1", 1, "20.00"), authorization("E2", 2, "Auth-A", "50.00"), later)
 
     log = replay(stream, CHALLENGE).log_at(Day(3))
 
-    assert settlements_of(log, "E2") == [SettlementAccepted(later, Day(3), ForcePosted())]
+    assert settlements_of(log, "E3") == [SettlementAccepted(later, Day(3), ForcePosted())]
     assert state_of(log, "Auth-A") == [Declined(Amount(aed("50.00")))]
-    assert closing(log, ACC_001, Day(3)) == aed("-30.00")
+    assert closing(log, ACC_001, Day(3)) == aed("10.00")
 
 
 def test_amb_029_a_settlement_after_a_final_one_is_force_posted() -> None:

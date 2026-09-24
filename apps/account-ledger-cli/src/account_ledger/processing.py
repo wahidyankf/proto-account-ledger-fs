@@ -19,13 +19,15 @@ from account_ledger.events import (
     Authorization,
     Credit,
     Debit,
+    Fee,
+    FeeRefund,
     IncomingEvent,
     Instalment,
     Instalments,
     Reversal,
     Settlement,
 )
-from account_ledger.ids import Day, EventId, IncomingId, InstalmentCount, InstalmentId
+from account_ledger.ids import Day, EventId, FeeId, IncomingId, InstalmentCount, InstalmentId, RefundId
 from account_ledger.log import (
     Accepted,
     AlreadyReversed,
@@ -120,11 +122,15 @@ def _refusal(log: Log, target_id: EventId) -> Rejection | None:
 
 
 def _undone_by(log: Log, target: LoggedEvent) -> AlreadyUndone | None:
-    """The part of the target's money already undone another way: its credit, or one of its instalments, reversed."""
+    """The part of the target's money already undone another way: a fee refunded, or a credit or one of its
+    instalments reversed."""
     match target:
         case Instalment(id=part):
             by = _reversed_by(log, part.parent)
             return None if by is None else AlreadyUndone(part, by)
+        case Fee(id=fee):
+            refund = _refund_of(log, fee)
+            return None if refund is None else AlreadyUndone(fee, refund)
         case Credit(posting=Instalments()):
             parts = instalments_of(log, target.id)
             return next(
@@ -132,6 +138,18 @@ def _undone_by(log: Log, target: LoggedEvent) -> AlreadyUndone | None:
             )
         case _:
             return None
+
+
+def _refund_of(log: Log, fee: FeeId) -> RefundId | None:
+    """The refund in effect for the fee: one that names it and is not itself reversed (AMB-004, AMB-035)."""
+    for entry in log:
+        match entry:
+            case Accepted(event=FeeRefund(id=refund, fee=refunded)) if refunded == fee:
+                if _reversed_by(log, refund) is None:
+                    return refund
+            case _:
+                pass
+    return None
 
 
 def _reversed_by(log: Log, target_id: EventId) -> IncomingId | None:

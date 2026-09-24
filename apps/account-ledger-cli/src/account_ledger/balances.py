@@ -5,10 +5,24 @@ from typing import assert_never
 
 from account_ledger.authorizations import Approved, Declined, Settled, records
 from account_ledger.config import Account, AnyAccount, is_aed
-from account_ledger.events import Authorization, Credit, Debit, Instalment, Instalments, Reversal, Settlement, Whole
+from account_ledger.events import (
+    Authorization,
+    Capitalization,
+    Credit,
+    Debit,
+    Fee,
+    FeeRefund,
+    Instalment,
+    Instalments,
+    InterestAccrual,
+    InterestAdjustment,
+    Reversal,
+    Settlement,
+    Whole,
+)
 from account_ledger.ids import AccountId, Day
 from account_ledger.log import Accepted, Log, LoggedEvent, SettlementAccepted, first, instalments_of
-from account_ledger.money import Aed, Bhd, CurrencyMismatch, Money, same_as
+from account_ledger.money import Aed, Bhd, CurrencyMismatch, Direction, Money, same_as
 
 
 def _effects(log: Log, account_id: AccountId) -> list[tuple[Day, Money]]:
@@ -35,12 +49,14 @@ def _moved(log: Log, event: LoggedEvent) -> tuple[Money, ...]:
                     return (event.amount.money,)
                 case Instalments():
                     return ()  # a credit in instalments posts nothing itself; its instalments post the parts
-        case Instalment():
+        case Instalment() | FeeRefund() | Capitalization():
             return (event.amount.money,)
-        case Debit() | Settlement():
+        case Debit() | Settlement() | Fee():
             return (-event.amount.money,)
         case Authorization():
             return ()  # a hold moves the available balance only, never the ledger balance
+        case InterestAccrual() | InterestAdjustment():
+            return ()  # interest moves accrued interest, never the ledger balance, until capitalized (AMB-007)
         case Reversal(reverses=reverses):
             target = first(log, reverses)
             undone = () if target is None else _undone(log, target.event)
@@ -92,6 +108,53 @@ def available_of(log: Log, account: AnyAccount, day: Day) -> Money:
     if is_aed(account):
         return available(log, account, day)
     return available(log, account, day)
+
+
+def interest_base[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> M:
+    """The closing less any capitalization value-dated that day, which posts after the day's interest (AMB-023)."""
+    total = closing(log, account, day)
+    for event in _counted(log, account.id):
+        match event:
+            case Capitalization(value_day=value_day, amount=amount) if value_day == day:
+                total = total - _same(total, amount.money)
+            case _:
+                pass
+    return total
+
+
+def accrued[M: (Aed, Bhd)](log: Log, account: Account[M]) -> M:
+    """The account's interest events, net of their directions, less its capitalizations (AMB-007)."""
+    total = type(account.opening).zero()
+    for event in _counted(log, account.id):
+        match event:
+            case InterestAccrual() | InterestAdjustment():
+                total = total + _same(total, _signed_interest(event))
+            case Capitalization(amount=amount):
+                total = total - _same(total, amount.money)
+            case _:
+                pass
+    return total
+
+
+def interest_fired[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> M:
+    """The account's interest events for a day, net of their directions (tech-docs 002, step 2)."""
+    total = type(account.opening).zero()
+    for event in _counted(log, account.id):
+        match event:
+            case InterestAccrual() | InterestAdjustment() if event.id.for_day == day:
+                total = total + _same(total, _signed_interest(event))
+            case _:
+                pass
+    return total
+
+
+def _signed_interest(event: InterestAccrual | InterestAdjustment) -> Money:
+    """An interest event's amount, negative for an adjustment down."""
+    match event:
+        case InterestAdjustment(direction=Direction.DOWN, amount=amount):
+            return -amount.money
+        case InterestAccrual(amount=amount) | InterestAdjustment(amount=amount):
+            return amount.money
 
 
 def _same[M: (Aed, Bhd)](like: M, money: Money) -> M:

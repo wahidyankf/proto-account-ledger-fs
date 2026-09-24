@@ -1,10 +1,13 @@
 """Processing an incoming event: reversals (AMB-028, AMB-035) and idempotency (AMB-034)."""
 
+from dataclasses import replace
+
 import pytest
 
-from account_ledger.balances import closing
-from account_ledger.config import CHALLENGE
-from account_ledger.ids import Day, IncomingId, InstalmentId
+from account_ledger.balances import closing, closing_of
+from account_ledger.config import CHALLENGE, AnyAccount
+from account_ledger.events import IncomingEvent
+from account_ledger.ids import Day, FeeId, IncomingId, InstalmentId, RefundId
 from account_ledger.log import (
     Accepted,
     AlreadyReversed,
@@ -34,34 +37,34 @@ def test_amb_035_a_reversal_undoes_what_its_target_moved() -> None:
 def test_amb_028_a_second_reversal_of_the_same_event_is_refused() -> None:
     """AMB-028: an event is reversed at most once, so a second reversal of E7 is refused and moves no balance."""
     second = reversal("E12", 3, "E7")
-    stream = (debit("E7", 1, "620.00"), reversal("E9", 2, "E7"), second)
+    stream = (credit("E1", 1, "1000.00"), debit("E7", 1, "620.00"), reversal("E9", 2, "E7"), second)
 
     log = replay(stream, CHALLENGE).log_at(Day(3))
 
     assert entries_for(log, "E12") == [Rejected(second, Day(3), AlreadyReversed(IncomingId("E7"), IncomingId("E9")))]
-    assert closing(log, ACC_001, Day(3)) == aed("0.00")
+    assert closing(log, ACC_001, Day(3)) == aed("1000.00")
 
 
 def test_amb_028_a_reversal_of_a_reversal_is_refused() -> None:
     """AMB-028: a reversal cannot itself be reversed, since a mistaken one is corrected by a new debit or credit."""
     undo = reversal("E12", 3, "E9")
-    stream = (debit("E7", 1, "620.00"), reversal("E9", 2, "E7"), undo)
+    stream = (credit("E1", 1, "1000.00"), debit("E7", 1, "620.00"), reversal("E9", 2, "E7"), undo)
 
     log = replay(stream, CHALLENGE).log_at(Day(3))
 
     assert entries_for(log, "E12") == [Rejected(undo, Day(3), ReversesAReversal(IncomingId("E9")))]
-    assert closing(log, ACC_001, Day(3)) == aed("0.00")
+    assert closing(log, ACC_001, Day(3)) == aed("1000.00")
 
 
 def test_amb_035_a_reversal_of_an_unknown_event_is_refused() -> None:
     """AMB-035: a reversal whose target is not in the log is refused and moves no balance."""
     stray = reversal("E12", 2, "E99")
-    stream = (debit("E7", 1, "620.00"), stray)
+    stream = (credit("E1", 1, "100.00"), stray)
 
     log = replay(stream, CHALLENGE).log_at(Day(2))
 
     assert entries_for(log, "E12") == [Rejected(stray, Day(2), UnknownTarget(IncomingId("E99")))]
-    assert closing(log, ACC_001, Day(2)) == aed("-620.00")
+    assert closing(log, ACC_001, Day(2)) == aed("100.00")
 
 
 @pytest.mark.parametrize("target", ["E8", "E3"])
@@ -94,24 +97,44 @@ def test_amb_035_reversing_a_credit_in_instalments_undoes_every_instalment() -> 
     assert closing(log, ACC_002, Day(5)) == bhd("0.000")
 
 
-@pytest.mark.parametrize(
-    ("undone", "target", "left"), [("E10", "E10-1", "0.000"), ("E10-1", "E10", "6.667")], ids=["part", "whole"]
-)
-def test_amb_035_money_already_undone_cannot_be_undone_again(undone: str, target: str, left: str) -> None:
-    """AMB-035: each event's money is undone at most once, whichever event undoes it, so after E11 reverses E10 or
-    E10-1, a reversal of the other is refused, naming E10-1 and E11."""
-    again = reversal("E12", 5, target, account="ACC-002")
-    stream = (
-        credit("E10", 5, "10.000", account="ACC-002", instalments=3),
-        reversal("E11", 5, undone, account="ACC-002"),
-        again,
-    )
+WEEK = replace(CHALLENGE, last_day=Day(7))
+INSTALMENTS = (credit("E10", 5, "10.000", account="ACC-002", instalments=3),)
+UNDONE = {
+    "part": (
+        (*INSTALMENTS, reversal("E11", 5, "E10", account="ACC-002"), reversal("E12", 5, "E10-1", account="ACC-002")),
+        ACC_002,
+        Day(5),
+        AlreadyUndone(InstalmentId(IncomingId("E10"), 1), IncomingId("E11")),
+    ),
+    "whole": (
+        (*INSTALMENTS, reversal("E11", 5, "E10-1", account="ACC-002"), reversal("E12", 5, "E10", account="ACC-002")),
+        ACC_002,
+        Day(5),
+        AlreadyUndone(InstalmentId(IncomingId("E10"), 1), IncomingId("E11")),
+    ),
+    "refunded-fee": (
+        (*brief_stream(), reversal("E12", 7, "FEE-001-D2@D5")),
+        ACC_001,
+        Day(7),
+        AlreadyUndone(
+            FeeId(ACC_001.id, Day(2), Day(5)),
+            RefundId(ACC_001.id, Day(2), Day(6)),
+        ),
+    ),
+}
 
-    log = replay(stream, CHALLENGE).log_at(Day(5))
 
-    part = InstalmentId(IncomingId("E10"), 1)
-    assert entries_for(log, "E12") == [Rejected(again, Day(5), AlreadyUndone(part, IncomingId("E11")))]
-    assert closing(log, ACC_002, Day(5)) == bhd(left)
+@pytest.mark.parametrize(("stream", "account", "day", "reason"), UNDONE.values(), ids=UNDONE.keys())
+def test_amb_035_money_already_undone_cannot_be_undone_again(
+    stream: tuple[IncomingEvent, ...], account: AnyAccount, day: Day, reason: AlreadyUndone
+) -> None:
+    """AMB-035: each event's money is undone at most once, whichever event undoes it: an instalment of a reversed
+    credit, a credit one of whose instalments is reversed, or a fee already refunded."""
+    log = replay(stream, WEEK).log_at(day)
+    without = replay(stream[:-1], WEEK).log_at(day)
+
+    assert entries_for(log, "E12") == [Rejected(stream[-1], day, reason)]
+    assert closing_of(log, account, day) == closing_of(without, account, day)
 
 
 def test_amb_034_a_repeated_event_is_logged_as_a_duplicate_with_no_effect() -> None:

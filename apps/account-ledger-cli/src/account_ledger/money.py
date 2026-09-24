@@ -6,6 +6,7 @@ happens here.
 
 from dataclasses import dataclass
 from decimal import ROUND_DOWN, ROUND_HALF_EVEN, Decimal, InvalidOperation
+from enum import Enum
 
 from account_ledger.ids import InstalmentCount
 
@@ -136,6 +137,13 @@ class Amount[M: (Aed, Bhd)]:
         return Amount(money) if money.value > 0 else NotPositive(str(money.value))
 
 
+class Direction(Enum):
+    """Which way an interest adjustment moves accrued interest; its amount stays above zero (D18)."""
+
+    UP = "up"
+    DOWN = "down"
+
+
 @dataclass(frozen=True, slots=True)
 class CurrencyMismatch:
     """A value of one currency met where another was required."""
@@ -221,6 +229,24 @@ def split_of(
             return split(Amount(money), count)
         case Bhd() as money:
             return split(Amount(money), count)
+
+
+def overdraft_fee_of(like: Money) -> Amount[Aed] | Amount[Bhd]:
+    """``overdraft_fee`` for a currency known only at run time."""
+    match like:
+        case Aed():
+            return overdraft_fee(like)
+        case Bhd():
+            return overdraft_fee(like)
+
+
+def amount_of(money: Money) -> Amount[Aed] | Amount[Bhd] | NotPositive:
+    """``Amount.of`` for a currency known only at run time."""
+    match money:
+        case Aed():
+            return Amount.of(money)
+        case Bhd():
+            return Amount.of(money)
 
 
 def digits(money: Money) -> str:

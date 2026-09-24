@@ -3,8 +3,20 @@
 from dataclasses import dataclass
 from enum import Enum
 
-from account_ledger.ids import AccountId, AuthorizationId, Day, EventId, IncomingId, InstalmentCount, InstalmentId
-from account_ledger.money import Aed, Amount, Bhd
+from account_ledger.ids import (
+    AccountId,
+    AuthorizationId,
+    CapitalizationId,
+    Day,
+    EventId,
+    FeeId,
+    IncomingId,
+    InstalmentCount,
+    InstalmentId,
+    InterestId,
+    RefundId,
+)
+from account_ledger.money import Aed, Amount, Bhd, Direction
 
 type AnyAmount = Amount[Aed] | Amount[Bhd]
 
@@ -93,4 +105,64 @@ class Instalment:
     amount: AnyAmount
 
 
-type FiredEvent = Instalment
+@dataclass(frozen=True, slots=True)
+class Fee:
+    """The overdraft fee for a day that closed negative, fired at a close and value-dated that close (AMB-002)."""
+
+    id: FeeId
+    account: AccountId
+    value_day: Day
+    amount: AnyAmount
+
+
+@dataclass(frozen=True, slots=True)
+class FeeRefund:
+    """The refund of a fee in force whose day closes at or above zero again, value-dated the close (AMB-004)."""
+
+    id: RefundId
+    account: AccountId
+    value_day: Day
+    fee: FeeId
+    amount: AnyAmount
+
+
+@dataclass(frozen=True, slots=True)
+class InterestAccrual:
+    """A day's interest, fired at its own close; its ID is for the day it fires (AMB-005)."""
+
+    id: InterestId
+    account: AccountId
+    value_day: Day
+    amount: AnyAmount
+
+    def __post_init__(self) -> None:
+        if self.id.for_day != self.id.fired_day:
+            raise ValueError("an accrual is for the day it fires; an earlier day takes an adjustment")
+
+
+@dataclass(frozen=True, slots=True)
+class InterestAdjustment:
+    """A correction of an earlier day's interest, fired when a changed closing is recognised (AMB-005)."""
+
+    id: InterestId
+    account: AccountId
+    value_day: Day
+    direction: Direction
+    amount: AnyAmount
+
+    def __post_init__(self) -> None:
+        if self.id.for_day >= self.id.fired_day:
+            raise ValueError("an adjustment is for an earlier day; the day it fires takes an accrual")
+
+
+@dataclass(frozen=True, slots=True)
+class Capitalization:
+    """The accrued interest, credited to the ledger balance on a capitalization day (AMB-007, AMB-023)."""
+
+    id: CapitalizationId
+    account: AccountId
+    value_day: Day
+    amount: AnyAmount
+
+
+type FiredEvent = Instalment | Fee | FeeRefund | InterestAccrual | InterestAdjustment | Capitalization

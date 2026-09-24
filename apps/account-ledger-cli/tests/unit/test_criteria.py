@@ -6,14 +6,22 @@ A refused criterion is proven by a test of what the ledger does instead (REJECTE
 from account_ledger.authorizations import Approved, Declined, Settled, records
 from account_ledger.balances import closing
 from account_ledger.config import CHALLENGE
-from account_ledger.events import Instalment, Settlement
+from account_ledger.events import Fee, Instalment, Settlement
 from account_ledger.ids import AuthorizationId, Day, IncomingId, InstalmentId
 from account_ledger.log import Accepted, Captured, ForcePosted, SettlementAccepted
-from account_ledger.money import Amount
+from account_ledger.money import Aed, Amount, Bhd
 from account_ledger.replay import replay
 from support.brief_stream import brief_stream
 from support.states import settlements_of, state_of
-from support.streams import ACC_001, ACC_002, through
+from support.streams import (
+    ACC_001,
+    ACC_002,
+    capitalization_amounts,
+    fee_markers,
+    interest_amounts,
+    refund_markers,
+    through,
+)
 from support.values import aed, bhd
 
 
@@ -85,3 +93,53 @@ def test_c7_e10_posts_3_333_3_333_3_334() -> None:
         for n, text in ((1, "3.333"), (2, "3.333"), (3, "3.334"))
     ]
     assert closing(log, ACC_002, Day(5)) == bhd("10.000")
+
+
+def test_c2_e7_causes_three_fees_all_value_dated_day_5() -> None:
+    """C2, refused (AMB-002, AMB-003): "E7 causes exactly one overdraft fee to be assessed, on Day 2." E7 arrives on
+    Day 5 value-dated Day 2, so Day 5's close finds Days 2, 4, and 5 negative and charges each, value-dated Day 5."""
+    log = replay(brief_stream(), CHALLENGE).log_at(Day(5))
+
+    assert fee_markers(log) == ["FEE-001-D2@D5", "FEE-001-D4@D5", "FEE-001-D5@D5"]
+    fees = [entry.event for entry in log if isinstance(entry, Accepted) and isinstance(entry.event, Fee)]
+    assert [(fee.amount, fee.value_day) for fee in fees] == [(Amount(aed("25.00")), Day(5))] * 3
+
+
+def test_c6_e9_restores_days_2_to_4_and_refunds_the_fees() -> None:
+    """C6, refused (AMB-004, AMB-005, AMB-024): "After E9, all balances and fees return to their pre-E7 values." Days
+    2, 3, and 4 close at 250.00, 650.00, and 285.00 again, and the three fees stay in the log, each undone by a refund
+    value-dated Day 6."""
+    log = replay(brief_stream(), CHALLENGE).log_at(Day(6))
+
+    assert [closing(log, ACC_001, Day(day)) for day in (2, 3, 4)] == [aed("250.00"), aed("650.00"), aed("285.00")]
+    assert fee_markers(log) == ["FEE-001-D2@D5", "FEE-001-D4@D5", "FEE-001-D5@D5"]
+    assert refund_markers(log) == ["REFUND-001-D2@D6", "REFUND-001-D4@D6", "REFUND-001-D5@D6"]
+
+
+def test_c8_capitalization_equals_the_sum_of_interest_events() -> None:
+    """C8, refused (AMB-006, AMB-023): "If the rounded daily interest accruals do not sum to the capitalized total, the
+    remainder is discarded." Each capitalization is the sum of its account's rounded interest events, so no remainder
+    can exist."""
+    log = replay(brief_stream(), CHALLENGE).log_at(Day(6))
+
+    assert capitalization_amounts(log) == [("CAP-001@D6", aed("0.76")), ("CAP-002@D6", bhd("0.008"))]
+    aed_total, bhd_total = Aed.zero(), Bhd.zero()
+    for marker, money in interest_amounts(log):
+        match money:
+            case Aed() if marker.startswith("INT-001"):
+                aed_total = aed_total + money
+            case Bhd() if marker.startswith("INT-002"):
+                bhd_total = bhd_total + money
+            case _:
+                raise AssertionError(f"{marker} in the wrong currency")
+    assert (aed_total, bhd_total) == (aed("0.76"), bhd("0.008"))
+
+
+def test_c6_day_6_closes_at_285_76_not_285_79() -> None:
+    """C6, refused (AMB-004, AMB-005, AMB-024): "After E9, all balances and fees return to their pre-E7 values." The
+    fees are value-dated Day 5 and their refunds Day 6, so Day 5 closes at 210.00, earns 0.08 rather than 0.11, and
+    ACC-001 capitalizes 0.76 and closes Day 6 at 285.76, not 285.79."""
+    log = replay(brief_stream(), CHALLENGE).log_at(Day(6))
+
+    assert closing(log, ACC_001, Day(5)) == aed("210.00")
+    assert closing(log, ACC_001, Day(6)) == aed("285.76")

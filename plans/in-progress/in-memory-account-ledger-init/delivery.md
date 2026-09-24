@@ -28,6 +28,14 @@ first.
 - Phase 4 (04:42–05:13): 23 cycles green, five of them (4.3, 4.6, 4.7, 4.12, 4.13) passing on arrival with their
   mutation proofs; every incoming kind processed, and C1, C3, C4, C5, and C7 green. Last gate passed: Phase 4. Next:
   Phase 5, Cycle 5.1.
+- Phase 4 committed as `58b0cdb` and pushed, `bd5722b..58b0cdb`.
+- Cycle 5.5 passed on arrival, as planned; its mutation proof is recorded under its RED.
+- Cycle 5.6 passed on arrival, as planned; its mutation proof is recorded under its RED.
+- Cycle 5.11 passed on arrival, as planned; its mutation proof is recorded under its RED.
+- Cycle 5.16 added `test_amb_035_a_reversed_refund_puts_its_fee_back_in_force` beside its planned test, since its GREEN
+  adds the reversed-refund rule, which no planned test reached; both failed on their assertions first.
+- Phase 5 (05:14–05:37): 17 cycles green, three of them (5.5, 5.6, 5.11) passing on arrival with their mutation proofs;
+  every criterion green, and every day report complete as data. Last gate passed: Phase 5. Next: Phase 6, Cycle 6.1.
 
 ## Execution Checkout
 
@@ -1266,10 +1274,12 @@ the red of the cycle that builds its behaviour.
       Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
   - Done 05:13: the row `2026-09-25 04:42–05:13`, "Plan execution, Phase 4: log, authorizations, settlements, reversals,
     and idempotency".
-- [ ] [AI] Commit the phase as `feat(account-ledger-cli): replay incoming events through an append-only log`, then push
+- [x] [AI] Commit the phase as `feat(account-ledger-cli): replay incoming events through an append-only log`, then push
       to `origin/main`; the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof: the
       commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-06, AC-08 to AC-12,
       AC-14 to AC-19, AC-32, AC-33, AC-35, AC-37.
+  - Done 05:14: commit `58b0cdb`; the pre-push hook ran `test:quick`, `test:integration`, and `test:e2e`, all green;
+    pushed `bd5722b..58b0cdb` to `origin/main`.
 
 Pause safety: the phase leaves every incoming kind processed, C1, C3, C4, C5, and C7 green, and each decision rule
 proven. Re-verify with `npx nx run account-ledger-cli:test:quick`.
@@ -1282,50 +1292,97 @@ and is handled as the rule above says.
 
 ### Cycle 5.1 — C2: E7 causes three fees
 
-- [ ] [AI] RED: write `test_c2_e7_causes_three_fees_all_value_dated_day_5` in `tests/unit/test_criteria.py`, with the
+- [x] [AI] RED: write `test_c2_e7_causes_three_fees_all_value_dated_day_5` in `tests/unit/test_criteria.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because no day closes with a fee step. Command:
       `pytest tests/unit/test_criteria.py`. Proof: the failure message, recorded here. Acceptance: AC-07.
-- [ ] [AI] GREEN: Write step 1 in `end_of_day.py`: a fee for each negative day, value-dated today, and call `close_day`
+  - Done 05:15. Stubs: `Fee(id, account, value_day, amount)` in `events.py`, and `fee_markers` returning `[]` in
+    `tests/support/streams.py`.
+  - `pytest tests/unit/test_criteria.py`: 1 failed, 6 passed, on its assertion:
+    `assert [] == ['FEE-001-D2@...EE-001-D5@D5']`, `Right contains 3 more items`. No day closed with a fee step.
+- [x] [AI] GREEN: Write step 1 in `end_of_day.py`: a fee for each negative day, value-dated today, and call `close_day`
       from the driver; add `fee_markers` to `tests/support/streams.py`. Command: `pytest tests/unit/test_criteria.py`,
       then `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance: AC-07.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:17. `end_of_day.close_day` fires, per account, a `Fee` value-dated today for each day so far whose closing
+    is negative, of `overdraft_fee_of(account.opening)`, new in `money.py` for a currency known only at run time, since
+    pyright will not assign a generic `Amount[M]` to `AnyAmount`. `Fee` joins `FiredEvent` and debits in
+    `balances._moved`; `replay` runs `close_day` before each day's report; `fee_markers` reads each fee's marker.
+  - Four earlier rule tests asserted closings on days that went negative incidentally, and now drew fees: the AMB-029
+    declined-settlement test and the AMB-028 and unknown-target reversal tests. Their streams now open with a credit so
+    no day is negative, and their asserted figures moved with it; what each test proves is unchanged.
+  - `pytest tests/unit/test_criteria.py`: 7 passed. `pytest tests/unit`: 52 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-07.
+  - Done 05:17. `replay` now runs one loop over the window's days: process the events listed next whose booked day has
+    come, then close. It no longer repeats close, report, and append in two loops; the order is the same as tech-docs
+    002's, since the stream reader refuses a booked day outside the window.
+  - `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 52 passed, coverage 97%.
 
 ### Cycle 5.2 — a day still negative is not charged again
 
-- [ ] [AI] RED: write `test_amb_011_a_day_still_negative_is_not_charged_again` in `tests/unit/test_end_of_day.py`, with
+- [x] [AI] RED: write `test_amb_011_a_day_still_negative_is_not_charged_again` in `tests/unit/test_end_of_day.py`, with
       the smallest stub it imports, and run it; it fails on its assertion because the next close charges the same day a
       second fee. Command: `pytest tests/unit/test_end_of_day.py`. Proof: the failure message, recorded here.
       Acceptance: AC-07.
-- [ ] [AI] GREEN: Track fees in force, so a day is charged once until refunded. Command:
+  - Done 05:18. New file `tests/unit/test_end_of_day.py`; no stub was needed.
+  - `pytest tests/unit/test_end_of_day.py`: 1 failed, on its assertion:
+    `At index 1 diff: 'FEE-001-D1@D2' != 'FEE-001-D2@D2'`. Day 2's close charged Day 1 a second fee.
+- [x] [AI] GREEN: Track fees in force, so a day is charged once until refunded. Command:
       `pytest tests/unit/test_end_of_day.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-07.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:18. `end_of_day._in_force` gives the days the account's fees are for, and step 1 skips a negative day that
+    has one.
+  - `pytest tests/unit/test_end_of_day.py`: 1 passed. `pytest tests/unit`: 53 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-07.
+  - Result: nothing to tidy; `_in_force` is one set comprehension, which refunds and reversals extend in 5.4 and 5.7.
+    `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 53 passed, coverage 97%.
 
 ### Cycle 5.3 — a fee counts in the closings after it
 
-- [ ] [AI] RED: write `test_amb_011_a_fee_counts_in_the_closings_after_it` in `tests/unit/test_end_of_day.py`, with the
+- [x] [AI] RED: write `test_amb_011_a_fee_counts_in_the_closings_after_it` in `tests/unit/test_end_of_day.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because step 1 reads each day's closing before
       firing any fee, so a Day 1 fee that takes Day 2 from 10.00 to −15.00 leaves Day 2 uncharged. Command:
       `pytest tests/unit/test_end_of_day.py`. Proof: the failure message, recorded here. Acceptance: AC-07.
-- [ ] [AI] GREEN: Read each closing in step 1 from the log as it grows, so a fee fired for an earlier day counts in the
+  - Done 05:19. E1 debits 20.00 value-dated Day 1 and E2 credits 30.00 on Day 2, so Day 1 closes at −20.00 and Day 2 at
+    10.00 before any fee. No stub was needed.
+  - `pytest tests/unit/test_end_of_day.py`: 1 failed, 1 passed, on its assertion:
+    `assert ['FEE-001-D1@D2'] == ['FEE-001-D1@...EE-001-D2@D2']`, `Right contains one more item: 'FEE-001-D2@D2'`. Step
+    1 read every closing before firing, so the Day 1 fee left Day 2 uncharged.
+- [x] [AI] GREEN: Read each closing in step 1 from the log as it grows, so a fee fired for an earlier day counts in the
       days after it. Command: `pytest tests/unit/test_end_of_day.py`, then `pytest tests/unit`. Proof: both passing
       runs, recorded here. Acceptance: AC-07.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:19. `close_day` runs `_fee_step` per account, which walks the days in order and appends each fee before
+    reading the next closing; `_negative` dispatches to the generic `_below_zero`.
+  - `pytest tests/unit/test_end_of_day.py`: 2 passed. `pytest tests/unit`: 54 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-07.
+  - Result: nothing to tidy; the green replaced the list-building helpers with the single walk.
+    `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 54 passed, coverage 97%.
 
 ### Cycle 5.4 — C6: E9 restores Days 2 to 4 and refunds the fees
 
-- [ ] [AI] RED: write `test_c6_e9_restores_days_2_to_4_and_refunds_the_fees` in `tests/unit/test_criteria.py`, with the
+- [x] [AI] RED: write `test_c6_e9_restores_days_2_to_4_and_refunds_the_fees` in `tests/unit/test_criteria.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because no refund fires once the days are
       non-negative. Command: `pytest tests/unit/test_criteria.py`. Proof: the failure message, recorded here.
       Acceptance: AC-11.
-- [ ] [AI] GREEN: Fire `FeeRefund` for a fee in force whose day closes at or above zero. Command:
+  - Done 05:19. Stubs: `FeeRefund(id, account, value_day, fee, amount)` in `events.py`; `refund_markers` in
+    `tests/support/streams.py`.
+  - `pytest tests/unit/test_criteria.py`: 1 failed, 7 passed, on its assertion:
+    `assert [] == ['REFUND-001-...ND-001-D5@D6']`, `Right contains 3 more items`. No refund fired once the days were
+    non-negative.
+- [x] [AI] GREEN: Fire `FeeRefund` for a fee in force whose day closes at or above zero. Command:
       `pytest tests/unit/test_criteria.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-11.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:20. `_fee_step` refunds the fee in force for a day that closes at or above zero, value-dated today, naming
+    the fee and its amount; `_in_force` maps each day to its fee until a refund names it. `FeeRefund` joins `FiredEvent`
+    and credits in `balances._moved`. The first run failed with `NameError` on two missed imports, which does not count;
+    fixed, then:
+  - `pytest tests/unit/test_criteria.py`: 8 passed. `pytest tests/unit`: 55 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-11.
+  - Result: nothing to tidy in the code; a `local-tmp/addimport.py` helper now adds import names, since `ruff format`
+    wraps long imports and plain string edits missed them. `npx nx run account-ledger-cli:test:quick`: pyright 0 errors,
+    ruff all checks passed, 55 passed, coverage 97%.
 
 ### Cycle 5.5 — a BHD account is charged BHD 2.560
 
@@ -1334,11 +1391,18 @@ and is handled as the rule above says.
       account's own currency type; its red is the mutation proof that making `overdraft_fee` return the AED figure's
       digits for BHD charges BHD 25.000. Command: `pytest tests/unit/test_end_of_day.py`. Proof: the failure message,
       recorded here. Acceptance: AC-22.
-- [ ] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
+  - Disposition: passes on arrival (3 passed), since step 1 takes `overdraft_fee_of` in the account's own currency.
+    Mutation: making `overdraft_fee` return the AED figure's digits for BHD made the test fail on its assertion:
+    `At index 0 diff: Amount(money=Bhd(value=Decimal('25.000'))) != Amount(money=Bhd(value=Decimal('2.560')))`. Restored
+    from a copy, 3 passed.
+- [x] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
       `pytest tests/unit/test_end_of_day.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-22.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: no production change; passes on arrival, recorded in the Execution Record.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-22.
+  - Result: nothing to tidy. `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 56
+    passed, coverage 97%.
 
 ### Cycle 5.6 — a settlement above its hold debits in full
 
@@ -1347,57 +1411,105 @@ and is handled as the rule above says.
       debits the settlement's own amount; its red is the mutation proof that capping the debit at the hold leaves the
       day non-negative and fires no fee. Command: `pytest tests/unit/test_end_of_day.py`. Proof: the failure message,
       recorded here. Acceptance: AC-20.
-- [ ] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
+  - Disposition: passes on arrival (4 passed), since a settlement debits its own amount in `balances._moved`. Mutation:
+    capping the settlement debit at its authorization's amount left Day 2 at 0.00, and the test failed on its assertion:
+    `assert [] == ['FEE-001-D2@D2']`. Restored from a copy, 4 passed.
+- [x] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
       `pytest tests/unit/test_end_of_day.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-20.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: no production change; passes on arrival, recorded in the Execution Record.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-20.
+  - Result: nothing to tidy. `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 57
+    passed, coverage 97%.
 
 ### Cycle 5.7 — a reversed fee on a negative day is charged again
 
-- [ ] [AI] RED: write `test_amb_035_a_fee_reversed_on_a_negative_day_is_charged_again` in
+- [x] [AI] RED: write `test_amb_035_a_fee_reversed_on_a_negative_day_is_charged_again` in
       `tests/unit/test_end_of_day.py`, with the smallest stub it imports, and run it; it fails on its assertion because
       the reversed fee still counts as in force, so Day 1 is not charged again. Command:
       `pytest tests/unit/test_end_of_day.py`. Proof: the failure message, recorded here. Acceptance: AC-31.
-- [ ] [AI] GREEN: Take a reversed fee out of force in step 1. Command: `pytest tests/unit/test_end_of_day.py`, then
+  - Done 05:22. No stub was needed.
+  - `pytest tests/unit/test_end_of_day.py`: 1 failed, 4 passed, on its assertion:
+    `At index 1 diff: 'FEE-001-D2@D2' != 'FEE-001-D1@D2'`. The reversed fee still counted as in force, so Day 1 was not
+    charged again.
+- [x] [AI] GREEN: Take a reversed fee out of force in step 1. Command: `pytest tests/unit/test_end_of_day.py`, then
       `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance: AC-31.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:22. `_in_force` drops a fee that an accepted reversal names, so step 1 judges its day again and charges it
+    under a marker for today.
+  - `pytest tests/unit/test_end_of_day.py`: 5 passed. `pytest tests/unit`: 58 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-31.
+  - Done 05:22. The set comprehension over the fees in force became a direct lookup of the reversed fee's day.
+  - `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 58 passed, coverage 97%.
 
 ### Cycle 5.8 — interest accrues on a positive closing
 
-- [ ] [AI] RED: write `test_amb_005_interest_accrues_on_a_positive_closing` in `tests/unit/test_end_of_day.py`, with the
+- [x] [AI] RED: write `test_amb_005_interest_accrues_on_a_positive_closing` in `tests/unit/test_end_of_day.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because no interest event fires. Command:
       `pytest tests/unit/test_end_of_day.py`. Proof: the failure message, recorded here. Acceptance: AC-13.
-- [ ] [AI] GREEN: Write step 2's accrual for today, only on a base above zero, and add `interest_amounts` to
+  - Done 05:23. Stub: `interest_amounts` returning `[]` in `tests/support/streams.py`.
+  - `pytest tests/unit/test_end_of_day.py`: 1 failed, 5 passed, on its assertion:
+    `assert [] == [('INT-001-D1...mal('0.40')))]`, `Right contains one more item`. No interest event fired.
+- [x] [AI] GREEN: Write step 2's accrual for today, only on a base above zero, and add `interest_amounts` to
       `tests/support/streams.py`. Command: `pytest tests/unit/test_end_of_day.py`, then `pytest tests/unit`. Proof: both
       passing runs, recorded here. Acceptance: AC-13.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:24. `events.py`: `InterestAccrual(id, account, value_day, amount)`, whose constructor refuses an ID for
+    another day, joins `FiredEvent`, and `balances._moved` gives it no ledger effect (AMB-007). `close_day` runs
+    `_interest_step` after the fees: `daily_interest` of today's closing, turned into an amount by the new
+    run-time-currency `money.amount_of`, fires an accrual unless it is `NotPositive`. `interest_amounts` reads each
+    interest event's marker and amount.
+  - `pytest tests/unit/test_end_of_day.py`: 6 passed. `pytest tests/unit`: 59 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-13.
+  - Done 05:24. The new docstring was wrapped under ruff's 120 columns; nothing else to tidy.
+  - `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 59 passed, coverage 97%.
 
 ### Cycle 5.9 — a changed closing adjusts its interest
 
-- [ ] [AI] RED: write `test_amb_005_a_changed_closing_adjusts_its_interest` in `tests/unit/test_end_of_day.py`, with the
+- [x] [AI] RED: write `test_amb_005_a_changed_closing_adjusts_its_interest` in `tests/unit/test_end_of_day.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because a backdated debit leaves Day 1's accrual
       unchanged. Command: `pytest tests/unit/test_end_of_day.py`. Proof: the failure message, recorded here. Acceptance:
       AC-11, AC-13.
-- [ ] [AI] GREEN: Fire adjustments for earlier days in step 2, `UP` or `DOWN`, as target minus what was fired. Command:
+  - Done 05:25. E2 debits 500.00 on Day 2 value-dated Day 1, halving Day 1's closing. No stub was needed.
+  - `pytest tests/unit/test_end_of_day.py`: 1 failed, 6 passed, on its assertion:
+    `At index 1 diff: ('INT-001-D2@D2', Aed(value=Decimal('0.20'))) != ('INT-001-D1@D2', Aed(value=Decimal('-0.20')))`.
+    The backdated debit left Day 1's accrual unchanged.
+- [x] [AI] GREEN: Fire adjustments for earlier days in step 2, `UP` or `DOWN`, as target minus what was fired. Command:
       `pytest tests/unit/test_end_of_day.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-11, AC-13.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:25. `money.Direction` (UP, DOWN) and `events.InterestAdjustment`, whose constructor refuses an ID for its
+    own day, join the model; `balances.interest_fired` nets an account's interest events for a day. Step 2 walks every
+    day so far and fires the target minus what was fired: an accrual for today, or an adjustment for an earlier day,
+    `UP` or `DOWN`, value-dated today. `interest_amounts` signs an adjustment by its direction.
+  - `pytest tests/unit/test_end_of_day.py`: 7 passed. `pytest tests/unit`: 60 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-11, AC-13.
+  - Result: nothing to tidy; the test reader signs interest itself rather than reuse production code.
+    `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 60 passed, coverage 97%.
 
 ### Cycle 5.10 — C8: capitalization is the sum of the interest events
 
-- [ ] [AI] RED: write `test_c8_capitalization_equals_the_sum_of_interest_events` in `tests/unit/test_criteria.py`, with
+- [x] [AI] RED: write `test_c8_capitalization_equals_the_sum_of_interest_events` in `tests/unit/test_criteria.py`, with
       the smallest stub it imports, and run it; it fails on its assertion because no capitalization fires, so no
       CAP-001@D6 of AED 0.76 or CAP-002@D6 of BHD 0.008 exists. Command: `pytest tests/unit/test_criteria.py`. Proof:
       the failure message, recorded here. Acceptance: AC-13.
-- [ ] [AI] GREEN: Write step 3 in `end_of_day.py` from `balances.accrued`, on the configured days. Command:
+  - Done 05:26. Stub: `capitalization_amounts` returning `[]` in `tests/support/streams.py`.
+  - `pytest tests/unit/test_criteria.py`: 1 failed, 8 passed, on its assertion:
+    `assert [] == [('CAP-001@D6...al('0.008')))]`, `Right contains 2 more items`. No capitalization fired.
+- [x] [AI] GREEN: Write step 3 in `end_of_day.py` from `balances.accrued`, on the configured days. Command:
       `pytest tests/unit/test_criteria.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-13.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:26. `events.Capitalization` joins `FiredEvent` and credits in `balances._moved`; `balances.accrued` nets the
+    account's interest events less its capitalizations. On a day in `config.capitalization_days`, step 3 credits each
+    account's accrued interest when above zero, value-dated today. `capitalization_amounts` reads each marker and
+    amount.
+  - `pytest tests/unit/test_criteria.py`: 9 passed, CAP-001@D6 0.76 and CAP-002@D6 0.008, each equal to its interest
+    events' sum. `pytest tests/unit`: 61 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-13.
+  - Done 05:26. `accrued` and `interest_fired` share `_signed_interest`, which signs an adjustment by its direction.
+  - `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 61 passed, coverage 97%.
 
 ### Cycle 5.11 — C6: Day 6 closes at 285.76
 
@@ -1405,85 +1517,162 @@ and is handled as the rule above says.
       stub it imports, and run it; it is expected to pass on arrival once 5.10 is green; its red is the mutation proof
       that removing step 3 leaves Day 6 at 285.00. Command: `pytest tests/unit/test_criteria.py`. Proof: the failure
       message, recorded here. Acceptance: AC-11.
-- [ ] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
+  - Disposition: passes on arrival (10 passed), since 5.10 capitalizes 0.76 on Day 6, and Day 5 closes at 210.00.
+    Mutation: disabling step 3 made the test fail on its assertion:
+    `assert Aed(value=Decimal('285.00')) == Aed(value=Decimal('285.76'))`. Restored from a copy, 10 passed.
+- [x] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
       `pytest tests/unit/test_criteria.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-11.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: no production change; passes on arrival, recorded in the Execution Record.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-11.
+  - Result: nothing to tidy. `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 62
+    passed, coverage 97%.
 
 ### Cycle 5.12 — a day's interest never counts its own capitalization
 
-- [ ] [AI] RED: write `test_amb_023_a_days_interest_never_counts_its_own_capitalization` in
+- [x] [AI] RED: write `test_amb_023_a_days_interest_never_counts_its_own_capitalization` in
       `tests/unit/test_end_of_day.py`, with the smallest stub it imports, and run it; it fails on its assertion because
       re-evaluating a capitalization day fires an adjustment on AED 50,000.00's capitalized 20.00. Command:
       `pytest tests/unit/test_end_of_day.py`. Proof: the failure message, recorded here. Acceptance: AC-13.
-- [ ] [AI] GREEN: Compute step 2's target from `balances.interest_base`. Command:
+  - Done 05:27. A config replaced from `CHALLENGE` with a window of Days 1–2 and capitalization on Day 1. No stub was
+    needed.
+  - `pytest tests/unit/test_end_of_day.py`: 1 failed, 7 passed, on its assertion:
+    `At index 1 diff: ('INT-001-D1@D2', Aed(value=Decimal('0.01'))) != ('INT-001-D2@D2', Aed(value=Decimal('20.01')))`.
+    Re-evaluating Day 1 read its capitalized 20.00 and adjusted up.
+- [x] [AI] GREEN: Compute step 2's target from `balances.interest_base`. Command:
       `pytest tests/unit/test_end_of_day.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-13.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:27. `balances.interest_base` is the closing less any capitalization value-dated that day, and step 2's
+    target is `daily_interest` of it.
+  - `pytest tests/unit/test_end_of_day.py`: 8 passed. `pytest tests/unit`: 63 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-13.
+  - Result: nothing to tidy. `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 63
+    passed, coverage 97%.
 
 ### Cycle 5.13 — a day restates each earlier closing it changed
 
-- [ ] [AI] RED: write `test_amb_022_a_day_restates_each_earlier_closing_it_changed` in `tests/unit/test_report.py`, with
+- [x] [AI] RED: write `test_amb_022_a_day_restates_each_earlier_closing_it_changed` in `tests/unit/test_report.py`, with
       the smallest stub it imports, and run it; it fails on its assertion because the report lists no restated closing.
       Command: `pytest tests/unit/test_report.py`. Proof: the failure message, recorded here. Acceptance: AC-11.
-- [ ] [AI] GREEN: Compute restated closings against the last reported ones. Command: `pytest tests/unit/test_report.py`,
+  - Done 05:28. New file `tests/unit/test_report.py`. Stubs: `Restatement(day, closing)` in `report.py`, and a
+    `restated` field on `DayReport` defaulting to `()`.
+  - `pytest tests/unit/test_report.py`: 1 failed, on its assertion: `assert () == (Restatement(...002'): None}))`,
+    `Right contains 3 more items`. The report listed no restated closing.
+- [x] [AI] GREEN: Compute restated closings against the last reported ones. Command: `pytest tests/unit/test_report.py`,
       then `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance: AC-11.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:28. `report` takes the closings last reported for each day and restates each earlier day whose closing now
+    differs, with `None` for an unchanged account; `reported_after` folds a report's own closings and restatements into
+    that record, and `replay` threads it day by day.
+  - `pytest tests/unit/test_report.py`: 1 passed, including Day 6's restatement of Day 5 to 210.00 and BHD 10.000.
+    `pytest tests/unit`: 64 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-11.
+  - Result: nothing to tidy. `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 64
+    passed, coverage 97%.
 
 ### Cycle 5.14 — every known authorization is listed with its state
 
-- [ ] [AI] RED: write `test_amb_019_every_known_authorization_is_listed_with_its_state` in `tests/unit/test_report.py`,
+- [x] [AI] RED: write `test_amb_019_every_known_authorization_is_listed_with_its_state` in `tests/unit/test_report.py`,
       with the smallest stub it imports, and run it; it fails on its assertion because the report lists no
       authorization. Command: `pytest tests/unit/test_report.py`. Proof: the failure message, recorded here. Acceptance:
       AC-10.
-- [ ] [AI] GREEN: Add authorization states to `DayReport`. Command: `pytest tests/unit/test_report.py`, then
+  - Done 05:29. Stub: an `authorizations` field on `DayReport` defaulting to `()`.
+  - `pytest tests/unit/test_report.py`: 1 failed, 1 passed, on its assertion:
+    `assert [] == [(Authorizati...'200.00')))))]`,
+    `Right contains one more item: (AuthorizationId(value='Auth-A'), Approved(...))`. The report listed no
+    authorization.
+- [x] [AI] GREEN: Add authorization states to `DayReport`. Command: `pytest tests/unit/test_report.py`, then
       `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance: AC-10.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:29. `DayReport.authorizations` holds `records(log)` at the day's close, in the order first seen; the test's
+    helper is typed `AuthorizationState`.
+  - `pytest tests/unit/test_report.py`: 2 passed. `pytest tests/unit`: 65 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-10.
+  - Result: nothing to tidy. `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 65
+    passed, coverage 97%.
 
 ### Cycle 5.15 — a rejected event prints as that day's error
 
-- [ ] [AI] RED: write `test_amb_014_a_rejected_event_prints_as_that_days_error` in `tests/unit/test_report.py`, with the
+- [x] [AI] RED: write `test_amb_014_a_rejected_event_prints_as_that_days_error` in `tests/unit/test_report.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because the report's errors are always none.
       Command: `pytest tests/unit/test_report.py`. Proof: the failure message, recorded here. Acceptance: AC-15 to
       AC-17, AC-32, AC-35.
-- [ ] [AI] GREEN: Add `Rejected` entries to the errors, by account, with the texts tech-docs 001 fixes; the test has one
+  - Done 05:30. Parametrized with one case per `Rejection`: IdReused, AlreadyReversed, ReversesAReversal, UnknownTarget,
+    MovedNoMoney, and AlreadyUndone. Stub: an `errors` field on `DayReport` defaulting to an empty mapping.
+  - `pytest tests/unit/test_report.py`: 6 failed, 2 passed, each on its assertion:
+    `assert mappingproxy({}) == {AccountId(va...ACC-002'): ()}`. The report's errors were always none.
+- [x] [AI] GREEN: Add `Rejected` entries to the errors, by account, with the texts tech-docs 001 fixes; the test has one
       case per rejection. Command: `pytest tests/unit/test_report.py`, then `pytest tests/unit`. Proof: both passing
       runs, recorded here. Acceptance: AC-15 to AC-17, AC-32, AC-35.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:30. `DayReport.errors` maps each account to the texts of the `Rejected` entries processed that day on it, in
+    log order; `report.refusal` renders each with tech-docs 001's text, one `match` over `Rejection` ending in
+    `assert_never`.
+  - `pytest tests/unit/test_report.py`: 8 passed. `pytest tests/unit`: 71 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-15 to AC-17,
       AC-32, AC-35.
+  - Result: nothing to tidy; `refusal` stays public for the text renderer of Phase 6.
+    `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 71 passed, coverage 97%.
 
 ### Cycle 5.16 — a refunded fee cannot be reversed
 
-- [ ] [AI] RED: write `test_amb_035_money_already_undone_cannot_be_undone_again` in `tests/unit/test_processing.py`,
+- [x] [AI] RED: write `test_amb_035_money_already_undone_cannot_be_undone_again` in `tests/unit/test_processing.py`,
       with the smallest stub it imports, and run it; it fails on its assertion because its new refunded-fee case, a
       reversal of FEE-001-D2@D5 after REFUND-001-D2@D6, is accepted and credits 25.00 again. Command:
       `pytest tests/unit/test_processing.py`. Proof: the failure message, recorded here. Acceptance: AC-35.
-- [ ] [AI] GREEN: Treat a refund as undoing its fee in the `AlreadyUndone` check, and a reversed refund as putting the
+  - Done 05:31. The test's cases became a table, `part`, `whole`, and the new `refunded-fee`: the brief's stream plus
+    E12 reversing FEE-001-D2@D5 on Day 7, in a week-long window. Each case now proves "moves no balance" against the
+    same stream without E12. Beside it, `test_amb_035_a_reversed_refund_puts_its_fee_back_in_force` in
+    `tests/unit/test_end_of_day.py` covers the GREEN's second half, which no planned test reached. No stub was needed.
+  - `pytest tests/unit/test_processing.py tests/unit/test_end_of_day.py`: 2 failed, 19 passed, each on its assertion.
+    `[refunded-fee]`: at index 0, `Accepted(event=Reversal(..., reverses=FeeId(...)))` was not
+    `Rejected(..., reason=AlreadyUndone(...))`, so the reversal would credit 25.00 again. The reversed-refund test:
+    `assert ['REFUND-001-...ND-001-D5@D6'] == ['REFUND-001-...ND-001-D2@D7']`, so no fee came back in force.
+- [x] [AI] GREEN: Treat a refund as undoing its fee in the `AlreadyUndone` check, and a reversed refund as putting the
       fee back in force in step 1. Command: `pytest tests/unit/test_processing.py`, then `pytest tests/unit`. Proof:
       both passing runs, recorded here. Acceptance: AC-35.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:32. `processing._undone_by` refuses a reversal of a fee whose refund is in effect, naming the fee and the
+    refund, through `_refund_of`, which skips a refund itself reversed. `end_of_day._in_force` remembers each refunded
+    fee and puts it back in force when an accepted reversal names its refund.
+  - `pytest tests/unit/test_processing.py tests/unit/test_end_of_day.py`: 21 passed. `pytest tests/unit`: 73 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-35.
+  - Result: nothing to tidy. `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 73
+    passed, coverage 97%.
 
 ### Cycle 5.17 — a step that fires nothing reports its row
 
-- [ ] [AI] RED: write `test_amb_033_a_step_that_fires_nothing_reports_its_row` in `tests/unit/test_report.py`, with the
+- [x] [AI] RED: write `test_amb_033_a_step_that_fires_nothing_reports_its_row` in `tests/unit/test_report.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because the end-of-day rows omit the empty steps.
       Command: `pytest tests/unit/test_report.py`. Proof: the failure message, recorded here. Acceptance: AC-01.
-- [ ] [AI] GREEN: Add the rows tech-docs 002 lists for a step with no event, `no interest capitalized` included.
+  - Done 05:33. Stubs in `report.py`: the `Step` and `Note` enums, `Fired(step, event)`,
+    `NothingFired(step, accounts, note)`, and an `end_of_day` field on `DayReport` defaulting to `()`.
+  - `pytest tests/unit/test_report.py`: 1 failed, 8 passed, on its assertion:
+    `assert [] == [(1, 'no fee ...('ACC-002',))]`, `Right contains 3 more items`. The report carried no end-of-day row
+    at all, the empty steps included.
+- [x] [AI] GREEN: Add the rows tech-docs 002 lists for a step with no event, `no interest capitalized` included.
       Command: `pytest tests/unit/test_report.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-01.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:33. `DayReport.end_of_day` lists each step's fired events in log order. Step 1 adds one row for every
+    account, "no fee assessed or refunded" or, after refunds only, "no new fee assessed"; step 2 adds "no interest
+    accrued" for an account with no accrual today; on a capitalization day, step 3 adds "no interest capitalized" for an
+    account paid nothing. Day 0, never closed, has no rows.
+  - `pytest tests/unit/test_report.py`: 9 passed. `pytest tests/unit`: 74 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-01.
-- [ ] [AI] Add `end_of_day` to `architecture.md`'s components. Proof: the module exists. Acceptance: AC-26.
+  - Done 05:34. `_end_of_day` split into `_fee_rows`, `_interest_rows`, and `_capitalization_rows`, which take a
+    `Sequence[LoggedEvent]`, since pyright holds `list` invariant.
+  - `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 74 passed, coverage 97%.
+- [x] [AI] Add `end_of_day` to `architecture.md`'s components. Proof: the module exists. Acceptance: AC-26.
+  - Done 05:35. The ledger-core diagram gains `end_of_day` between `replay` and the log, closing each day with fees,
+    interest, then capitalization; the component table adds its row and updates `events`, `balances`, and `report`.
+  - The module exists: `ls src/account_ledger/end_of_day.py`.
 
 ### Phase 5 Gate
 
-- [ ] [AI] Run every gate command below against the phase's combined state; each exits 0. Proof: each command and its
+- [x] [AI] Run every gate command below against the phase's combined state; each exits 0. Proof: each command and its
       exit status, recorded here. Acceptance: AC-06 to AC-20, AC-22, AC-31, AC-35. Commands:
   - `npx nx run account-ledger-cli:test:quick`
   - `npx nx run account-ledger-cli:test:integration`
@@ -1491,8 +1680,13 @@ and is handled as the rule above says.
   - `npm run -s check:hygiene`
   - `sh local-tmp/check-md.sh`
   - `./rhino md internal-link validate && ./rhino md heading-hierarchy validate && ./rhino md naming validate`
-- [ ] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
+  - Done 05:37, each exiting 0: `test:quick` 0 (74 passed, coverage 97%); `test:integration` 0 (2 passed); `test:e2e` 0
+    (1 passed); `npm run -s check:hygiene` 0; `sh local-tmp/check-md.sh` 0; `./rhino md internal-link validate` 0,
+    `heading-hierarchy validate` 0, `naming validate` 0.
+- [x] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
       Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
+  - Done 05:37: the row `2026-09-25 05:14–05:37`, "Plan execution, Phase 5: fees, refunds, interest, capitalization, and
+    the day report".
 - [ ] [AI] Commit the phase as `feat(account-ledger-cli): close each day with fees, interest, and capitalization`, then
       push to `origin/main`; the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof:
       the commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-06 to AC-20,

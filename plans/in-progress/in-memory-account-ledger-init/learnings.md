@@ -57,5 +57,13 @@ Each entry records when, what was found, why it matters, and, once routed, its o
   adds that field then.
 - **Owner.** Not yet routed.
 
+### L6 — Rule tests with incidental overdrafts break once fees exist (2026-09-25 05:17)
+
+- **Found.** Cycle 5.1's fee step made four Phase 4 tests fail: their streams let a day close negative, which had no
+  consequence before fees, and each asserted a closing that now carried a fee. Their streams now open with a credit.
+- **Why it matters.** A rule test should keep every day at or above zero unless the fee rule is what it tests, or each
+  later end-of-day step can move its figures.
+- **Owner.** Not yet routed.
+
 [capture]: ../../../repo-governance/conventions/structure/plans/008-knowledge-capture-and-archival.md
 [triage]: ../../../repo-governance/conventions/structure/plans/017-learning-triage.md

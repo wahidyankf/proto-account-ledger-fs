@@ -4,17 +4,32 @@ from account_ledger.config import Account
 from account_ledger.events import (
     AnyAmount,
     Authorization,
+    Capitalization,
     Capture,
     Credit,
     Debit,
+    Fee,
+    FeeRefund,
     IncomingEvent,
     Instalments,
+    InterestAccrual,
+    InterestAdjustment,
     Reversal,
     Settlement,
     Whole,
 )
-from account_ledger.ids import AccountId, AuthorizationId, Day, IdFault, IncomingId, InstalmentCount, parse_event_id
-from account_ledger.money import Aed, Amount, Bhd
+from account_ledger.ids import (
+    AccountId,
+    AuthorizationId,
+    Day,
+    IdFault,
+    IncomingId,
+    InstalmentCount,
+    parse_event_id,
+    text,
+)
+from account_ledger.log import Accepted, Log
+from account_ledger.money import Aed, Amount, Bhd, Direction, Money
 from support.values import aed, bhd
 
 HEADER = ("event", "booked", "type", "account", "amount", "value_date", "reference", "instalments")
@@ -88,3 +103,36 @@ def reversal(event: str, day: int, reverses: str, value: int | None = None, acco
     target = parse_event_id(reverses)
     assert not isinstance(target, IdFault), target
     return Reversal(IncomingId(event), Day(day), AccountId(account), Day(value or day), target)
+
+
+def fee_markers(log: Log) -> list[str]:
+    """The marker of every fee in the log, in the order fired."""
+    return [text(entry.event.id) for entry in log if isinstance(entry, Accepted) and isinstance(entry.event, Fee)]
+
+
+def refund_markers(log: Log) -> list[str]:
+    """The marker of every fee refund in the log, in the order fired."""
+    return [text(entry.event.id) for entry in log if isinstance(entry, Accepted) and isinstance(entry.event, FeeRefund)]
+
+
+def interest_amounts(log: Log) -> list[tuple[str, Money]]:
+    """The marker and signed amount of every interest event in the log, in the order fired."""
+    amounts: list[tuple[str, Money]] = []
+    for entry in log:
+        match entry:
+            case Accepted(event=InterestAccrual(id=marker, amount=amount)):
+                amounts.append((text(marker), amount.money))
+            case Accepted(event=InterestAdjustment(id=marker, direction=direction, amount=amount)):
+                amounts.append((text(marker), amount.money if direction is Direction.UP else -amount.money))
+            case _:
+                pass
+    return amounts
+
+
+def capitalization_amounts(log: Log) -> list[tuple[str, Money]]:
+    """The marker and amount of every capitalization in the log, in the order fired."""
+    return [
+        (text(entry.event.id), entry.event.amount.money)
+        for entry in log
+        if isinstance(entry, Accepted) and isinstance(entry.event, Capitalization)
+    ]
