@@ -116,6 +116,19 @@ policies:
         - { glob: ".agents/skills/*/SKILL.md", schema: skill }
         - { glob: ".agents/agents/*.md", schema: agent }
         - { glob: ".agents/**/README.md", schema: governance }
+    naming:
+      surfaces:
+        - { glob: "**/*.md", style: kebab-case }
+      exempt:
+        - "**/README.md"
+        - "**/SKILL.md"
+        - "AGENTS.md"
+        - "CLAUDE.md"
+        # Assessment deliverables whose upper-case names are prescribed.
+        - "NUMBERS.md"
+        - "AMBIGUITIES.md"
+        - "REJECTED.md"
+        - "WORKLOG.md"
     internal-link:
       exclude-sources: ["specs/fixtures/**"]
   governance:
@@ -229,6 +242,12 @@ gates:
       command:
         executable: ./rhino
         args: [{ literal: metadata }, { literal: validate }]
+      run-on: { pre-push: {}, pull-request: {}, main: {} }
+    - id: naming
+      type: check
+      command:
+        executable: ./rhino
+        args: [{ literal: md }, { literal: naming }, { literal: validate }]
       run-on: { pre-push: {}, pull-request: {}, main: {} }
     - id: internal-link
       type: check
