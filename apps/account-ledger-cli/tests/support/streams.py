@@ -136,3 +136,8 @@ def capitalization_amounts(log: Log) -> list[tuple[str, Money]]:
         for entry in log
         if isinstance(entry, Accepted) and isinstance(entry.event, Capitalization)
     ]
+
+
+def auth_a_never_settled() -> tuple[IncomingEvent, ...]:
+    """Auth-A approved on Day 1 against a credit, and never settled or reversed (AMB-018)."""
+    return (credit("E1", 1, "1000.00"), authorization("E2", 1, "Auth-A", "200.00"))

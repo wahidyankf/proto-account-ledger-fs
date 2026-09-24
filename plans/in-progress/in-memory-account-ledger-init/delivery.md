@@ -62,6 +62,11 @@ first.
 - The fix, 06:02: `_replay` flushes `out` after writing, so a closed pipe raises inside `run`'s handlers; the test then
   passed, and the e2e suite passed 6 of 6. Mutation proof: without `main`'s null-device `dup2`, the test failed again
   with the same exit-time message; restored.
+- Phase 6 (05:38–06:10): 17 cycles green, none passing on arrival, and the rendering of the brief's stream equals
+  OUTPUT_TARGET byte for byte. Beside the planned tests came three AMB-035 reversal tests and the process-level
+  closed-pipe test. The CLI honours the floor tier, the architecture is the C4 model, and the README publishes the
+  statuses. Last gate passed: Phase 6. Next: Phase 7.
+- Phase 6 committed as `0857bae` and pushed, `148a42e..0857bae`.
 
 ## Execution Checkout
 
@@ -2182,10 +2187,13 @@ The renderer, the floor-tier shell, and the golden run ([input and output](tech-
       Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
   - Done 06:10: the row `2026-09-25 05:38–06:10`, "Plan execution, Phase 6: the report as text and the floor-tier CLI;
     OUTPUT_TARGET exact", above Phase 5's.
-- [ ] [AI] Commit the phase as `feat(account-ledger-cli): print the daily report from a stream file`, then push to
+- [x] [AI] Commit the phase as `feat(account-ledger-cli): print the daily report from a stream file`, then push to
       `origin/main`; the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof: the
       commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-01 to AC-04, AC-26,
       AC-36.
+  - Done 06:11. Commit `0857bae`, 2026-09-25 06:11:08; the commit hooks passed: public safety, staged format, and
+    commitlint. `/usr/bin/git push origin main` pushed `148a42e..0857bae`, after the pre-push hook ran `test:quick`,
+    `test:integration`, and `test:e2e`.
 
 Pause safety: the phase leaves a program that prints OUTPUT_TARGET exactly and honours the floor-tier contract.
 Re-verify with `npx nx run account-ledger-cli:test:quick`.
@@ -2194,25 +2202,46 @@ Re-verify with `npx nx run account-ledger-cli:test:quick`.
 
 The brief's one failing test (AMB-018, AMB-031, D6), as [testing strategy](tech-docs/004-testing-strategy.md) shows it.
 
-- [ ] [AI] RED: write `test_known_weakness_an_unsettled_hold_never_lapses` in `tests/unit/test_known_weakness.py`, with
+- [x] [AI] RED: write `test_known_weakness_an_unsettled_hold_never_lapses` in `tests/unit/test_known_weakness.py`, with
       `auth_a_never_settled()` in `tests/support/streams.py`, without its marker, and run it; it fails on its assertion,
       since Day 32 still holds AED 200.00. Command: `pytest tests/unit/test_known_weakness.py`. Proof: the failure.
       Acceptance: AC-23.
-- [ ] [AI] Mark it `xfail(strict=True, reason=…)` with the inline annotation, citing Visa Business News AI13522.
+  - Done 06:12. `auth_a_never_settled()` in `tests/support/streams.py` credits AED 1,000.00 and approves Auth-A for AED
+    200.00, both on Day 1, and never settles it. The test replays it through Day 32, without its marker.
+  - `pytest tests/unit/test_known_weakness.py`: 1 failed, on its assertion:
+    `assert Aed(value=Decimal('802.40')) == Aed(value=Decimal('1002.40'))`. Day 32 still holds AED 200.00.
+- [x] [AI] Mark it `xfail(strict=True, reason=…)` with the inline annotation, citing Visa Business News AI13522.
       Command: `npx nx run account-ledger-cli:test:unit`. Proof: the run passes and reports `1 xfailed`. Acceptance:
       AC-23.
-- [ ] [AI] Prove the marker is strict: make holds lapse after 30 days in the working tree, never committed, run the unit
+  - Done 06:12. The marker is
+    `xfail(strict=True, reason="AMB-018: holds never expire, so an unsettled hold is never released")`. Above it sits
+    the inline annotation from tech-docs 004: what the weakness reveals, Visa Business News AI13522's 30 calendar days,
+    and the fix.
+  - `npx nx run account-ledger-cli:test:unit`: 94 passed, 1 xfailed, and the run passed.
+- [x] [AI] Prove the marker is strict: make holds lapse after 30 days in the working tree, never committed, run the unit
       suite, watch `XPASS(strict)` fail it, restore. Command: `/usr/bin/git diff --stat -- apps/account-ledger-cli/src`
       prints nothing afterwards. Proof: the failing run's summary line. Acceptance: AC-23.
-- [ ] [AI] Add two chosen constants to `NUMBERS.md`, each with its reason and why not half: the hold time frame, 30
+  - Done 06:13. In the working tree only, `balances.holds` dropped any hold more than 30 days past its value day;
+    nothing was committed.
+  - `npx nx run account-ledger-cli:test:unit` exited 1: `1 failed, 94 passed`, the failure
+    `[XPASS(strict)] AMB-018: holds never expire, so an unsettled hold is never ...`. Restored from the backup,
+    `/usr/bin/git diff --stat -- apps/account-ledger-cli/src` printed nothing.
+- [x] [AI] Add two chosen constants to `NUMBERS.md`, each with its reason and why not half: the hold time frame, 30
       calendar days, cited from Visa Business News AI13522 (at 15, Visa would still honour a lodging or cruise
       authorization, so a lapse test would claim a weakness no network shows); and the replay length, Day 32, the first
       day after Auth-A's thirty (at Day 16 the hold is still legitimately active). Add a known-weakness section to the
       application README. Proof: the md gates. Acceptance: AC-23, AC-24.
+  - Done 06:13. `NUMBERS.md`'s Chosen Constants gains two rows, each with a section giving its reason and why not half.
+    The hold time frame, 30 calendar days, is cited from Visa Business News AI13522; at 15, Visa would still honour a
+    lodging or cruise authorization. The replay through Day 32 is the first day after Auth-A's thirty; at Day 16 the
+    hold is still legitimately active. Both are marked test only, AMB-018, and the introduction now names the
+    known-weakness test beside the ledger. The application README gains a Known Weakness section.
+  - Proof: `sh local-tmp/check-md.sh` passed, and `./rhino md internal-link validate`, `heading-hierarchy validate`, and
+    `naming validate` each exited 0.
 
 ### Phase 7 Gate
 
-- [ ] [AI] Run every gate command below against the phase's combined state; each exits 0. Proof: each command and its
+- [x] [AI] Run every gate command below against the phase's combined state; each exits 0. Proof: each command and its
       exit status, recorded here. Acceptance: AC-23. Commands:
   - `npx nx run account-ledger-cli:test:quick`
   - `npx nx run account-ledger-cli:test:integration`
@@ -2220,8 +2249,13 @@ The brief's one failing test (AMB-018, AMB-031, D6), as [testing strategy](tech-
   - `npm run -s check:hygiene`
   - `sh local-tmp/check-md.sh`
   - `./rhino md internal-link validate && ./rhino md heading-hierarchy validate && ./rhino md naming validate`
-- [ ] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
+  - Done 06:16, each exiting 0: `test:quick` 0 (94 passed, 1 xfailed, coverage 96%); `test:integration` 0 (2 passed);
+    `test:e2e` 0 (6 passed); `npm run -s check:hygiene` 0; `sh local-tmp/check-md.sh` 0;
+    `./rhino md internal-link validate` 0, `heading-hierarchy validate` 0, `naming validate` 0.
+- [x] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
       Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
+  - Done 06:16: the row `2026-09-25 06:12–06:16`, "Plan execution, Phase 7: the known weakness, a hold that never
+    lapses, as a strict xfail", above Phase 6's.
 - [ ] [AI] Commit the phase as `test(account-ledger-cli): record that holds never expire as a strict expected failure`,
       then push to `origin/main`; the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`.
       Proof: the commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-23.

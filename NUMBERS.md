@@ -1,9 +1,9 @@
 # Numbers
 
-Every constant the ledger uses, where it comes from, and why it has that value and not half of it. A value marked open
-depends on an entry still open in [AMBIGUITIES](AMBIGUITIES.md), which holds its options and reasoning; a value marked
-proposed is a chosen value no ambiguity covers, not yet confirmed; a value marked resolved follows a settled entry
-there. Figures here follow the resolutions in AMBIGUITIES.
+Every constant the ledger and its known-weakness test use, where it comes from, and why it has that value and not half
+of it. A value marked open depends on an entry still open in [AMBIGUITIES](AMBIGUITIES.md), which holds its options and
+reasoning; a value marked proposed is a chosen value no ambiguity covers, not yet confirmed; a value marked resolved
+follows a settled entry there. Figures here follow the resolutions in AMBIGUITIES.
 
 A **given** constant is fixed by the [challenge brief](challenge-raw.md); halving it would break a non-negotiable rule,
 so its entry says what the value drives instead. A **chosen** constant is a design decision and carries its own reason.
@@ -27,18 +27,20 @@ Both are listed, as AMB-032 resolves.
 
 ## Chosen Constants
 
-| Constant                    | Value                                | Status            |
-| --------------------------- | ------------------------------------ | ----------------- |
-| Rate literal                | `Decimal("0.0004")`                  | in place          |
-| Decimal working precision   | 28 significant digits                | in place          |
-| Rounding mode               | half-even                            | resolved, AMB-006 |
-| Instalment split            | 3.333, 3.333, 3.334                  | resolved, AMB-020 |
-| Hold released on settlement | the full hold, on a final settlement | resolved, AMB-013 |
-| Day representation          | integers 1 to 6                      | resolved, AMB-001 |
-| End-of-day order            | fees, interest, then capitalization  | resolved, AMB-023 |
-| AED to BHD rate             | 1 AED = 0.10238257 BHD               | resolved, AMB-027 |
-| BHD overdraft fee           | BHD 2.560                            | resolved, AMB-027 |
-| Unit coverage floor         | 80% of lines                         | in place          |
+| Constant                    | Value                                | Status             |
+| --------------------------- | ------------------------------------ | ------------------ |
+| Rate literal                | `Decimal("0.0004")`                  | in place           |
+| Decimal working precision   | 28 significant digits                | in place           |
+| Rounding mode               | half-even                            | resolved, AMB-006  |
+| Instalment split            | 3.333, 3.333, 3.334                  | resolved, AMB-020  |
+| Hold released on settlement | the full hold, on a final settlement | resolved, AMB-013  |
+| Day representation          | integers 1 to 6                      | resolved, AMB-001  |
+| End-of-day order            | fees, interest, then capitalization  | resolved, AMB-023  |
+| AED to BHD rate             | 1 AED = 0.10238257 BHD               | resolved, AMB-027  |
+| BHD overdraft fee           | BHD 2.560                            | resolved, AMB-027  |
+| Unit coverage floor         | 80% of lines                         | in place           |
+| Hold time frame             | 30 calendar days                     | test only, AMB-018 |
+| Known-weakness replay       | through Day 32                       | test only, AMB-018 |
 
 ### Rate literal
 
@@ -94,6 +96,19 @@ charged under the same rules as the AED fee. ACC-002 never goes negative in this
 
 Set in commit 199456f for this time-boxed assessment: it still guards the ledger core while leaving room to move fast.
 At 40% (half), most of the core could go unexecuted by unit tests.
+
+### Hold time frame
+
+The known-weakness test's measure of how long a hold should live; the ledger itself gives a hold no lifetime (AMB-018).
+Visa Business News AI13522, effective 13 April 2024, makes 30 calendar days its longest authorization-to-clearing time
+frame, so no network would still honour an older hold. At 15 (half), Visa would still honour a lodging or cruise
+authorization, so a lapse test would claim a weakness no network shows.
+
+### Known-weakness replay
+
+Through Day 32, the first day after Auth-A's thirty: the test's Auth-A is approved on Day 1, so Day 31 is the thirtieth
+day after it and Day 32 the first on which no network would still honour it. At Day 16 (half), the hold is still
+legitimately active, and the test would call a hold that ought to be kept a weakness.
 
 ## Derived Figures
 

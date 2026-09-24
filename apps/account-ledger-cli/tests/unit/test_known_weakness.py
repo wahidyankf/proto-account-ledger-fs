@@ -1,0 +1,23 @@
+"""The brief's one failing test against this design, inline-annotated with what it reveals (AMB-018, AMB-031, D6)."""
+
+from dataclasses import replace
+
+import pytest
+
+from account_ledger.config import CHALLENGE
+from account_ledger.ids import Day
+from account_ledger.replay import replay
+from support.streams import ACC_001, auth_a_never_settled
+
+
+# KNOWN WEAKNESS (AMB-018): a hold never expires.
+# What it reveals: an approved authorization that is never settled keeps its hold, and so keeps reducing the
+# available balance, for as long as the ledger runs. Visa's longest authorization-to-clearing time frame is 30
+# calendar days (Visa Business News AI13522, effective 13 April 2024), so by Day 32 no network would still honour
+# Auth-A, yet this ledger still reserves its AED 200.00.
+# The fix: a hold lifetime after which the end of day fires a hold-expiry event that releases the hold.
+@pytest.mark.xfail(strict=True, reason="AMB-018: holds never expire, so an unsettled hold is never released")
+def test_known_weakness_an_unsettled_hold_never_lapses() -> None:
+    day_32 = replay(auth_a_never_settled(), replace(CHALLENGE, last_day=Day(32))).report(Day(32))
+
+    assert day_32.available[ACC_001.id] == day_32.closing[ACC_001.id]

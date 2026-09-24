@@ -84,3 +84,14 @@ D13 records.
 
 `REASON` is `no such file` for a missing file and the operating system's message otherwise. Both streams are written as
 UTF-8 whatever the locale, because the report prints `−` (U+2212) for a negative amount.
+
+## Known Weakness
+
+A hold never expires (AMB-018): an approved authorization that is never settled keeps reducing the available balance for
+as long as the ledger runs. `tests/unit/test_known_weakness.py` holds the brief's one failing test against this design,
+inline-annotated with what it reveals. It replays an authorization left unsettled through Day 32, past the 30 calendar
+days Visa allows at most, and asserts the hold has lapsed.
+
+It is marked `xfail(strict=True)`, so the suite reports it as `1 xfailed` and passes. Once holds gain a lifetime, the
+test passes, pytest reports `XPASS(strict)`, and the run fails until the marker is removed. The constants it uses are
+defended in [NUMBERS](../../NUMBERS.md).
