@@ -6,11 +6,12 @@ when every option still open in [AMBIGUITIES](AMBIGUITIES.md) gives the same val
 figure, and its key points to the entries it waits on, listed under its table.
 
 Each day has three tables. **Events processed** lists the day's events from the brief, with E10's instalments under E10.
-**EOD applied** lists the end-of-day steps in the order AMB-023 recommends: 1, fee re-evaluation, which assesses and
-reverses overdraft fees; 2, interest accrual, which is not an entry until it capitalizes (AMB-007); 3, on Day 6 only,
-capitalization. **Closing Summary** is the state OUTPUT_TARGET prints. A generated entry is named by kind and day, such
-as `FEE-D2` for the fee on Day 2, so its name holds under every option of AMB-002; a hold is not an entry (AMB-010), and
-shows under authorizations.
+**EOD applied** lists the end-of-day steps: 1, fee re-evaluation, which assesses and reverses overdraft fees; 2,
+interest accrual; 3, on Day 6 only, capitalization. That order is only AMB-023's recommendation, and whether an accrual
+is a ledger entry before it capitalizes is AMB-007; both are open, so neither the step numbers nor the accrual rows
+decide them. **Closing Summary** is the state OUTPUT_TARGET prints. A generated entry is named by kind and day, such as
+`FEE-D2` for the fee on Day 2, so its name holds under every option of AMB-002; whether a hold is an entry is AMB-010,
+and a hold shows under authorizations.
 
 Balances are the state as known at the end of each day. How the report lays that state out, and whether it adds restated
 or final views, is itself open (AMB-022, AMB-025); OUTPUT_TARGET shows the printed text, and repeats these figures
@@ -124,8 +125,8 @@ EOD applied:
 | Step | Entry | Type              | Account          | Detail                      | Value date |
 | ---- | ----- | ----------------- | ---------------- | --------------------------- | ---------- |
 | 1    | —     | Fee re-evaluation | ACC-001, ACC-002 | no fee assessed or reversed | —          |
-| 2    | —     | Interest accrual  | ACC-001          | 0.10; not an entry          | Day 1      |
-| 2    | —     | Interest accrual  | ACC-002          | 0.000; not an entry         | Day 1      |
+| 2    | —     | Interest accrual  | ACC-001          | 0.10                        | Day 1      |
+| 2    | —     | Interest accrual  | ACC-002          | 0.000                       | Day 1      |
 
 Closing Summary:
 
@@ -149,8 +150,8 @@ EOD applied:
 | Step | Entry | Type              | Account          | Detail                      | Value date |
 | ---- | ----- | ----------------- | ---------------- | --------------------------- | ---------- |
 | 1    | —     | Fee re-evaluation | ACC-001, ACC-002 | no fee assessed or reversed | —          |
-| 2    | —     | Interest accrual  | ACC-001          | pending (a); not an entry   | Day 2      |
-| 2    | —     | Interest accrual  | ACC-002          | 0.000; not an entry         | Day 2      |
+| 2    | —     | Interest accrual  | ACC-001          | pending (a)                 | Day 2      |
+| 2    | —     | Interest accrual  | ACC-002          | 0.000                       | Day 2      |
 
 Closing Summary:
 
@@ -181,8 +182,8 @@ EOD applied:
 | Step | Entry | Type              | Account          | Detail                      | Value date |
 | ---- | ----- | ----------------- | ---------------- | --------------------------- | ---------- |
 | 1    | —     | Fee re-evaluation | ACC-001, ACC-002 | no fee assessed or reversed | —          |
-| 2    | —     | Interest accrual  | ACC-001          | pending (a); not an entry   | Day 3      |
-| 2    | —     | Interest accrual  | ACC-002          | 0.000; not an entry         | Day 3      |
+| 2    | —     | Interest accrual  | ACC-001          | pending (a)                 | Day 3      |
+| 2    | —     | Interest accrual  | ACC-002          | 0.000                       | Day 3      |
 
 Closing Summary:
 
@@ -211,8 +212,8 @@ EOD applied:
 | Step | Entry | Type              | Account          | Detail                      | Value date |
 | ---- | ----- | ----------------- | ---------------- | --------------------------- | ---------- |
 | 1    | —     | Fee re-evaluation | ACC-001, ACC-002 | no fee assessed or reversed | —          |
-| 2    | —     | Interest accrual  | ACC-001          | pending (a); not an entry   | Day 4      |
-| 2    | —     | Interest accrual  | ACC-002          | 0.000; not an entry         | Day 4      |
+| 2    | —     | Interest accrual  | ACC-001          | pending (a)                 | Day 4      |
+| 2    | —     | Interest accrual  | ACC-002          | 0.000                       | Day 4      |
 
 Closing Summary:
 
@@ -251,8 +252,8 @@ EOD applied:
 | 1    | FEE-D2 | Overdraft fee    | ACC-001 | AED 25.00, if assessed; pending (b) | pending (b) |
 | 1    | FEE-D4 | Overdraft fee    | ACC-001 | AED 25.00, if assessed; pending (c) | pending (c) |
 | 1    | FEE-D5 | Overdraft fee    | ACC-001 | AED 25.00                           | Day 5       |
-| 2    | —      | Interest accrual | ACC-001 | pending (d); not an entry           | Day 5       |
-| 2    | —      | Interest accrual | ACC-002 | pending (e); not an entry           | Day 5       |
+| 2    | —      | Interest accrual | ACC-001 | pending (d)                         | Day 5       |
+| 2    | —      | Interest accrual | ACC-002 | pending (e)                         | Day 5       |
 
 Closing Summary:
 
@@ -307,8 +308,8 @@ EOD applied:
 | 1    | FEE-REV-D4  | Fee reversal            | ACC-001          | AED 25.00, if booked; pending (b) | pending (b) |
 | 1    | FEE-REV-D5  | Fee reversal            | ACC-001          | AED 25.00, if booked; pending (c) | pending (c) |
 | 1    | —           | Fee re-evaluation       | ACC-001, ACC-002 | no new fee assessed               | —           |
-| 2    | —           | Interest accrual        | ACC-001          | pending (d); not an entry         | Day 6       |
-| 2    | —           | Interest accrual        | ACC-002          | pending (e); not an entry         | Day 6       |
+| 2    | —           | Interest accrual        | ACC-001          | pending (d)                       | Day 6       |
+| 2    | —           | Interest accrual        | ACC-002          | pending (e)                       | Day 6       |
 | 3    | CAP-ACC-001 | Interest capitalization | ACC-001          | pending (f)                       | Day 6       |
 | 3    | CAP-ACC-002 | Interest capitalization | ACC-002          | pending (g)                       | Day 6       |
 

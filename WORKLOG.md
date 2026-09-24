@@ -29,3 +29,4 @@ claimed.
 | 2026-09-24 15:57 | Renumbered ambiguities by first appearance in MOVEMENT; earlier entries keep the old numbers   |
 | 2026-09-24 16:04 | Gave every MOVEMENT day three tables: events processed, EOD applied, and closing summary       |
 | 2026-09-24 16:05 | Moved fees, reversals, and capitalization out of the closing summary into EOD applied          |
+| 2026-09-24 16:08 | MOVEMENT no longer states the open EOD order or accrual status as settled                      |
