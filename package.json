@@ -11,7 +11,6 @@
     "libs/*"
   ],
   "scripts": {
-    "build": "nx run-many -t build",
     "check:governance": "./rhino governance word-budget validate",
     "check:harness-parity": "./rhino harness adapters validate",
     "check:hygiene": "./rhino gate run --surface main",
@@ -22,6 +21,7 @@
     "lint": "nx run-many -t lint",
     "prepare": "husky",
     "test": "npm run test:quick",
+    "test:e2e": "nx run-many -t test:e2e",
     "test:integration": "nx run-many -t test:integration",
     "test:quick": "nx run-many -t test:quick",
     "test:unit": "nx run-many -t test:unit",

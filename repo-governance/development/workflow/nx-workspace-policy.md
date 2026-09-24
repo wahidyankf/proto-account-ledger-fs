@@ -18,20 +18,22 @@ that runs several existing targets in order with the built-in `nx:run-commands` 
 list of `npm exec -- nx run <project>:<target>` entries, and `options.parallel` set to `false`. The aggregate invokes
 targets instead of copying their commands, so each command has exactly one owner.
 
-Use ordinary, exact-pinned npm or language-native dependencies (for example `dotnet` tools pinned in
-`.config/dotnet-tools.json`). Do not add framework-, language-, or platform-specific `@nx/*` plugins, generators, or
-executors. An exception needs explicit owner direction naming the plugin and the capability it provides, recorded in the
-change that introduces it.
+Use ordinary, exact-pinned npm or language-native dependencies (for example Python tools locked in a project's
+`uv.lock`). Do not add framework-, language-, or platform-specific `@nx/*` plugins, generators, or executors. An
+exception needs explicit owner direction naming the plugin and the capability it provides, recorded in the change that
+introduces it.
 
 ## Targets
 
 | Target             | Owns                                                                              | Cached |
 | ------------------ | --------------------------------------------------------------------------------- | ------ |
-| `build`            | a publishable build of an application                                             | yes    |
-| `typecheck`        | compilation with warnings as errors                                               | yes    |
+| `install`          | syncing the project's pinned toolchain; every other target depends on it          | no     |
+| `build`            | a publishable build, only for a project that publishes one                        | yes    |
+| `typecheck`        | static type checking with no errors or warnings allowed                           | yes    |
 | `lint`             | formatter check and linter                                                        | yes    |
 | `test:unit`        | in-process tests with every OS-facing dependency injected, with the coverage gate | yes    |
 | `test:integration` | tests against real, isolated local resources, never the network                   | yes    |
+| `test:e2e`         | tests that run the application through its public process boundary                | yes    |
 | `test:quick`       | aggregate: `typecheck`, `lint`, `test:unit`, in that order                        | yes    |
 | `run`              | running an application locally                                                    | no     |
 
@@ -40,9 +42,9 @@ Gherkin feature files among their inputs, so a scenario change invalidates the c
 
 ## The Push Gate
 
-`.husky/pre-push` runs `nx affected -t test:quick test:integration` against `origin/main` for every pushed ref. Running
-the integration suite on every push, not only `test:quick`, is this repository's choice: the suite is in-process and
-fast, and a push is the moment publication begins.
+`.husky/pre-push` runs `nx affected -t test:quick test:integration test:e2e` against `origin/main` for every pushed ref.
+Running the integration and end-to-end suites on every push, not only `test:quick`, is this repository's choice: both
+are fast and local, and a push is the moment publication begins.
 
 ## Verification
 

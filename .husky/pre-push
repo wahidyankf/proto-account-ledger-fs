@@ -32,10 +32,10 @@ while read -r local_ref local_sha remote_ref remote_sha; do
 		continue
 	fi
 
-	# Repository-specific: run the quick gate AND the integration suite for
-	# every affected project, compared with main so the whole accumulated change
-	# set is covered.
-	NX_NO_CLOUD=true npm exec -- nx affected -t test:quick test:integration \
+	# Repository-specific: run the quick gate, the integration suite, AND the
+	# end-to-end suite for every affected project, compared with main so the
+	# whole accumulated change set is covered.
+	NX_NO_CLOUD=true npm exec -- nx affected -t test:quick test:integration test:e2e \
 		--base=origin/main --head="$local_sha"
 done <<REFS
 $ref_updates
