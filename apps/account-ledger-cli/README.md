@@ -35,5 +35,16 @@ npx nx run account-ledger-cli:test:e2e          # end-to-end suite
 npx nx run account-ledger-cli:test:quick        # typecheck, lint, test:unit in order
 ```
 
+For a test-driven loop, run each watcher in its own terminal pane. Each runs once, then again on every change to a `.py`
+file or to a `.feature` file under `specs/`:
+
+```bash
+npx nx run account-ledger-cli:test:quick:watch        # nx watch: typecheck, lint, test:unit
+npx nx run account-ledger-cli:test:integration:watch  # pytest-watcher on tests/integration
+npx nx run account-ledger-cli:test:e2e:watch          # pytest-watcher on tests/e2e
+```
+
+Run only one copy of each watcher: Nx refuses to start a task that is already running in another process.
+
 A test is never skipped: every test target fails if `pytest.skip`, `mark.skip`, `skipif`, or `mark.xfail` appears under
 `tests/`.

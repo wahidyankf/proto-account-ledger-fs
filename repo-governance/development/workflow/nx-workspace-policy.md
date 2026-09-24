@@ -36,6 +36,7 @@ introduces it.
 | `test:e2e`         | tests that run the application through its public process boundary                | yes    |
 | `test:quick`       | aggregate: `typecheck`, `lint`, `test:unit`, in that order                        | yes    |
 | `run`              | running an application locally                                                    | no     |
+| `<test>:watch`     | rerunning `test:quick`, `test:integration`, or `test:e2e` on every change         | no     |
 
 Test levels follow [Test Boundaries and Gates](../quality/testing/test-boundaries-and-gates.md). Test targets list their
 Gherkin feature files among their inputs, so a scenario change invalidates the cache.
