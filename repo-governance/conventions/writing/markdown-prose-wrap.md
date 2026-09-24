@@ -1,7 +1,7 @@
 ---
 description: >-
-  Requires Markdown prose to be hard-wrapped at one fixed width by the formatter, never by hand, with a per-file
-  preserve override reserved for text pasted elsewhere verbatim.
+  Requires Markdown prose to be hard-wrapped at one fixed width by the formatter, never by hand, and lines outside rules
+  and harness to fit it, with a preserve override reserved for text pasted elsewhere verbatim.
 when_to_use: >-
   Use when configuring a Markdown formatter's wrapping, editing a paragraph, or adding a file whose text is copied
   verbatim into another destination.
@@ -39,9 +39,20 @@ deliberate. When a tool owns the line breaks, a line break in prose never carrie
 The width applies to Markdown. Whether code files share it is a separate decision, made in the same configuration with a
 per-file-type override.
 
-A line still longer than the width after formatting holds something the formatter cannot break — a long URL or a long
-inline code span. It stays as it is. Breaking it by hand changes the content, and a line-length lint rule would fail a
-line neither tool can fix, which is why line length belongs to the formatter.
+A line still longer than the width after formatting holds something the formatter cannot break — a table row, a long
+link or URL, or a long inline code span. It stays inside rules and harness, whose text is adopted or generated;
+elsewhere it is restructured, per the next section.
+
+## Every Line Outside Rules and Harness
+
+Every line of a Markdown file outside `repo-governance/`, `.agents/`, `.claude/`, `.codex/`, and `.opencode/` is at most
+120 characters, tables and fenced code included; copy-paste targets below are exempt.
+
+Reason: these files are read in terminals, where longer lines wrap mid-cell or run off the pane.
+
+A file follows the rule when no line exceeds 120 Unicode characters, and violates it with one that does. What the
+formatter cannot shorten is restructured: a wide table loses a column or moves explanations below it, a long link goes
+reference-style, and a long command continues on the next line.
 
 ## Structure Instead of Breaks
 
@@ -82,3 +93,5 @@ text, and for no other reason.
 
 An adopter enforces the wrap by running the formatter in its own pre-commit hook and a format check in its own gate, so
 the wrap is applied whether or not anyone ran the formatter by hand.
+
+That line limit is unenforced by decision, though checkable mechanically; a change adding a check is recorded here.
