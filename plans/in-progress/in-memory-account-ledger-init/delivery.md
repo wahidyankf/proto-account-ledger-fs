@@ -11,6 +11,8 @@ first.
   every finding fixed in 07e72d9.
 - Phase 1 (04:07–04:17): Gherkin and pytest-bdd retired, R1 applied; the greeting proven by three plain tests. Last gate
   passed: Phase 1. Next: Phase 2.
+- Phase 2 (04:17–04:22): R2 and R3 applied; python-standards records returned result values and the domain shapes, 011
+  and plan-execution record the delivery options. Last gate passed: Phase 2. Next: Phase 3, Cycle 3.1.
 
 ## Execution Checkout
 
@@ -193,10 +195,11 @@ tests first, so the suite never goes a commit without covering it.
 - [x] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
       Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
   - Result: entry "Plan execution, Phase 1".
-- [ ] [AI] Commit the phase as one commit,
+- [x] [AI] Commit the phase as one commit,
       `test(account-ledger-cli): replace Gherkin with plain pytest and retire its rules`, then push to `origin/main`;
       the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof: the commit hash and the
       pushed range, recorded here and in the Execution Record. Acceptance: AC-28, AC-30.
+  - Result: 6daf504, pushed c5afbb0..6daf504; the pre-push hook ran every test layer.
 
 Pause safety: the phase leaves a Gherkin-free repository whose suite still proves the greeting. Re-verify with
 `npx nx run account-ledger-cli:test:quick`.
@@ -205,22 +208,33 @@ Pause safety: the phase leaves a Gherkin-free repository whose suite still prove
 
 Rule changes R2 and R3: the Python choices (S3, D8, D14 to D18) and the delivery grammar (D9a to D9d, D11).
 
-- [ ] [AI] Open a Rules Propagation run at `local-tmp/rules-propagation-ledger-choices.md` for R2 and R3. Proof: the
+- [x] [AI] Open a Rules Propagation run at `local-tmp/rules-propagation-ledger-choices.md` for R2 and R3. Proof: the
       record exists. Acceptance: AC-29.
-- [ ] [AI] Apply R2 to `repo-governance/development/quality/stacks/python-standards.md`: typed result values under
+  - Result: `local-tmp/rules-propagation-ledger-choices.md` opened, listing R2 and R3 and their four files.
+- [x] [AI] Apply R2 to `repo-governance/development/quality/stacks/python-standards.md`: typed result values under
       Failures; the money, positive-amount, value-object, and state rows under Domain Types; the sentences on illegal
       values and hand-written machines. Proof: the md and word-budget gates. Acceptance: AC-29.
-- [ ] [AI] Carry R2 into `AGENTS.md`'s Coding Conventions summary, as tech-docs 006 states it. Proof: the md gates.
+  - Result: Domain Types: the money row now one frozen dataclass per currency in a union, same-type operators; new rows
+    for a positive amount, an identifier or day, and a state carrying data; two sentences under the table, on illegal
+    values (constructor raises, `parse`/`of` return typed faults) and hand-written machines. Failures records **returned
+    result values**. md and word-budget gates 0.
+- [x] [AI] Carry R2 into `AGENTS.md`'s Coding Conventions summary, as tech-docs 006 states it. Proof: the md gates.
       Acceptance: AC-29.
-- [ ] [AI] Apply R3's four sentences to
+  - Result: the summary reads "frozen dataclasses and unions for the domain, one type per currency for money";
+    `npm run generate:bindings` regenerated the adapters for the new `AGENTS.md` digest (learnings L2).
+- [x] [AI] Apply R3's four sentences to
       `repo-governance/conventions/structure/plans/011-phase-boundaries-and-delivery-choices.md`. Proof: the gates.
       Acceptance: AC-29.
-- [ ] [AI] Apply R3's completion-gate sentence to `repo-governance/workflows/plan/plan-execution.md`, and close the
+  - Result: under each table, "This repository records **phase gate**", "**Phase 0 baseline**", "**split cycle**", and
+    "**reopen**, adapted as `plans/done/README.md` states"; word-budget and internal-link 0.
+- [x] [AI] Apply R3's completion-gate sentence to `repo-governance/workflows/plan/plan-execution.md`, and close the
       record. Proof: the gates. Acceptance: AC-29.
+  - Result: "This repository records **execution check only**" under the Completion Gate table; the record closed at
+    04:18 with its conflict scan.
 
 ### Phase 2 Gate
 
-- [ ] [AI] Run every gate command below against the phase's combined state; each exits 0. Proof: each command and its
+- [x] [AI] Run every gate command below against the phase's combined state; each exits 0. Proof: each command and its
       exit status, recorded here. Acceptance: AC-29. Commands:
   - `npx nx run account-ledger-cli:test:quick`
   - `npx nx run account-ledger-cli:test:integration`
@@ -229,8 +243,11 @@ Rule changes R2 and R3: the Python choices (S3, D8, D14 to D18) and the delivery
   - `sh local-tmp/check-md.sh`
   - `./rhino md internal-link validate && ./rhino md heading-hierarchy validate && ./rhino md naming validate`
   - `./rhino governance word-budget validate`
-- [ ] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
+  - Result (04:20–04:21): `test:quick` 0, `test:integration` 0, `test:e2e` 0, `check:hygiene` 0;
+    `sh local-tmp/check-md.sh`, internal-link, heading-hierarchy, naming, and word-budget each 0.
+- [x] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
       Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
+  - Result: entry "Plan execution, Phase 2".
 - [ ] [AI] Commit the phase as `docs(governance): record the ledger's Python and delivery choices`, then push to
       `origin/main`; the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof: the
       commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-29.

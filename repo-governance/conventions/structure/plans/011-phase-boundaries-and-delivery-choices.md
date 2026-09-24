@@ -24,7 +24,7 @@ plan does not choose for itself.
 Under a phase gate, phase N+1 does not begin while any item of phase N's gate fails, and the failure is repaired inside
 phase N. Gate items carry executor labels like any other item. The pause-safety note names the coherent state the phase
 reached and the one command that re-verifies it. A phase whose gate cannot be written as commands has not been thought
-through.
+through. This repository records **phase gate**.
 
 ## 2. Whether a Baseline Phase Exists
 
@@ -34,7 +34,8 @@ through.
 | no baseline      | the first phase starts changing the repository                                                   | faster start; a pre-existing failure still has to be fixed, but looks like one the work made |
 
 Either way, a failure that predates the plan is fixed rather than exempted — see
-[Execution](../../../workflows/plan/plan-execution.md). The baseline only decides whether its origin stays visible.
+[Execution](../../../workflows/plan/plan-execution.md). The baseline only decides whether its origin stays visible. This
+repository records **Phase 0 baseline**.
 
 ## 3. How a Test-First Item Is Written
 
@@ -44,7 +45,7 @@ Either way, a failure that predates the plan is fixed rather than exempted — s
 | single item | one item whose proof is the passing test                                                                           | a shorter checklist; nothing shows the test was ever able to fail                      |
 
 A repository that builds its own validators or gates has the strongest reason to split: a check never observed failing
-has not been shown to check anything.
+has not been shown to check anything. This repository records **split cycle**.
 
 ## 4. What Happens When an Archived Plan Is Defective
 
@@ -57,4 +58,5 @@ The follow-up plan is the rule as [Lifecycle and Folders](001-lifecycle-and-fold
 rule, so an adopter choosing it records the adaptation and its reason.
 
 Neither option permits quietly editing a plan in `done/`. A silently corrected archive reads as though the plan had been
-right all along.
+right all along. This repository records **reopen**, adapted as
+[`plans/done/README.md`](../../../../plans/done/README.md) states, so the correction sits beside the claim it corrects.

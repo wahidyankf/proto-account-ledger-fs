@@ -66,8 +66,8 @@ and the execution check waits. A failed run keeps any worktree and records why.
 | execution check only          | nothing beyond the execution check's permitting verdict   | one review closes the plan                           |
 | fresh quality gate on the end | a new, explicitly directed quality-gate `PASS` on the end | the whole delivered plan is judged again, at one run |
 
-Record the option. The fresh-gate option also requires a fresh `PASS` before interrupted work resumes. Execution never
-starts that gate run itself.
+Record the option. This repository records **execution check only**. The fresh-gate option also requires a fresh `PASS`
+before interrupted work resumes. Execution never starts that gate run itself.
 
 ## Pause Safety
 

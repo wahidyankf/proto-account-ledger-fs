@@ -31,20 +31,25 @@ processes stay in the shell and reach the core as arguments, as
 
 ## Domain Types
 
-| Concept              | Python shape                                                                     |
-| -------------------- | -------------------------------------------------------------------------------- |
-| closed set of states | an `Enum` or `Literal`, never bare strings or booleans                           |
-| data                 | `@dataclass(frozen=True, slots=True)`; collections are tuples or frozen mappings |
-| amount of money      | `decimal.Decimal` quantized to the currency's minor unit, never `float`          |
-| domain event         | one frozen dataclass per event kind, joined in a union type                      |
+| Concept              | Python shape                                                                                                          |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| closed set of states | an `Enum` or `Literal`, never bare strings or booleans                                                                |
+| data                 | `@dataclass(frozen=True, slots=True)`; collections are tuples or frozen mappings                                      |
+| amount of money      | one frozen dataclass per currency, in a union, wrapping a `Decimal` at its places; same-type operators, never `float` |
+| positive amount      | a frozen wrapper whose constructor refuses zero and below; the event kind gives the direction                         |
+| identifier or day    | a frozen value object whose constructor refuses a malformed value, never a bare `str` or `int`                        |
+| state carrying data  | one frozen dataclass per state, joined in a union, each holding only its own data                                     |
+| domain event         | one frozen dataclass per event kind, joined in a union type                                                           |
 
-A `match` over a closed set ends with `case _: assert_never(value)`, so pyright reports a newly unhandled case.
+A `match` over a closed set ends with `case _: assert_never(value)`, so pyright reports a newly unhandled case. No type
+may represent an illegal value: its constructor raises on one, which only a bug reaches, and its `parse` or `of` returns
+a typed fault for input. State machines are hand-written: one `match` over the state and trigger unions is the table.
 
 ## Failures
 
-Whether an expected failure is an exception or a returned result value is an open adopter decision, weighed in the
-programming skill and recorded here when the ledger is planned. Under either, a failure has a named type, never a bare
-string; an unexpected fault is handled at the shell; and no code uses a bare `except:`.
+This repository records **returned result values**: an expected failure is returned as a named fault type in a union
+with the success value, and exceptions are left for bugs and the shell. Under either option, a failure has a named type,
+never a bare string; an unexpected fault is handled at the shell; and no code uses a bare `except:`.
 
 ## Enforcement
 
