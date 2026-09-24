@@ -9,7 +9,9 @@ dependencies = []
 [dependency-groups]
 dev = [
   "pyright>=1.1.414",
-  "pytest>=9.1",
+  # pytest-bdd 8.1.0 calls fixture APIs that pytest 9.1 deprecates, so every run warns PytestRemovedIn10Warning.
+  # Lift the cap once a pytest-bdd release after 8.1.0 ships pytest-dev/pytest-bdd#827.
+  "pytest>=9.0,<9.1",
   "pytest-bdd>=8.1",
   "pytest-cov>=7.0",
   "pytest-watcher>=0.4",
