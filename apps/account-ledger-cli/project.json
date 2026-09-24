@@ -1,0 +1,102 @@
+{
+  "$schema": "../../node_modules/nx/schemas/project-schema.json",
+  "name": "account-ledger-cli",
+  "projectType": "application",
+  "root": "apps/account-ledger-cli",
+  "sourceRoot": "apps/account-ledger-cli/src",
+  "targets": {
+    "build": {
+      "command": "dotnet publish apps/account-ledger-cli/account-ledger-cli.fsproj -c Release -o apps/account-ledger-cli/dist",
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/src/**/*.fs",
+        "{projectRoot}/account-ledger-cli.fsproj",
+        "{workspaceRoot}/global.json"
+      ],
+      "outputs": ["{projectRoot}/dist"]
+    },
+    "typecheck": {
+      "command": "dotnet build apps/account-ledger-cli/account-ledger-cli.fsproj",
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/src/**/*.fs",
+        "{projectRoot}/account-ledger-cli.fsproj",
+        "{workspaceRoot}/global.json"
+      ]
+    },
+    "lint": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "dotnet tool restore",
+          "dotnet fantomas --check apps/account-ledger-cli/src apps/account-ledger-cli/tests",
+          "dotnet fsharplint lint apps/account-ledger-cli/account-ledger-cli.fsproj --lint-config apps/account-ledger-cli/fsharplint.json"
+        ],
+        "parallel": false
+      },
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/src/**/*.fs",
+        "{projectRoot}/account-ledger-cli.fsproj",
+        "{workspaceRoot}/global.json",
+        "{projectRoot}/tests/**/*.fs",
+        "{projectRoot}/fsharplint.json",
+        "{workspaceRoot}/.editorconfig",
+        "{workspaceRoot}/.config/dotnet-tools.json"
+      ]
+    },
+    "run": {
+      "command": "dotnet run --project apps/account-ledger-cli/account-ledger-cli.fsproj --",
+      "cache": false
+    },
+    "test:unit": {
+      "command": "if grep -rn -E --include='*.fs' 'Skip\\s*=' apps/account-ledger-cli/tests/unit; then echo 'ERROR: xunit Skip= attribute found in test files above'; exit 1; fi && dotnet test apps/account-ledger-cli/tests/unit/account-ledger-cli-unit-tests.fsproj /p:CollectCoverage=true /p:Threshold=99 /p:ThresholdType=line \"/p:Include=[account-ledger-cli]*\" \"/p:ExcludeByFile=**/Program.fs\"",
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/src/**/*.fs",
+        "{projectRoot}/account-ledger-cli.fsproj",
+        "{workspaceRoot}/global.json",
+        "{projectRoot}/tests/unit/**/*.fs",
+        "{projectRoot}/tests/unit/*.fsproj",
+        "{projectRoot}/tests/unit/xunit.runner.json",
+        "{workspaceRoot}/specs/apps/account-ledger/cli/behaviours/**/*.feature"
+      ]
+    },
+    "test:integration": {
+      "command": "if grep -rn -E --include='*.fs' 'Skip\\s*=' apps/account-ledger-cli/tests/integration; then echo 'ERROR: xunit Skip= attribute found in test files above'; exit 1; fi && dotnet test apps/account-ledger-cli/tests/integration/account-ledger-cli-integration-tests.fsproj",
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/src/**/*.fs",
+        "{projectRoot}/account-ledger-cli.fsproj",
+        "{workspaceRoot}/global.json",
+        "{projectRoot}/tests/integration/**/*.fs",
+        "{projectRoot}/tests/integration/*.fsproj",
+        "{projectRoot}/tests/integration/xunit.runner.json",
+        "{workspaceRoot}/specs/apps/account-ledger/cli/behaviours/**/*.feature"
+      ]
+    },
+    "test:quick": {
+      "executor": "nx:run-commands",
+      "options": {
+        "commands": [
+          "npm exec -- nx run account-ledger-cli:typecheck",
+          "npm exec -- nx run account-ledger-cli:lint",
+          "npm exec -- nx run account-ledger-cli:test:unit"
+        ],
+        "parallel": false
+      },
+      "cache": true,
+      "inputs": [
+        "{projectRoot}/src/**/*.fs",
+        "{projectRoot}/account-ledger-cli.fsproj",
+        "{workspaceRoot}/global.json",
+        "{projectRoot}/tests/unit/**/*.fs",
+        "{projectRoot}/tests/unit/*.fsproj",
+        "{projectRoot}/tests/unit/xunit.runner.json",
+        "{workspaceRoot}/specs/apps/account-ledger/cli/behaviours/**/*.feature",
+        "{projectRoot}/fsharplint.json"
+      ]
+    }
+  },
+  "tags": ["type:app", "platform:cli", "lang:fsharp"]
+}
