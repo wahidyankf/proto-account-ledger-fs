@@ -8,6 +8,7 @@ earlier work is claimed.
 
 | When                   | What                                                                                        |
 | ---------------------- | ------------------------------------------------------------------------------------------- |
+| 2026-09-25 04:42–05:13 | Plan execution, Phase 4: log, authorizations, settlements, reversals, and idempotency       |
 | 2026-09-25 04:21–04:42 | Plan execution, Phase 3: money, IDs, config, events, and the stream reader, test-first      |
 | 2026-09-25 04:17–04:21 | Plan execution, Phase 2: recorded the Python choices and the delivery grammar in governance |
 | 2026-09-25 04:07–04:17 | Plan execution, Phase 1: Gherkin and pytest-bdd retired; plain pytest proves the greeting   |

@@ -17,6 +17,17 @@ first.
   under its RED.
 - Phase 3 (04:21–04:42): 24 cycles green, one (3.16) passing on arrival with its mutation proof; the type gate proven to
   fail on an AED plus BHD sum. Last gate passed: Phase 3. Next: Phase 4, Cycle 4.1.
+- Cycle 4.3 passed on arrival, as planned; its mutation proof is recorded under its RED.
+- Cycle 4.6 passed on arrival, as planned; its mutation proof is recorded under its RED.
+- Cycle 4.7 passed on arrival, as planned; its mutation proof is recorded under its RED.
+- Cycle 4.12 passed on arrival, as planned; its mutation proof is recorded under its RED.
+- Cycle 4.13 passed on arrival, as planned; its mutation proof is recorded under its RED.
+- Before the Phase 4 gate, the two matches over the authorization unions that ended in a wildcard or a capture,
+  `balances.holds` and `processing._effect`, were brought to end in `assert_never`, as tech-docs 001 requires; no
+  behaviour changed, and `test:quick` passed (51 passed, coverage 97%).
+- Phase 4 (04:42–05:13): 23 cycles green, five of them (4.3, 4.6, 4.7, 4.12, 4.13) passing on arrival with their
+  mutation proofs; every incoming kind processed, and C1, C3, C4, C5, and C7 green. Last gate passed: Phase 4. Next:
+  Phase 5, Cycle 5.1.
 
 ## Execution Checkout
 
@@ -717,10 +728,11 @@ The domain types and the parser, bottom-up ([domain model](tech-docs/001-domain-
 - [x] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
       Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
   - Result: entry "Plan execution, Phase 3".
-- [ ] [AI] Commit the phase as `feat(account-ledger-cli): add the domain types and the stream reader`, then push to
+- [x] [AI] Commit the phase as `feat(account-ledger-cli): add the domain types and the stream reader`, then push to
       `origin/main`; the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof: the
       commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-03, AC-05, AC-12,
       AC-22, AC-34.
+  - Result: bd5722b, pushed ad8daaf..bd5722b; the pre-push hook ran every test layer.
 
 Pause safety: the phase leaves domain types and a parser proven at the unit and integration layers. Re-verify with
 `npx nx run account-ledger-cli:test:quick`.
@@ -733,29 +745,44 @@ the red of the cycle that builds its behaviour.
 
 ### Cycle 4.1 — an empty stream reports the opening balances
 
-- [ ] [AI] RED: write `test_an_empty_stream_reports_the_opening_balances_for_day_0_to_6` in `tests/unit/test_replay.py`,
+- [x] [AI] RED: write `test_an_empty_stream_reports_the_opening_balances_for_day_0_to_6` in `tests/unit/test_replay.py`,
       with the smallest stub it imports, and run it; it fails on its assertion because the stub `replay` returns no
       reports. Command: `pytest tests/unit/test_replay.py`. Proof: the failure message, recorded here. Acceptance:
       AC-01.
-- [ ] [AI] GREEN: Write `log.py`, `balances.closing`, `report.py`'s `DayReport` with closings only, and `replay.py`'s
+  - Result: with a stub `replay` returning no reports, it failed on its assertion:
+    `assert [] == [Day(number=0...umber=5), ...]` (1 failed).
+- [x] [AI] GREEN: Write `log.py`, `balances.closing`, `report.py`'s `DayReport` with closings only, and `replay.py`'s
       `Replay`, with `reports`, `logs`, `report(day)`, and `log_at(day)`, over an empty stream; add `ACC_001`,
       `ACC_002`, and `through` to `tests/support/streams.py`. Command: `pytest tests/unit/test_replay.py`, then
       `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance: AC-01.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: `log.py` holds `Accepted`, `LogEntry`, `Log`, and `append`; `balances.closing` returns the opening;
+    `DayReport` holds the day and a frozen mapping of closings; `Replay` has `reports`, `logs`, `report(day)`, and
+    `log_at(day)`; `tests/support/streams.py` gains `ACC_001`, `ACC_002`, and `through`. 1 passed; `pytest tests/unit`
+    26 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-01.
+  - Result: `closing_of` dispatches an `AnyAccount` through the `is_aed` `TypeIs` guard in `config.py`, since strict
+    pyright refused the union for the generic `closing`. `test:quick` exit 0, coverage 98%.
 
 ### Cycle 4.2 — C1: Day 2 closes at −370.00 at the end of Day 5
 
-- [ ] [AI] RED: write `test_c1_day_2_closes_at_minus_370_at_end_of_day_5_before_fees` in `tests/unit/test_criteria.py`,
+- [x] [AI] RED: write `test_c1_day_2_closes_at_minus_370_at_end_of_day_5_before_fees` in `tests/unit/test_criteria.py`,
       with the smallest stub it imports, and run it; it fails on its assertion because credits and debits are not yet
       appended, so Day 2 closes at 0.00. Command: `pytest tests/unit/test_criteria.py`. Proof: the failure message,
       recorded here. Acceptance: AC-06.
-- [ ] [AI] GREEN: Process credits and debits in `processing.py` as `Accepted`, count them by value day in
+  - Result: it failed on its assertion: `assert Aed(value=Decimal('0.00')) == Aed(value=Decimal('-370.00'))`, nothing
+    being appended (1 failed).
+- [x] [AI] GREEN: Process credits and debits in `processing.py` as `Accepted`, count them by value day in
       `balances.closing`, and close days in `replay.py` as booked days advance. Command:
       `pytest tests/unit/test_criteria.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-06.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: `process` appends credits and debits as `Accepted` on the processed day; `closing` sums each counted effect
+    by value day through `same_as`; the driver closes each day as the booked days advance, then every remaining day. 1
+    passed; `pytest tests/unit` 27 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-06.
+  - Result: the driver's lists typed for strict pyright; ruff allows U+2212 (`allowed-confusables`), which the brief's
+    verbatim quote and OUTPUT_TARGET print. `test:quick` exit 0, coverage 98%.
 
 ### Cycle 4.3 — a late event is processed on the open day
 
@@ -764,35 +791,55 @@ the red of the cycle that builds its behaviour.
       every event on the day that is open; its red is the mutation proof that sorting the stream by booked day puts E10
       in Day 5's log. Command: `pytest tests/unit/test_replay.py`. Proof: the failure message, recorded here.
       Acceptance: AC-01.
-- [ ] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
+  - Disposition: passes on arrival (2 passed), since Cycle 4.2's driver already processes each event on the open day.
+    Mutation: sorting the stream by booked day put E10 in Day 5's log, and the test failed on its assertion
+    (`assert IncomingId(value='E10') not in [... IncomingId(value='E10')]`); restored from a copy, 2 passed.
+- [x] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
       `pytest tests/unit/test_replay.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance:
       AC-01.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: no production change; passes on arrival, recorded in the Execution Record.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-01.
+  - Result: nothing to tidy. `test:quick` exit 0.
 
 ### Cycle 4.4 — C5: a hold reduces available balance only
 
-- [ ] [AI] RED: write `test_c5_a_hold_reduces_available_balance_but_not_ledger_balance` in
+- [x] [AI] RED: write `test_c5_a_hold_reduces_available_balance_but_not_ledger_balance` in
       `tests/unit/test_criteria.py`, with the smallest stub it imports, and run it; it fails on its assertion because
       authorizations are ignored, so Day 2's available balance is 250.00, not 50.00. Command:
       `pytest tests/unit/test_criteria.py`. Proof: the failure message, recorded here. Acceptance: AC-10.
-- [ ] [AI] GREEN: Write `decide` returning a `Decision`, `AuthorizationDecided` in `log.py`, `records` building
+  - Result: with `DayReport.available` stubbed as the closing, it failed on its assertion:
+    `assert Aed(value=Decimal('250.00')) == Aed(value=Decimal('50.00'))` (1 failed, 1 passed).
+- [x] [AI] GREEN: Write `decide` returning a `Decision`, `AuthorizationDecided` in `log.py`, `records` building
       `Approved`, `holds` and `available` in `balances.py`, and `available` in `DayReport`. Command:
       `pytest tests/unit/test_criteria.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-10.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: `Decision` and `AuthorizationDecided` in `log.py`; `authorizations.py` with `Approved`,
+    `AuthorizationRecord`, `decide(available, amount)`, which approves for now, and `records`; `holds`, `available`, and
+    `available_of` in `balances.py`; `available` in `DayReport`; `process` takes the configuration to find the account.
+    2 passed; `pytest tests/unit` 29 passed. `decide` takes the balance, not the log, to avoid an import cycle
+    (learnings L3).
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-10.
+  - Result: the effect `match` names the authorization case, with no effect, for exhaustiveness. `test:quick` exit 0,
+    coverage 98%.
 
 ### Cycle 4.5 — C5: Auth-B is declined
 
-- [ ] [AI] RED: write `test_c5_auth_b_is_declined` in `tests/unit/test_criteria.py`, with the smallest stub it imports,
+- [x] [AI] RED: write `test_c5_auth_b_is_declined` in `tests/unit/test_criteria.py`, with the smallest stub it imports,
       and run it; it fails on its assertion because every authorization is approved. Command:
       `pytest tests/unit/test_criteria.py`. Proof: the failure message, recorded here. Acceptance: AC-10.
-- [ ] [AI] GREEN: Return a declined `Decision` when the available balance after the hold is below zero, and build
+  - Result: it failed on its assertion:
+    `At index 0 diff: Approved(hold=Amount(money=Aed(value=Decimal('90.00')))) != Declined(requested=...)`, every
+    authorization being approved (1 failed, 2 passed).
+- [x] [AI] GREEN: Return a declined `Decision` when the available balance after the hold is below zero, and build
       `Declined(requested)` from it in `records`. Command: `pytest tests/unit/test_criteria.py`, then
       `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance: AC-10.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: `decide` declines when the available balance is below the amount, through `money.below`; `records` builds
+    `Declined(requested)` from a declined decision. 3 passed; `pytest tests/unit` 30 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-10.
+  - Result: nothing to tidy. `test:quick` exit 0, coverage 98%.
 
 ### Cycle 4.6 — a future-dated credit does not count for an authorization
 
@@ -801,11 +848,17 @@ the red of the cycle that builds its behaviour.
       arrival, since `available` already reads balances by value day; its red is the mutation proof that counting every
       accepted credit, whatever its value date, approves the authorization. Command:
       `pytest tests/unit/test_authorizations.py`. Proof: the failure message, recorded here. Acceptance: AC-37.
-- [ ] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
+  - Disposition: passes on arrival (1 passed), since `available` already reads balances by value day. Mutation: counting
+    every effect whatever its value day approved the authorization, and the test failed on its assertion
+    (`At index 0 diff: Approved(hold=...) != Declined(requested=...)`); restored from a copy, 1 passed.
+- [x] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
       `pytest tests/unit/test_authorizations.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-37.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: no production change; passes on arrival, recorded in the Execution Record. The support builders `credit`,
+    `debit`, `authorization`, `settlement`, and `reversal` arrived with the test.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-37.
+  - Result: the builders' amount typed for strict pyright. `test:quick` exit 0, coverage 98%.
 
 ### Cycle 4.7 — a later credit the same day does not rescue a decline
 
@@ -814,58 +867,111 @@ the red of the cycle that builds its behaviour.
       arrival, since `records` builds the state from the decision logged on arrival; its red is the mutation proof that
       re-deciding each authorization at the day's end approves it. Command: `pytest tests/unit/test_authorizations.py`.
       Proof: the failure message, recorded here. Acceptance: AC-37.
-- [ ] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
+  - Disposition: passes on arrival (2 passed), since `records` builds the state from the decision logged on arrival.
+    Mutation: re-deciding the day's authorizations after a credit appended an approval, and the test failed on its
+    assertion (`Left contains one more item: Approved(...)`); restored from a copy, 2 passed.
+- [x] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
       `pytest tests/unit/test_authorizations.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-37.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: no production change; passes on arrival, recorded in the Execution Record.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-37.
+  - Result: nothing to tidy. `test:quick` exit 0.
 
 ### Cycle 4.8 — a hold counts from its value date
 
-- [ ] [AI] RED: write `test_amb_010_a_hold_counts_from_its_value_date` in `tests/unit/test_authorizations.py`, with the
+- [x] [AI] RED: write `test_amb_010_a_hold_counts_from_its_value_date` in `tests/unit/test_authorizations.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because `holds` counts an authorization
       value-dated Day 3 against Day 2's available balance. Command: `pytest tests/unit/test_authorizations.py`. Proof:
       the failure message, recorded here. Acceptance: AC-37.
-- [ ] [AI] GREEN: Count a hold in `balances.holds` from its authorization's value date only. Command:
+  - Result: it failed on its assertion: `assert Aed(value=Decimal('60.00')) == Aed(value=Decimal('100.00'))`, the Day 3
+    hold counting on Day 2 (1 failed, 2 passed).
+- [x] [AI] GREEN: Count a hold in `balances.holds` from its authorization's value date only. Command:
       `pytest tests/unit/test_authorizations.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-37.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: `holds` counts an approved hold only once its authorization's value day is at most the day asked. 3 passed;
+    `pytest tests/unit` 33 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-37.
+  - Result: nothing to tidy. `test:quick` exit 0, coverage 98%.
 
 ### Cycle 4.9 — C3: Auth-A's final settlement releases its hold
 
-- [ ] [AI] RED: write `test_c3_auth_a_settlement_is_accepted_and_releases_the_hold` in `tests/unit/test_criteria.py`,
+- [x] [AI] RED: write `test_c3_auth_a_settlement_is_accepted_and_releases_the_hold` in `tests/unit/test_criteria.py`,
       with the smallest stub it imports, and run it; it fails on its assertion because settlements are ignored, so no
       185.00 debit posts and the hold stays. Command: `pytest tests/unit/test_criteria.py`. Proof: the failure message,
       recorded here. Acceptance: AC-08.
-- [ ] [AI] GREEN: Add `Settlement` processing, `Settled`, `SettleFinal`, `transition`, and the `Captured` effect.
+  - Done 04:47. Stubs: `Settled` in `authorizations.py`, and `Captured` and `SettlementAccepted` in `log.py`, typed
+    `object` and outside `LogEntry`.
+  - `pytest tests/unit/test_criteria.py`: 1 failed, 3 passed, on its assertion: `At index 0 diff:`
+    `Approved(hold=Amount(money=Aed(value=Decimal('200.00'))))` `!=`
+    `Settled(captured=Amount(money=Aed(value=Decimal('185.00'))))`. The hold stays, because settlements were ignored.
+- [x] [AI] GREEN: Add `Settlement` processing, `Settled`, `SettleFinal`, `transition`, and the `Captured` effect.
       Command: `pytest tests/unit/test_criteria.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-08.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 04:53. `log.py`: typed `Captured(before, after)` and
+    `SettlementAccepted(event: Settlement, processed_day, effect)`, now in `LogEntry`; the states are imported under
+    `TYPE_CHECKING`, since `authorizations` reads the log. `authorizations.py`: `SettleFinal`, `trigger_of`,
+    `transition` (Approved + SettleFinal → Settled), and `record_for`; `records` applies each capture's `after`.
+    `processing.py`: a `Settlement` case appends `SettlementAccepted` with `Captured`. `balances.py`: a settlement
+    debits its amount at its value day.
+  - `pytest tests/unit/test_criteria.py`: 4 passed. `pytest tests/unit`: 34 passed.
+  - `test:quick` then failed typecheck on two test annotations: `state_of` typed `list[Approved | Declined]`, and
+    `SettlementAccepted` built from the union-typed log event. Fixed by typing `state_of` as `list[AuthorizationState]`
+    and narrowing the E5 event with `isinstance`.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-08.
+  - Done 04:53. The duplicated `state_of` in `test_authorizations.py` and `test_criteria.py` moved to
+    `tests/support/states.py`.
+  - `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 34 passed, coverage 98%.
 
 ### Cycle 4.10 — C4: E6 is a force-post
 
-- [ ] [AI] RED: write `test_c4_e6_is_force_posted_for_180` in `tests/unit/test_criteria.py`, with the smallest stub it
+- [x] [AI] RED: write `test_c4_e6_is_force_posted_for_180` in `tests/unit/test_criteria.py`, with the smallest stub it
       imports, and run it; it fails on its assertion because a settlement without an authorization posts nothing.
       Command: `pytest tests/unit/test_criteria.py`. Proof: the failure message, recorded here. Acceptance: AC-09.
-- [ ] [AI] GREEN: Post a settlement with no transition as `ForcePosted`, releasing nothing. Command:
+  - Done 04:54. Stub: an empty `ForcePosted` in `log.py`.
+  - `pytest tests/unit/test_criteria.py`: 1 failed, 4 passed, on its assertion:
+    `assert [] == [SettlementAc...orcePosted())]`, `Right contains one more item`. A settlement with no authorization
+    was dropped, posting nothing.
+- [x] [AI] GREEN: Post a settlement with no transition as `ForcePosted`, releasing nothing. Command:
       `pytest tests/unit/test_criteria.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-09.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 04:54. `ForcePosted` is documented and joins `SettlementAccepted.effect` as `Captured | ForcePosted`; `process`
+    appends a force-post when `record_for` finds no authorization. The settlement debit in `balances.py` already covers
+    it.
+  - `pytest tests/unit/test_criteria.py`: 5 passed. `pytest tests/unit`: 35 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-09.
+  - Done 04:55. The wildcard case in `records` became an explicit `Accepted() | SettlementAccepted()` case, commented;
+    pyright cannot prove exhaustiveness through a nested `effect=ForcePosted()` pattern, so the case matches on the
+    entry type.
+  - `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 35 passed, coverage 98%.
 
 ### Cycle 4.11 — an unconfigured transition leaves the state unchanged
 
-- [ ] [AI] RED: write `test_an_unconfigured_transition_leaves_the_state_unchanged` in
+- [x] [AI] RED: write `test_an_unconfigured_transition_leaves_the_state_unchanged` in
       `tests/unit/test_authorizations.py`, with the smallest stub it imports, and run it; it fails on its assertion
       because `transition` on `Settled` returns a new state. Command: `pytest tests/unit/test_authorizations.py`. Proof:
       the failure message, recorded here. Acceptance: AC-18, AC-19.
-- [ ] [AI] GREEN: Return `NoTransition` from `transition` for `Settled` and `Declined`, ending the `match` in
+  - Done 04:55. Parametrized over `Settled` and `Declined`, triggered by `SettleFinal`. Stub: an empty `NoTransition` in
+    `authorizations.py`.
+  - `pytest tests/unit/test_authorizations.py`: 2 failed, 3 passed, on their assertion:
+    `assert Settled(captured=Amount(money=Aed(value=Decimal('185.00')))) == NoTransition()`. The wildcard case handed
+    back the state itself, not `NoTransition`.
+- [x] [AI] GREEN: Return `NoTransition` from `transition` for `Settled` and `Declined`, ending the `match` in
       `assert_never`. Command: `pytest tests/unit/test_authorizations.py`, then `pytest tests/unit`. Proof: both passing
       runs, recorded here. Acceptance: AC-18, AC-19.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 04:56. `transition` returns `AuthorizationState | NoTransition`: `Settled() | Declined(), _` gives
+    `NoTransition()`, and the `match` ends in `assert_never(pair)` over the named `(state, trigger)` pair, since pyright
+    flags a capture pattern on an exhausted tuple as never matched. `process` force-posts a settlement whose transition
+    is `NoTransition`.
+  - `pytest tests/unit/test_authorizations.py`: 5 passed. `pytest tests/unit`: 37 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-18, AC-19.
+  - Done 04:56. The nested `match` in `process` moved to `_effect(before, settlement)`, and the unknown-authorization
+    branch gained its AMB-012 comment.
+  - `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 37 passed, coverage 98%.
 
 ### Cycle 4.12 — a settlement against a declined authorization is a force-post
 
@@ -874,11 +980,19 @@ the red of the cycle that builds its behaviour.
       arrival, since 4.10 and 4.11 already route it; its red is the mutation proof that letting a declined authorization
       settle captures it. Command: `pytest tests/unit/test_authorizations.py`. Proof: the failure message, recorded
       here. Acceptance: AC-18.
-- [ ] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
+  - Disposition: passes on arrival (6 passed), since 4.10 and 4.11 route a settlement whose transition is `NoTransition`
+    to `ForcePosted`. Mutation: adding a `Declined(), SettleFinal(amount=a)` case that returns `Settled(a)` made the
+    test fail on its assertion: at index 0 the entry's effect was `Captured(before=Declined(...), after=Settled(...))`,
+    not `ForcePosted()`. Restored from a copy, 6 passed.
+- [x] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
       `pytest tests/unit/test_authorizations.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-18.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: no production change; passes on arrival, recorded in the Execution Record.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-18.
+  - Done 04:57. The test's settlement-entry filter moved to `settlements_of` in `tests/support/states.py`, and the C3
+    and C4 tests use it too.
+  - `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 38 passed, coverage 98%.
 
 ### Cycle 4.13 — a settlement after a final one is a force-post
 
@@ -887,134 +1001,256 @@ the red of the cycle that builds its behaviour.
       arrival, since 4.10 and 4.11 already route it; its red is the mutation proof that letting `Settled` accept a
       second settlement captures it. Command: `pytest tests/unit/test_authorizations.py`. Proof: the failure message,
       recorded here. Acceptance: AC-19.
-- [ ] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
+  - Disposition: passes on arrival (7 passed), since `transition` gives `NoTransition` for `Settled`, which `process`
+    force-posts. Mutation: adding a `Settled(), SettleFinal(amount=a)` case that returns `Settled(a)` made the test fail
+    on its assertion: at index 0 the entry's effect was `Captured(before=Settled(...), after=Settled(...))`, not
+    `ForcePosted()`. Restored from a copy, 7 passed.
+- [x] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
       `pytest tests/unit/test_authorizations.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-19.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Result: no production change; passes on arrival, recorded in the Execution Record.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-19.
+  - Result: nothing to tidy; the test reuses `settlements_of` and `state_of`.
+    `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 39 passed, coverage 98%.
 
 ### Cycle 4.14 — C7: E10 posts three instalments
 
-- [ ] [AI] RED: write `test_c7_e10_posts_3_333_3_333_3_334` in `tests/unit/test_criteria.py`, with the smallest stub it
+- [x] [AI] RED: write `test_c7_e10_posts_3_333_3_333_3_334` in `tests/unit/test_criteria.py`, with the smallest stub it
       imports, and run it; it fails on its assertion because E10 posts as one credit of 10.000. Command:
       `pytest tests/unit/test_criteria.py`. Proof: the failure message, recorded here. Acceptance: AC-12.
-- [ ] [AI] GREEN: Fire `Instalment` events E10-1 to E10-3 from a credit in `Instalments`, using `money.split`. Command:
+  - Done 04:58. Stub: `Instalment(id, account, value_day, amount)` in `events.py`.
+  - `pytest tests/unit/test_criteria.py`: 1 failed, 5 passed, on its assertion:
+    `assert [] == [(InstalmentI...ay(number=5))]`, `Right contains 3 more items`. E10 posted as one credit of 10.000 and
+    fired nothing.
+- [x] [AI] GREEN: Fire `Instalment` events E10-1 to E10-3 from a credit in `Instalments`, using `money.split`. Command:
       `pytest tests/unit/test_criteria.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-12.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 04:59. `events.py`: `Instalment` documented, and `type FiredEvent = Instalment`; `Accepted.event` now takes
+    `Credit | Debit | FiredEvent`. `process` appends a credit in `Instalments` as `Accepted`, then one
+    `Accepted(Instalment(...))` per part of `split_of`, numbered from 1 with the credit's value day. `balances._effects`
+    counts a `Whole` credit and each instalment, and a credit in instalments posts nothing itself.
+  - `pytest tests/unit/test_criteria.py`: 6 passed. `pytest tests/unit`: 40 passed.
+  - Typecheck first flagged the `Credit(posting=Whole())` class pattern as not exhaustive, so `_effects` matches
+    `event.posting` inside the `Credit` case.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-12.
+  - Done 04:59. The instalment firing moved from the `match` in `process` to `_instalments(credit, count, today)`.
+  - `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 40 passed, coverage 98%.
 
 ### Cycle 4.15 — a reversal undoes what its target moved
 
-- [ ] [AI] RED: write `test_amb_035_a_reversal_undoes_what_its_target_moved` in `tests/unit/test_processing.py`, with
+- [x] [AI] RED: write `test_amb_035_a_reversal_undoes_what_its_target_moved` in `tests/unit/test_processing.py`, with
       the smallest stub it imports, and run it; it fails on its assertion because reversals are ignored, so Day 2 stays
       at −370.00 after E9. Command: `pytest tests/unit/test_processing.py`. Proof: the failure message, recorded here.
       Acceptance: AC-11.
-- [ ] [AI] GREEN: Append a reversal as `Accepted`, and give it minus its target's effect, from the reversal's value day,
+  - Done 05:00. New file `tests/unit/test_processing.py`; no stub was needed.
+  - `pytest tests/unit/test_processing.py`: 1 failed, on its assertion:
+    `At index 0 diff: Aed(value=Decimal('-370.00')) != Aed(value=Decimal('250.00'))`. E9 was ignored, so Day 2 stayed at
+    −370.00.
+- [x] [AI] GREEN: Append a reversal as `Accepted`, and give it minus its target's effect, from the reversal's value day,
       in `balances.closing`. Command: `pytest tests/unit/test_processing.py`, then `pytest tests/unit`. Proof: both
       passing runs, recorded here. Acceptance: AC-11.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:00. `process` appends a `Reversal` as `Accepted`, whose event type now includes `Reversal`.
+    `balances._effects` reads each event's signed movement from `_moved(log, event)`; a reversal moves minus its
+    target's movement, found as the first entry with the reversed ID, counted from the reversal's own value day.
+    `log.py` gained `LoggedEvent`, the union of every entry's event.
+  - `pytest tests/unit/test_processing.py`: 1 passed. `pytest tests/unit`: 41 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-11.
+  - Done 05:01. The now-unreachable wildcard in `process` became `assert_never(event)`, so a new incoming kind fails
+    typecheck until it is processed.
+  - `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 41 passed, coverage 98%.
 
 ### Cycle 4.16 — a second reversal of the same event is refused
 
-- [ ] [AI] RED: write `test_amb_028_a_second_reversal_of_the_same_event_is_refused` in `tests/unit/test_processing.py`,
+- [x] [AI] RED: write `test_amb_028_a_second_reversal_of_the_same_event_is_refused` in `tests/unit/test_processing.py`,
       with the smallest stub it imports, and run it; it fails on its assertion because E12 reverses E7 a second time.
       Command: `pytest tests/unit/test_processing.py`. Proof: the failure message, recorded here. Acceptance: AC-16.
-- [ ] [AI] GREEN: Append it as `Rejected(AlreadyReversed)`; the test asserts the entry. Command:
+  - Done 05:01. Stubs: `AlreadyReversed` and `Rejected` in `log.py`, typed `object` and outside `LogEntry`.
+  - `pytest tests/unit/test_processing.py`: 1 failed, 1 passed, on its assertion: at index 0,
+    `Accepted(event=Reversal(id=IncomingId(value='E12'), ...))` was not
+    `Rejected(event=Reversal(...), ..., reason=AlreadyReversed(...))`. E12 reversed E7 a second time.
+- [x] [AI] GREEN: Append it as `Rejected(AlreadyReversed)`; the test asserts the entry. Command:
       `pytest tests/unit/test_processing.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-16.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:02. `log.py`: typed `AlreadyReversed(target: EventId, by: IncomingId)`, `type Rejection`, and
+    `Rejected(event: IncomingEvent, processed_day, reason)`, now in `LogEntry`. `process` routes a reversal through
+    `_reversal`, which refuses it when an accepted reversal of the same target exists. `balances._effects` counts only
+    `Accepted` and `SettlementAccepted` entries, and `records` passes over a refusal.
+  - `pytest tests/unit/test_processing.py`: 2 passed. `pytest tests/unit`: 42 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-16.
+  - Done 05:02. The entry filter in `_effects` moved to the generator `_counted(log, account_id)`.
+  - `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 42 passed, coverage 98%.
 
 ### Cycle 4.17 — a reversal of a reversal is refused
 
-- [ ] [AI] RED: write `test_amb_028_a_reversal_of_a_reversal_is_refused` in `tests/unit/test_processing.py`, with the
+- [x] [AI] RED: write `test_amb_028_a_reversal_of_a_reversal_is_refused` in `tests/unit/test_processing.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because E12 undoes E9. Command:
       `pytest tests/unit/test_processing.py`. Proof: the failure message, recorded here. Acceptance: AC-17.
-- [ ] [AI] GREEN: Append it as `Rejected(ReversesAReversal)`; the test asserts the entry. Command:
+  - Done 05:02. Stub: `ReversesAReversal` in `log.py`, typed `object`.
+  - `pytest tests/unit/test_processing.py`: 1 failed, 2 passed, on its assertion: at index 0,
+    `Accepted(event=Reversal(id=IncomingId(value='E12'), ..., reverses=IncomingId(value='E9')))` was not
+    `Rejected(..., reason=ReversesAReversal(target=IncomingId(value='E9')))`. E12 undid E9.
+- [x] [AI] GREEN: Append it as `Rejected(ReversesAReversal)`; the test asserts the entry. Command:
       `pytest tests/unit/test_processing.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-17.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:02. `log.py`: typed `ReversesAReversal(target: EventId)`, joining `Rejection`. `_reversal` refuses a
+    reversal whose target is a reversal, before the already-reversed check, in tech-docs 002's order. The first run
+    failed with `NameError` on a missing import, which does not count; fixed, then:
+  - `pytest tests/unit/test_processing.py`: 3 passed. `pytest tests/unit`: 43 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-17.
+  - Done 05:03. The first-entry lookup in `processing._reversal` and `balances._moved` moved to
+    `log.first(log, event_id)`.
+  - `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 43 passed, coverage 98%.
 
 ### Cycle 4.18 — a reversal of an unknown event is refused
 
-- [ ] [AI] RED: write `test_amb_035_a_reversal_of_an_unknown_event_is_refused` in `tests/unit/test_processing.py`, with
+- [x] [AI] RED: write `test_amb_035_a_reversal_of_an_unknown_event_is_refused` in `tests/unit/test_processing.py`, with
       the smallest stub it imports, and run it; it fails on its assertion because a reversal of E99 is accepted and
       undoes nothing. Command: `pytest tests/unit/test_processing.py`. Proof: the failure message, recorded here.
       Acceptance: AC-32.
-- [ ] [AI] GREEN: Append it as `Rejected(UnknownTarget)`; the test asserts the entry. Command:
+  - Done 05:03. Stub: `UnknownTarget` in `log.py`, typed `object`.
+  - `pytest tests/unit/test_processing.py`: 1 failed, 3 passed, on its assertion: at index 0,
+    `Accepted(event=Reversal(..., reverses=IncomingId(value='E99')))` was not
+    `Rejected(..., reason=UnknownTarget(target=IncomingId(value='E99')))`. The reversal of E99 was accepted and undid
+    nothing.
+- [x] [AI] GREEN: Append it as `Rejected(UnknownTarget)`; the test asserts the entry. Command:
       `pytest tests/unit/test_processing.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-32.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:03. `log.py`: typed `UnknownTarget(target: EventId)`, joining `Rejection`. `_reversal` refuses a reversal
+    with no first entry for its target, as the first check.
+  - `pytest tests/unit/test_processing.py`: 4 passed. `pytest tests/unit`: 44 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-32.
+  - Result: nothing to tidy; the checks in `_reversal` read in tech-docs 002's order.
+    `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 44 passed, coverage 98%.
 
 ### Cycle 4.19 — a reversal of an event that moved no money is refused
 
-- [ ] [AI] RED: write `test_amb_035_a_reversal_of_an_event_that_moved_no_money_is_refused` in
+- [x] [AI] RED: write `test_amb_035_a_reversal_of_an_event_that_moved_no_money_is_refused` in
       `tests/unit/test_processing.py`, with the smallest stub it imports, and run it; it fails on its assertion because
       a reversal of the declined E8 or the approved E3 is accepted. Command: `pytest tests/unit/test_processing.py`.
       Proof: the failure message, recorded here. Acceptance: AC-32.
-- [ ] [AI] GREEN: Append it as `Rejected(MovedNoMoney)` when the target is an authorization or a rejected entry.
+  - Done 05:04. Parametrized over the declined E8 and the approved E3. Stub: `MovedNoMoney` in `log.py`, typed `object`.
+  - `pytest tests/unit/test_processing.py`: 2 failed, 4 passed, each on its assertion: at index 0,
+    `Accepted(event=Reversal(..., reverses=IncomingId(value='E8')))` was not
+    `Rejected(..., reason=MovedNoMoney(target=IncomingId(value='E8')))`, and the same for E3.
+- [x] [AI] GREEN: Append it as `Rejected(MovedNoMoney)` when the target is an authorization or a rejected entry.
       Command: `pytest tests/unit/test_processing.py`, then `pytest tests/unit`. Proof: both passing runs, recorded
       here. Acceptance: AC-32.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:04. `log.py`: typed `MovedNoMoney(target: EventId)`, joining `Rejection`. `_reversal` refuses a reversal
+    whose target entry is an `AuthorizationDecided` or a `Rejected`, after the reversal check.
+  - `pytest tests/unit/test_processing.py`: 6 passed. `pytest tests/unit`: 46 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-32.
+  - Done 05:05. `_reversal` now wraps `_refusal(log, target_id) -> Rejection | None`, which runs the checks in order;
+    the already-reversed search became `_reversed_by`, one class pattern.
+  - `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 46 passed, coverage 98%.
 
 ### Cycle 4.20 — reversing a credit in instalments undoes every instalment
 
-- [ ] [AI] RED: write `test_amb_035_reversing_a_credit_in_instalments_undoes_every_instalment` in
+- [x] [AI] RED: write `test_amb_035_reversing_a_credit_in_instalments_undoes_every_instalment` in
       `tests/unit/test_processing.py`, with the smallest stub it imports, and run it; it fails on its assertion because
       reversing E10 undoes nothing, since E10 itself posted nothing. Command: `pytest tests/unit/test_processing.py`.
       Proof: the failure message, recorded here. Acceptance: AC-33.
-- [ ] [AI] GREEN: Count a credit's instalments as its effect when it is reversed. Command:
+  - Done 05:05. No stub was needed.
+  - `pytest tests/unit/test_processing.py`: 1 failed, 6 passed, on its assertion:
+    `assert Bhd(value=Decimal('10.000')) == Bhd(value=Decimal('0.000'))`. Reversing E10 undid nothing, since E10 itself
+    posted nothing.
+- [x] [AI] GREEN: Count a credit's instalments as its effect when it is reversed. Command:
       `pytest tests/unit/test_processing.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-33.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:05. `balances._moved` returns a tuple of signed amounts, empty for an event that moves nothing; a reversal
+    takes out minus `_undone(log, target)`, which for a credit in instalments is every instalment it fired.
+  - `pytest tests/unit/test_processing.py`: 7 passed. `pytest tests/unit`: 47 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-33.
+  - Done 05:05. The instalment search moved to `log.instalments_of(log, credit)`, which Cycle 4.21 reuses.
+  - `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 47 passed, coverage 98%.
 
 ### Cycle 4.21 — money already undone cannot be undone again
 
-- [ ] [AI] RED: write `test_amb_035_money_already_undone_cannot_be_undone_again` in `tests/unit/test_processing.py`,
+- [x] [AI] RED: write `test_amb_035_money_already_undone_cannot_be_undone_again` in `tests/unit/test_processing.py`,
       with the smallest stub it imports, and run it; it fails on its assertion because a reversal of an instalment of a
       reversed credit, or of a credit one of whose instalments was reversed, is accepted. Command:
       `pytest tests/unit/test_processing.py`. Proof: the failure message, recorded here. Acceptance: AC-35.
-- [ ] [AI] GREEN: Append it as `Rejected(AlreadyUndone)`, naming the part and what undid it; the test asserts the entry,
+  - Done 05:06. Parametrized: E11 reverses E10 then E12 reverses E10-1 (`part`), and E11 reverses E10-1 then E12
+    reverses E10 (`whole`). Stub: `AlreadyUndone` in `log.py`, typed `object`.
+  - `pytest tests/unit/test_processing.py`: 2 failed, 7 passed, each on its assertion: at index 0,
+    `Accepted(event=Reversal(id=IncomingId(value='E12'), ...))` was not `Rejected(..., reason=AlreadyUndone(...))`
+    naming part `InstalmentId(parent=IncomingId(value='E10'), n=1)` and `by=IncomingId(value='E11')`.
+- [x] [AI] GREEN: Append it as `Rejected(AlreadyUndone)`, naming the part and what undid it; the test asserts the entry,
       and its refunded-fee case is added in Cycle 5.16, once refunds exist. Command:
       `pytest tests/unit/test_processing.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-35.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:06. `log.py`: typed `AlreadyUndone(part: EventId, by: EventId)`, joining `Rejection`; `by` is an `EventId`
+    so that Cycle 5.16 can name a refund. `_refusal` ends with `_undone_by`, which refuses an instalment of a reversed
+    credit, or a credit one of whose instalments is reversed, naming the part and its reversal.
+  - `pytest tests/unit/test_processing.py`: 9 passed. `pytest tests/unit`: 49 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-35.
+  - Done 05:06. The credit branch of `_undone_by` became one `next(...)` over the instalments.
+  - `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 49 passed, coverage 98%.
 
 ### Cycle 4.22 — the same event twice is logged as a duplicate
 
-- [ ] [AI] RED: write `test_amb_034_a_repeated_event_is_logged_as_a_duplicate_with_no_effect` in
+- [x] [AI] RED: write `test_amb_034_a_repeated_event_is_logged_as_a_duplicate_with_no_effect` in
       `tests/unit/test_processing.py`, with the smallest stub it imports, and run it; it fails on its assertion because
       the second E1 credits another 100.00. Command: `pytest tests/unit/test_processing.py`. Proof: the failure message,
       recorded here. Acceptance: AC-14.
-- [ ] [AI] GREEN: Append an event equal to the first with its ID as `Duplicate`, counted by no aggregation. Command:
+  - Done 05:07. Stub: `Duplicate` in `log.py`, typed `object`. The first run failed with `NameError`, from an import the
+    edit missed, and does not count; with the import fixed:
+  - `pytest tests/unit/test_processing.py`: 1 failed, 9 passed, on its assertion: at index 1,
+    `Accepted(event=Credit(id=IncomingId(value='E1'), ...))` was not
+    `Duplicate(event=Credit(...), processed_day=Day(number=1))`. The second E1 credited another 100.00.
+- [x] [AI] GREEN: Append an event equal to the first with its ID as `Duplicate`, counted by no aggregation. Command:
       `pytest tests/unit/test_processing.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-14.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:07. `log.py`: typed `Duplicate(event: IncomingEvent, processed_day)`, in `LogEntry`. `process` first looks
+    up the first entry for the event's ID, and appends an equal event as `Duplicate`; `_counted` counts only accepted
+    entries, so no balance moves, and `records` passes over it.
+  - `pytest tests/unit/test_processing.py`: 10 passed. `pytest tests/unit`: 50 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-14.
+  - Result: nothing to tidy; the idempotency check is three lines ahead of the `match`, reusing `log.first`.
+    `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 50 passed, coverage 98%.
 
 ### Cycle 4.23 — a reused ID with other content is refused
 
-- [ ] [AI] RED: write `test_amb_034_a_reused_id_with_different_content_is_refused` in `tests/unit/test_processing.py`,
+- [x] [AI] RED: write `test_amb_034_a_reused_id_with_different_content_is_refused` in `tests/unit/test_processing.py`,
       with the smallest stub it imports, and run it; it fails on its assertion because the second E1 credits 90.00.
       Command: `pytest tests/unit/test_processing.py`. Proof: the failure message, recorded here. Acceptance: AC-15.
-- [ ] [AI] GREEN: Append it as `Rejected(IdReused)`; the test asserts the entry. Command:
+  - Done 05:07. Stub: `IdReused` in `log.py`, typed `object`.
+  - `pytest tests/unit/test_processing.py`: 1 failed, 10 passed, on its assertion: at index 1,
+    `Accepted(event=Credit(id=IncomingId(value='E1'), ..., amount=Amount(money=Aed(value=Decimal('90.00'))), ...))` was
+    not `Rejected(..., reason=IdReused(...))`. The second E1 credited 90.00.
+- [x] [AI] GREEN: Append it as `Rejected(IdReused)`; the test asserts the entry. Command:
       `pytest tests/unit/test_processing.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-15.
-- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+  - Done 05:08. `log.py`: `IdReused` joins `Rejection` with no field, since the refused event already carries the ID its
+    text names; the test now expects `IdReused()`. The idempotency check in `process` appends an equal event as
+    `Duplicate` and any other as `Rejected(IdReused())`.
+  - `pytest tests/unit/test_processing.py`: 11 passed. `pytest tests/unit`: 51 passed.
+- [x] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-15.
-- [ ] [AI] Add `log`, `balances`, `authorizations` with its state diagram, `processing`, `replay`, and `report` to
+  - Done 05:08. The test module's `entries_for` moved to `tests/support/states.py`, beside `settlements_of` and
+    `state_of`.
+  - `npx nx run account-ledger-cli:test:quick`: pyright 0 errors, ruff all checks passed, 51 passed, coverage 98%.
+- [x] [AI] Add `log`, `balances`, `authorizations` with its state diagram, `processing`, `replay`, and `report` to
       `architecture.md`'s components. Proof: each named module exists. Acceptance: AC-26.
+  - Done 05:10. `architecture.md`: a ledger-core component diagram (replay, processing, report, authorizations,
+    balances, log), the as-built authorization state diagram (Approved, Declined, Settled; `SettleFinal`; force-post
+    without a transition), six new rows in the component table, and a Scope that no longer calls the app a hello-world
+    scaffold.
+  - Each named module exists: `ls src/account_ledger/{log,balances,authorizations,processing,replay,report}.py` lists
+    all six.
 
 ### Phase 4 Gate
 
-- [ ] [AI] Run every gate command below against the phase's combined state; each exits 0. Proof: each command and its
+- [x] [AI] Run every gate command below against the phase's combined state; each exits 0. Proof: each command and its
       exit status, recorded here. Acceptance: AC-06, AC-08 to AC-12, AC-14 to AC-19, AC-32, AC-33, AC-35, AC-37.
       Commands:
   - `npx nx run account-ledger-cli:test:quick`
@@ -1023,8 +1259,13 @@ the red of the cycle that builds its behaviour.
   - `npm run -s check:hygiene`
   - `sh local-tmp/check-md.sh`
   - `./rhino md internal-link validate && ./rhino md heading-hierarchy validate && ./rhino md naming validate`
-- [ ] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
+  - Done 05:13, each exiting 0: `test:quick` 0 (51 passed, coverage 97%); `test:integration` 0 (2 passed); `test:e2e` 0
+    (1 passed); `npm run -s check:hygiene` 0; `sh local-tmp/check-md.sh` 0; `./rhino md internal-link validate` 0,
+    `heading-hierarchy validate` 0, `naming validate` 0.
+- [x] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
       Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
+  - Done 05:13: the row `2026-09-25 04:42–05:13`, "Plan execution, Phase 4: log, authorizations, settlements, reversals,
+    and idempotency".
 - [ ] [AI] Commit the phase as `feat(account-ledger-cli): replay incoming events through an append-only log`, then push
       to `origin/main`; the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof: the
       commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-06, AC-08 to AC-12,

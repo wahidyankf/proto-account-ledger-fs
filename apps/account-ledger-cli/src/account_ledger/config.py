@@ -1,6 +1,7 @@
 """The ledger's configuration: its accounts, its window of days, and its capitalization days."""
 
 from dataclasses import dataclass
+from typing import TypeIs
 
 from account_ledger.ids import AccountId, Day
 from account_ledger.money import Aed, Bhd
@@ -15,6 +16,11 @@ class Account[M: (Aed, Bhd)]:
 
 
 type AnyAccount = Account[Aed] | Account[Bhd]
+
+
+def is_aed(account: AnyAccount) -> TypeIs[Account[Aed]]:
+    """Narrow an account to its currency; the other branch is ``Account[Bhd]``."""
+    return isinstance(account.opening, Aed)
 
 
 @dataclass(frozen=True, slots=True)

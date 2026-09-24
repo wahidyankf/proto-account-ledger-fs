@@ -1,9 +1,9 @@
-"""Incoming events: one frozen dataclass per kind, joined in the union ``IncomingEvent``."""
+"""Events: one frozen dataclass per kind, joined in the unions ``IncomingEvent`` and ``FiredEvent``."""
 
 from dataclasses import dataclass
 from enum import Enum
 
-from account_ledger.ids import AccountId, AuthorizationId, Day, EventId, IncomingId, InstalmentCount
+from account_ledger.ids import AccountId, AuthorizationId, Day, EventId, IncomingId, InstalmentCount, InstalmentId
 from account_ledger.money import Aed, Amount, Bhd
 
 type AnyAmount = Amount[Aed] | Amount[Bhd]
@@ -81,3 +81,16 @@ class Reversal:
 
 
 type IncomingEvent = Credit | Debit | Authorization | Settlement | Reversal
+
+
+@dataclass(frozen=True, slots=True)
+class Instalment:
+    """A part of a credit in instalments, fired by the ledger with the credit's value day (AMB-017, AMB-020)."""
+
+    id: InstalmentId
+    account: AccountId
+    value_day: Day
+    amount: AnyAmount
+
+
+type FiredEvent = Instalment

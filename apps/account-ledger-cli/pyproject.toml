@@ -31,6 +31,8 @@ src = ["src", "tests"]
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "N", "UP", "B", "C4", "SIM", "PT", "RUF"]
+# OUTPUT_TARGET and the brief print negative amounts with U+2212, so the report and verbatim quotes need it.
+allowed-confusables = ["−"]
 
 [tool.pyright]
 include = ["src", "tests"]

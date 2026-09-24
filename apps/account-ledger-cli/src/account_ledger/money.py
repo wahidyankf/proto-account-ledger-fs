@@ -226,3 +226,12 @@ def split_of(
 def digits(money: Money) -> str:
     """The value's text, for the renderer and messages: its places, no sign change, no separators."""
     return str(money.value)
+
+
+def below(money: Money, amount: Amount[Aed] | Amount[Bhd]) -> bool:
+    """Whether a balance is below an amount of its own currency; a mismatch is a bug the reader prevents."""
+    match (money, amount.money):
+        case (Aed(), Aed()) | (Bhd(), Bhd()):
+            return money.value < amount.money.value
+        case _:
+            raise ValueError(f"{currency(money)} compared with {currency(amount.money)}")
