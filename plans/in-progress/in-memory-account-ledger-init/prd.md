@@ -40,6 +40,8 @@ Scenario: Replaying the brief's stream prints OUTPUT_TARGET exactly
   And the exit status is 0
 ```
 
+Test: `test_the_brief_replay_prints_output_target`, in `tests/e2e/test_program.py`.
+
 #### AC-02 — A missing stream file is a failure to complete
 
 ```gherkin
@@ -50,6 +52,9 @@ Scenario: The stream file does not exist
   And standard output is empty
   And the exit status is 2
 ```
+
+Tests: `test_a_missing_stream_file_exits_2` end to end, `test_main_reads_a_real_file_and_reports_a_missing_one` at the
+integration layer, and `test_an_unreadable_file_exits_2` through `run`.
 
 #### AC-03 — A malformed stream names the line at fault
 
@@ -71,6 +76,9 @@ Scenario: A row naming an account the ledger does not hold
 
 The second scenario is AMB-014's input fault (D21): the row never becomes an event, so nothing is logged.
 
+Tests: `test_a_malformed_amount_names_its_line` and `test_an_unheld_account_names_its_line` end to end, and each fault
+of tech-docs 003 through its `tests/unit/test_stream_csv.py` test.
+
 #### AC-04 — Wrong usage is a failure to complete
 
 ```gherkin
@@ -80,6 +88,9 @@ Scenario: The program runs with no argument
   And the exit status is 2
 ```
 
+Tests: `test_no_argument_prints_usage_and_exits_2` end to end, and `test_no_argument_is_a_usage_error_exiting_2` through
+`run`.
+
 #### AC-05 — The stream file holds the brief's events
 
 ```gherkin
@@ -88,6 +99,9 @@ Scenario: The shipped stream matches the brief
   Then it yields E1 to E10 in the brief's order, each with the brief's booked day, type, account, amount, value day,
     and reference, and E10 carries 3 instalments
 ```
+
+Tests: `test_the_shipped_stream_is_the_brief`, in `tests/integration/test_stream_file.py`, and
+`test_a_valid_stream_parses_to_its_events`.
 
 ### The Brief's Criteria
 
@@ -199,7 +213,7 @@ Test: `test_c8_capitalization_equals_the_sum_of_interest_events`.
 ### Rules the Brief's Stream Never Triggers
 
 Each rule is a resolution in [AMBIGUITIES](../../../AMBIGUITIES.md) that this stream does not exercise (D3). Each test
-replays a short stream of its own, built in the test. AC-31 to AC-36 were added after the others and keep their numbers.
+replays a short stream of its own, built in the test. AC-31 to AC-37 were added after the others and keep their numbers.
 Where a criterion states an error text, its named test asserts the log entry, and
 `test_amb_014_a_rejected_event_prints_as_that_days_error`, one case per rejection, asserts the text the day prints.
 
@@ -374,6 +388,28 @@ Scenario Outline: Reversing what is already undone
 
 Test: `test_amb_035_money_already_undone_cannot_be_undone_again`.
 
+#### AC-37 — AMB-008, AMB-009, AMB-010: how an authorization is decided
+
+```gherkin
+Scenario: A credit value-dated in the future does not count
+  Given ACC-001 holds AED 0.00, and a credit of AED 100.00 booked Day 2 and value-dated Day 3
+  When an authorization of AED 50.00 is booked and value-dated Day 2
+  Then it is declined
+
+Scenario: A later credit the same day does not rescue a decline
+  Given ACC-001 holds AED 0.00 and an authorization of AED 50.00 on Day 2 is declined
+  When a credit of AED 100.00 value-dated Day 2 follows it on Day 2
+  Then the authorization stays declined at the end of Day 2
+
+Scenario: A hold counts from its authorization's value date
+  Given ACC-001 holds AED 100.00, and an authorization of AED 40.00 booked Day 2 and value-dated Day 3
+  When the day reports are read
+  Then the available balance is AED 100.00 at the end of Day 2, and AED 60.00 at the end of Day 3
+```
+
+Tests: `test_amb_008_a_future_dated_credit_does_not_count_for_an_authorization`,
+`test_amb_009_a_later_credit_the_same_day_does_not_rescue_a_decline`, `test_amb_010_a_hold_counts_from_its_value_date`.
+
 ### The Command Line
 
 #### AC-36 — A failure inside the program, a closed pipe, and an interrupt
@@ -435,8 +471,8 @@ Scenario: The suite carries exactly one strict expected failure
 ```gherkin
 Scenario: Every criterion and rule names its test
   When MOVEMENT, REJECTED, and AMBIGUITIES are read
-  Then each criterion and each rule AC-06 to AC-23 and AC-31 to AC-35 cite names a test function that exists in the
-    suite
+  Then each criterion names a test function that exists in the suite
+  And each AMBIGUITIES entry that states what the ledger does names one, as tech-docs 004 maps them
   And ACCEPTANCE_CRITERIA.feature no longer exists
   And WORKLOG.md holds an entry, stamped with its real times, for each phase of this plan
 ```

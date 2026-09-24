@@ -67,7 +67,7 @@ per [Assessment Docs](../../../repo-governance/conventions/structure/assessment-
 ## Directory Map
 
 - [brd.md](brd.md) — why the work is worth doing, for whom, and its risks.
-- [prd.md](prd.md) — personas, stories, and acceptance criteria AC-01 to AC-36.
+- [prd.md](prd.md) — personas, stories, and acceptance criteria AC-01 to AC-37.
 - [tech-docs/](tech-docs/README.md) — the technical design, decision records, and file impact.
 - [delivery.md](delivery.md) — the phased checklist, its gates, and its execution record.
 - [learnings.md](learnings.md) — what execution discovers, held until it is routed.

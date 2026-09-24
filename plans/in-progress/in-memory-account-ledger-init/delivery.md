@@ -38,10 +38,10 @@ confirming that each ticked item's change is present, and continues; no fresh ga
 - **Test-first items (D9a).** Each behaviour is a cycle of three items: RED, GREEN, and REFACTOR, per [Cycle and
   Evidence][cycle]. A RED counts only when the new test fails on its assertion; an import error or a broken fixture is
   repaired first. A GREEN is the smallest change that passes, so a later cycle's test still has something to fail on.
-- **A test that passes on arrival.** The RED stays unticked with the disposition "passes on arrival"; the executor
-  breaks the code path the test names, watches it fail on its assertion, restores it, and records that run instead. The
-  GREEN closes as "no production change", and the Execution Record gets a line
-  ([testing strategy](tech-docs/004-testing-strategy.md)).
+- **A test that passes on arrival.** A cycle expected to pass says so in its RED, with the mutation that proves it; any
+  test can still surprise. The RED stays unticked with the disposition "passes on arrival"; the executor breaks the code
+  path the test names, watches it fail on its assertion, restores it, and records that run instead. The GREEN closes as
+  "no production change", and the Execution Record gets a line ([testing strategy](tech-docs/004-testing-strategy.md)).
 - **Results, not ticks.** Each ticked item carries, indented under it, what it produced: the command, its output or its
   head, and anything that surprised. Discoveries go to [learnings](learnings.md) when they happen.
 - **Domain types first.** Every value a test builds goes through the domain constructors of
@@ -150,8 +150,8 @@ tests first, so the suite never goes a commit without covering it.
   - `sh local-tmp/check-md.sh`
   - `./rhino md internal-link validate && ./rhino md heading-hierarchy validate && ./rhino md naming validate`
   - `./rhino governance word-budget validate`
-- [ ] [AI] Add the phase's `WORKLOG.md` entry at the top, or extend the entry its section already has, stamped with the
-      real `date` times. Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
+- [ ] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
+      Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
 - [ ] [AI] Commit the phase as one commit,
       `test(account-ledger-cli): replace Gherkin with plain pytest and retire its rules`, then push to `origin/main`;
       the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof: the commit hash and the
@@ -169,6 +169,8 @@ Rule changes R2 and R3: the Python choices (S3, D8, D14 to D18) and the delivery
 - [ ] [AI] Apply R2 to `repo-governance/development/quality/stacks/python-standards.md`: typed result values under
       Failures; the money, positive-amount, value-object, and state rows under Domain Types; the sentences on illegal
       values and hand-written machines. Proof: the md and word-budget gates. Acceptance: AC-29.
+- [ ] [AI] Carry R2 into `AGENTS.md`'s Coding Conventions summary, as tech-docs 006 states it. Proof: the md gates.
+      Acceptance: AC-29.
 - [ ] [AI] Apply R3's four sentences to
       `repo-governance/conventions/structure/plans/011-phase-boundaries-and-delivery-choices.md`. Proof: the gates.
       Acceptance: AC-29.
@@ -186,8 +188,8 @@ Rule changes R2 and R3: the Python choices (S3, D8, D14 to D18) and the delivery
   - `sh local-tmp/check-md.sh`
   - `./rhino md internal-link validate && ./rhino md heading-hierarchy validate && ./rhino md naming validate`
   - `./rhino governance word-budget validate`
-- [ ] [AI] Add the phase's `WORKLOG.md` entry at the top, or extend the entry its section already has, stamped with the
-      real `date` times. Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
+- [ ] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
+      Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
 - [ ] [AI] Commit the phase as `docs(governance): record the ledger's Python and delivery choices`, then push to
       `origin/main`; the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof: the
       commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-29.
@@ -236,16 +238,17 @@ The domain types and the parser, bottom-up ([domain model](tech-docs/001-domain-
       `npx nx run account-ledger-cli:typecheck`, watch it fail naming the line, remove it. Proof: the failing run's
       head. Acceptance: AC-34.
 
-### Cycle 3.4 — a computed amount rounds half-even
+### Cycle 3.4 — daily interest rounds half-even
 
-- [ ] [AI] RED: write `test_amb_006_a_computed_amount_rounds_half_even` in `tests/unit/test_money.py`, with the smallest
-      stub it imports, and run it; it fails on its assertion because the stub rounds `0.125` up to `0.13` instead of
-      `0.12`. Command: `pytest tests/unit/test_money.py`. Proof: the failure message, recorded here. Acceptance: AC-12,
+- [ ] [AI] RED: write `test_amb_006_daily_interest_rounds_half_even` in `tests/unit/test_money.py`, with the smallest
+      stub it imports, and run it; it fails on its assertion because the stub's `daily_interest` rounds AED 312.50 ×
+      0.0004 = 0.125 up to 0.13 instead of 0.12. Command: `pytest tests/unit/test_money.py`. Proof: the failure message,
+      recorded here. Acceptance: AC-13.
+- [ ] [AI] GREEN: Write `daily_interest` at 0.0004 in `money.py`, rounding half-even to the currency's places. Command:
+      `pytest tests/unit/test_money.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance:
       AC-13.
-- [ ] [AI] GREEN: Round computed values half-even inside `money.py`. Command: `pytest tests/unit/test_money.py`, then
-      `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance: AC-12, AC-13.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
-      `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-12, AC-13.
+      `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-13.
 
 ### Cycle 3.5 — an amount splits with the remainder last
 
@@ -263,9 +266,9 @@ The domain types and the parser, bottom-up ([domain model](tech-docs/001-domain-
 - [ ] [AI] RED: write `test_amb_027_the_bhd_fee_is_2_560` in `tests/unit/test_money.py`, with the smallest stub it
       imports, and run it; it fails on its assertion because the stub's BHD fee is the AED figure `25.000`. Command:
       `pytest tests/unit/test_money.py`. Proof: the failure message, recorded here. Acceptance: AC-22.
-- [ ] [AI] GREEN: Write `overdraft_fee` as AED 25.00 and, for BHD, 25.00 × 0.10238257 rounded half-even, and
-      `daily_interest` at 0.0004. Command: `pytest tests/unit/test_money.py`, then `pytest tests/unit`. Proof: both
-      passing runs, recorded here. Acceptance: AC-22.
+- [ ] [AI] GREEN: Write `overdraft_fee` as AED 25.00 and, for BHD, 25.00 × 0.10238257 rounded half-even. Command:
+      `pytest tests/unit/test_money.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance:
+      AC-22.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-22.
 
@@ -353,8 +356,9 @@ The domain types and the parser, bottom-up ([domain model](tech-docs/001-domain-
       each kind. Command: `pytest tests/unit/test_stream_csv.py`. Proof: the failure message, recorded here. Acceptance:
       AC-05.
 - [ ] [AI] GREEN: Write `events.py` (the incoming kinds, `Capture`, and `posting`) and `parse_stream` in `stream_csv.py`
-      for well-formed rows. Command: `pytest tests/unit/test_stream_csv.py`, then `pytest tests/unit`. Proof: both
-      passing runs, recorded here. Acceptance: AC-05.
+      for well-formed rows; the test builds its text with `csv_text(rows)` in `tests/support/streams.py`, which writes
+      rows under the current header. Command: `pytest tests/unit/test_stream_csv.py`, then `pytest tests/unit`. Proof:
+      both passing runs, recorded here. Acceptance: AC-05.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-05.
 
@@ -473,8 +477,9 @@ The domain types and the parser, bottom-up ([domain model](tech-docs/001-domain-
       header, so it parses to no events against `brief_stream()`. Command:
       `pytest tests/integration/test_stream_file.py`. Proof: the failure message, recorded here. Acceptance: AC-05.
 - [ ] [AI] GREEN: Write `apps/account-ledger-cli/streams/challenge.csv` with the eight columns tech-docs 003 shows, and
-      `tests/support/brief_stream.py`. Command: `pytest tests/integration/test_stream_file.py`, then
-      `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance: AC-05.
+      `tests/support/brief_stream.py`, and list `{projectRoot}/streams/**/*.csv` among the test targets' inputs in
+      `project.json`. Command: `pytest tests/integration/test_stream_file.py`, then `pytest tests/unit`. Proof: both
+      passing runs, recorded here. Acceptance: AC-05.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-05.
 - [ ] [AI] Mark the rate literal and the working precision in place in `NUMBERS.md`, since `money.py` now uses both; no
@@ -493,8 +498,8 @@ The domain types and the parser, bottom-up ([domain model](tech-docs/001-domain-
   - `npm run -s check:hygiene`
   - `sh local-tmp/check-md.sh`
   - `./rhino md internal-link validate && ./rhino md heading-hierarchy validate && ./rhino md naming validate`
-- [ ] [AI] Add the phase's `WORKLOG.md` entry at the top, or extend the entry its section already has, stamped with the
-      real `date` times. Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
+- [ ] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
+      Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
 - [ ] [AI] Commit the phase as `feat(account-ledger-cli): add the domain types and the stream reader`, then push to
       `origin/main`; the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof: the
       commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-03, AC-05, AC-12,
@@ -516,8 +521,9 @@ the red of the cycle that builds its behaviour.
       reports. Command: `pytest tests/unit/test_replay.py`. Proof: the failure message, recorded here. Acceptance:
       AC-01.
 - [ ] [AI] GREEN: Write `log.py`, `balances.closing`, `report.py`'s `DayReport` with closings only, and `replay.py`'s
-      driver over an empty stream. Command: `pytest tests/unit/test_replay.py`, then `pytest tests/unit`. Proof: both
-      passing runs, recorded here. Acceptance: AC-01.
+      `Replay`, with `reports`, `logs`, `report(day)`, and `log_at(day)`, over an empty stream; add `ACC_001`,
+      `ACC_002`, and `through` to `tests/support/streams.py`. Command: `pytest tests/unit/test_replay.py`, then
+      `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance: AC-01.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-01.
 
@@ -537,10 +543,11 @@ the red of the cycle that builds its behaviour.
 ### Cycle 4.3 — a late event is processed on the open day
 
 - [ ] [AI] RED: write `test_amb_015_a_late_event_is_processed_on_the_open_day` in `tests/unit/test_replay.py`, with the
-      smallest stub it imports, and run it; it fails on its assertion because E10, booked Day 5 and listed after E9, is
-      not yet held back to Day 6. Command: `pytest tests/unit/test_replay.py`. Proof: the failure message, recorded
-      here. Acceptance: AC-01.
-- [ ] [AI] GREEN: Process an event whose booked day has closed on the current day in `replay.py`. Command:
+      smallest stub it imports, and run it; it is expected to pass on arrival, since 4.2's driver already processes
+      every event on the day that is open; its red is the mutation proof that sorting the stream by booked day puts E10
+      in Day 5's log. Command: `pytest tests/unit/test_replay.py`. Proof: the failure message, recorded here.
+      Acceptance: AC-01.
+- [ ] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
       `pytest tests/unit/test_replay.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance:
       AC-01.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
@@ -553,8 +560,9 @@ the red of the cycle that builds its behaviour.
       authorizations are ignored, so Day 2's available balance is 250.00, not 50.00. Command:
       `pytest tests/unit/test_criteria.py`. Proof: the failure message, recorded here. Acceptance: AC-10.
 - [ ] [AI] GREEN: Write `decide` returning a `Decision`, `AuthorizationDecided` in `log.py`, `records` building
-      `Approved`, and `holds` and `available` in `balances.py`. Command: `pytest tests/unit/test_criteria.py`, then
-      `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance: AC-10.
+      `Approved`, `holds` and `available` in `balances.py`, and `available` in `DayReport`. Command:
+      `pytest tests/unit/test_criteria.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
+      Acceptance: AC-10.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-10.
 
@@ -569,7 +577,45 @@ the red of the cycle that builds its behaviour.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-10.
 
-### Cycle 4.6 — C3: Auth-A's final settlement releases its hold
+### Cycle 4.6 — a future-dated credit does not count for an authorization
+
+- [ ] [AI] RED: write `test_amb_008_a_future_dated_credit_does_not_count_for_an_authorization` in
+      `tests/unit/test_authorizations.py`, with the smallest stub it imports, and run it; it is expected to pass on
+      arrival, since `available` already reads balances by value day; its red is the mutation proof that counting every
+      accepted credit, whatever its value date, approves the authorization. Command:
+      `pytest tests/unit/test_authorizations.py`. Proof: the failure message, recorded here. Acceptance: AC-37.
+- [ ] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
+      `pytest tests/unit/test_authorizations.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
+      Acceptance: AC-37.
+- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+      `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-37.
+
+### Cycle 4.7 — a later credit the same day does not rescue a decline
+
+- [ ] [AI] RED: write `test_amb_009_a_later_credit_the_same_day_does_not_rescue_a_decline` in
+      `tests/unit/test_authorizations.py`, with the smallest stub it imports, and run it; it is expected to pass on
+      arrival, since `records` builds the state from the decision logged on arrival; its red is the mutation proof that
+      re-deciding each authorization at the day's end approves it. Command: `pytest tests/unit/test_authorizations.py`.
+      Proof: the failure message, recorded here. Acceptance: AC-37.
+- [ ] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
+      `pytest tests/unit/test_authorizations.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
+      Acceptance: AC-37.
+- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+      `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-37.
+
+### Cycle 4.8 — a hold counts from its value date
+
+- [ ] [AI] RED: write `test_amb_010_a_hold_counts_from_its_value_date` in `tests/unit/test_authorizations.py`, with the
+      smallest stub it imports, and run it; it fails on its assertion because `holds` counts an authorization
+      value-dated Day 3 against Day 2's available balance. Command: `pytest tests/unit/test_authorizations.py`. Proof:
+      the failure message, recorded here. Acceptance: AC-37.
+- [ ] [AI] GREEN: Count a hold in `balances.holds` from its authorization's value date only. Command:
+      `pytest tests/unit/test_authorizations.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
+      Acceptance: AC-37.
+- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+      `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-37.
+
+### Cycle 4.9 — C3: Auth-A's final settlement releases its hold
 
 - [ ] [AI] RED: write `test_c3_auth_a_settlement_is_accepted_and_releases_the_hold` in `tests/unit/test_criteria.py`,
       with the smallest stub it imports, and run it; it fails on its assertion because settlements are ignored, so no
@@ -581,7 +627,7 @@ the red of the cycle that builds its behaviour.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-08.
 
-### Cycle 4.7 — C4: E6 is a force-post
+### Cycle 4.10 — C4: E6 is a force-post
 
 - [ ] [AI] RED: write `test_c4_e6_is_force_posted_for_180` in `tests/unit/test_criteria.py`, with the smallest stub it
       imports, and run it; it fails on its assertion because a settlement without an authorization posts nothing.
@@ -592,7 +638,7 @@ the red of the cycle that builds its behaviour.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-09.
 
-### Cycle 4.8 — an unconfigured transition leaves the state unchanged
+### Cycle 4.11 — an unconfigured transition leaves the state unchanged
 
 - [ ] [AI] RED: write `test_an_unconfigured_transition_leaves_the_state_unchanged` in
       `tests/unit/test_authorizations.py`, with the smallest stub it imports, and run it; it fails on its assertion
@@ -604,33 +650,33 @@ the red of the cycle that builds its behaviour.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-18, AC-19.
 
-### Cycle 4.9 — a settlement against a declined authorization is a force-post
+### Cycle 4.12 — a settlement against a declined authorization is a force-post
 
 - [ ] [AI] RED: write `test_amb_029_a_settlement_against_a_declined_authorization_is_force_posted` in
-      `tests/unit/test_authorizations.py`, with the smallest stub it imports, and run it; it fails on its assertion
-      because nothing yet, since 4.7 and 4.8 already route it: it passes on arrival, and its red is the mutation proof
-      that makes a declined authorization settle. Command: `pytest tests/unit/test_authorizations.py`. Proof: the
-      failure message, recorded here. Acceptance: AC-18.
-- [ ] [AI] GREEN: Route the declined case through the force-post path. Command:
+      `tests/unit/test_authorizations.py`, with the smallest stub it imports, and run it; it is expected to pass on
+      arrival, since 4.10 and 4.11 already route it; its red is the mutation proof that letting a declined authorization
+      settle captures it. Command: `pytest tests/unit/test_authorizations.py`. Proof: the failure message, recorded
+      here. Acceptance: AC-18.
+- [ ] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
       `pytest tests/unit/test_authorizations.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-18.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-18.
 
-### Cycle 4.10 — a settlement after a final one is a force-post
+### Cycle 4.13 — a settlement after a final one is a force-post
 
 - [ ] [AI] RED: write `test_amb_029_a_settlement_after_a_final_one_is_force_posted` in
-      `tests/unit/test_authorizations.py`, with the smallest stub it imports, and run it; it fails on its assertion
-      because nothing yet, since 4.7 and 4.8 already route it: it passes on arrival, and its red is the mutation proof
-      that lets `Settled` accept a second settlement. Command: `pytest tests/unit/test_authorizations.py`. Proof: the
-      failure message, recorded here. Acceptance: AC-19.
-- [ ] [AI] GREEN: Route the settled case through the force-post path. Command:
+      `tests/unit/test_authorizations.py`, with the smallest stub it imports, and run it; it is expected to pass on
+      arrival, since 4.10 and 4.11 already route it; its red is the mutation proof that letting `Settled` accept a
+      second settlement captures it. Command: `pytest tests/unit/test_authorizations.py`. Proof: the failure message,
+      recorded here. Acceptance: AC-19.
+- [ ] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
       `pytest tests/unit/test_authorizations.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-19.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-19.
 
-### Cycle 4.11 — C7: E10 posts three instalments
+### Cycle 4.14 — C7: E10 posts three instalments
 
 - [ ] [AI] RED: write `test_c7_e10_posts_3_333_3_333_3_334` in `tests/unit/test_criteria.py`, with the smallest stub it
       imports, and run it; it fails on its assertion because E10 posts as one credit of 10.000. Command:
@@ -641,19 +687,19 @@ the red of the cycle that builds its behaviour.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-12.
 
-### Cycle 4.12 — a reversal undoes what its target moved
+### Cycle 4.15 — a reversal undoes what its target moved
 
 - [ ] [AI] RED: write `test_amb_035_a_reversal_undoes_what_its_target_moved` in `tests/unit/test_processing.py`, with
       the smallest stub it imports, and run it; it fails on its assertion because reversals are ignored, so Day 2 stays
       at −370.00 after E9. Command: `pytest tests/unit/test_processing.py`. Proof: the failure message, recorded here.
       Acceptance: AC-11.
-- [ ] [AI] GREEN: Give an accepted reversal minus its target's effect, from the reversal's value day, in
-      `balances.closing`. Command: `pytest tests/unit/test_processing.py`, then `pytest tests/unit`. Proof: both passing
-      runs, recorded here. Acceptance: AC-11.
+- [ ] [AI] GREEN: Append a reversal as `Accepted`, and give it minus its target's effect, from the reversal's value day,
+      in `balances.closing`. Command: `pytest tests/unit/test_processing.py`, then `pytest tests/unit`. Proof: both
+      passing runs, recorded here. Acceptance: AC-11.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-11.
 
-### Cycle 4.13 — a second reversal of the same event is refused
+### Cycle 4.16 — a second reversal of the same event is refused
 
 - [ ] [AI] RED: write `test_amb_028_a_second_reversal_of_the_same_event_is_refused` in `tests/unit/test_processing.py`,
       with the smallest stub it imports, and run it; it fails on its assertion because E12 reverses E7 a second time.
@@ -664,7 +710,7 @@ the red of the cycle that builds its behaviour.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-16.
 
-### Cycle 4.14 — a reversal of a reversal is refused
+### Cycle 4.17 — a reversal of a reversal is refused
 
 - [ ] [AI] RED: write `test_amb_028_a_reversal_of_a_reversal_is_refused` in `tests/unit/test_processing.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because E12 undoes E9. Command:
@@ -675,7 +721,7 @@ the red of the cycle that builds its behaviour.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-17.
 
-### Cycle 4.15 — a reversal of an unknown event is refused
+### Cycle 4.18 — a reversal of an unknown event is refused
 
 - [ ] [AI] RED: write `test_amb_035_a_reversal_of_an_unknown_event_is_refused` in `tests/unit/test_processing.py`, with
       the smallest stub it imports, and run it; it fails on its assertion because a reversal of E99 is accepted and
@@ -687,7 +733,7 @@ the red of the cycle that builds its behaviour.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-32.
 
-### Cycle 4.16 — a reversal of an event that moved no money is refused
+### Cycle 4.19 — a reversal of an event that moved no money is refused
 
 - [ ] [AI] RED: write `test_amb_035_a_reversal_of_an_event_that_moved_no_money_is_refused` in
       `tests/unit/test_processing.py`, with the smallest stub it imports, and run it; it fails on its assertion because
@@ -699,7 +745,7 @@ the red of the cycle that builds its behaviour.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-32.
 
-### Cycle 4.17 — reversing a credit in instalments undoes every instalment
+### Cycle 4.20 — reversing a credit in instalments undoes every instalment
 
 - [ ] [AI] RED: write `test_amb_035_reversing_a_credit_in_instalments_undoes_every_instalment` in
       `tests/unit/test_processing.py`, with the smallest stub it imports, and run it; it fails on its assertion because
@@ -711,20 +757,20 @@ the red of the cycle that builds its behaviour.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-33.
 
-### Cycle 4.18 — money already undone cannot be undone again
+### Cycle 4.21 — money already undone cannot be undone again
 
 - [ ] [AI] RED: write `test_amb_035_money_already_undone_cannot_be_undone_again` in `tests/unit/test_processing.py`,
       with the smallest stub it imports, and run it; it fails on its assertion because a reversal of an instalment of a
-      reversed credit, or of a refunded fee, is accepted. Command: `pytest tests/unit/test_processing.py`. Proof: the
-      failure message, recorded here. Acceptance: AC-35.
+      reversed credit, or of a credit one of whose instalments was reversed, is accepted. Command:
+      `pytest tests/unit/test_processing.py`. Proof: the failure message, recorded here. Acceptance: AC-35.
 - [ ] [AI] GREEN: Append it as `Rejected(AlreadyUndone)`, naming the part and what undid it; the test asserts the entry,
-      and its refunded-fee case is added in Cycle 5.15, once refunds exist. Command:
+      and its refunded-fee case is added in Cycle 5.16, once refunds exist. Command:
       `pytest tests/unit/test_processing.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-35.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-35.
 
-### Cycle 4.19 — the same event twice is logged as a duplicate
+### Cycle 4.22 — the same event twice is logged as a duplicate
 
 - [ ] [AI] RED: write `test_amb_034_a_repeated_event_is_logged_as_a_duplicate_with_no_effect` in
       `tests/unit/test_processing.py`, with the smallest stub it imports, and run it; it fails on its assertion because
@@ -736,7 +782,7 @@ the red of the cycle that builds its behaviour.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-14.
 
-### Cycle 4.20 — a reused ID with other content is refused
+### Cycle 4.23 — a reused ID with other content is refused
 
 - [ ] [AI] RED: write `test_amb_034_a_reused_id_with_different_content_is_refused` in `tests/unit/test_processing.py`,
       with the smallest stub it imports, and run it; it fails on its assertion because the second E1 credits 90.00.
@@ -752,22 +798,23 @@ the red of the cycle that builds its behaviour.
 ### Phase 4 Gate
 
 - [ ] [AI] Run every gate command below against the phase's combined state; each exits 0. Proof: each command and its
-      exit status, recorded here. Acceptance: AC-06, AC-08 to AC-12, AC-14 to AC-19, AC-32, AC-33, AC-35. Commands:
+      exit status, recorded here. Acceptance: AC-06, AC-08 to AC-12, AC-14 to AC-19, AC-32, AC-33, AC-35, AC-37.
+      Commands:
   - `npx nx run account-ledger-cli:test:quick`
   - `npx nx run account-ledger-cli:test:integration`
   - `npx nx run account-ledger-cli:test:e2e`
   - `npm run -s check:hygiene`
   - `sh local-tmp/check-md.sh`
   - `./rhino md internal-link validate && ./rhino md heading-hierarchy validate && ./rhino md naming validate`
-- [ ] [AI] Add the phase's `WORKLOG.md` entry at the top, or extend the entry its section already has, stamped with the
-      real `date` times. Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
+- [ ] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
+      Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
 - [ ] [AI] Commit the phase as `feat(account-ledger-cli): replay incoming events through an append-only log`, then push
       to `origin/main`; the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof: the
       commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-06, AC-08 to AC-12,
-      AC-14 to AC-19, AC-32, AC-33, AC-35.
+      AC-14 to AC-19, AC-32, AC-33, AC-35, AC-37.
 
-Pause safety: the phase leaves every incoming kind processed and C1, C3, C4, C5, and C7 green. Re-verify with
-`npx nx run account-ledger-cli:test:quick`.
+Pause safety: the phase leaves every incoming kind processed, C1, C3, C4, C5, and C7 green, and each decision rule
+proven. Re-verify with `npx nx run account-ledger-cli:test:quick`.
 
 ## Phase 5 — End of Day and the Day Report
 
@@ -781,8 +828,8 @@ and is handled as the rule above says.
       smallest stub it imports, and run it; it fails on its assertion because no day closes with a fee step. Command:
       `pytest tests/unit/test_criteria.py`. Proof: the failure message, recorded here. Acceptance: AC-07.
 - [ ] [AI] GREEN: Write step 1 in `end_of_day.py`: a fee for each negative day, value-dated today, and call `close_day`
-      from the driver. Command: `pytest tests/unit/test_criteria.py`, then `pytest tests/unit`. Proof: both passing
-      runs, recorded here. Acceptance: AC-07.
+      from the driver; add `fee_markers` to `tests/support/streams.py`. Command: `pytest tests/unit/test_criteria.py`,
+      then `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance: AC-07.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-07.
 
@@ -798,7 +845,19 @@ and is handled as the rule above says.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-07.
 
-### Cycle 5.3 — C6: E9 restores Days 2 to 4 and refunds the fees
+### Cycle 5.3 — a fee counts in the closings after it
+
+- [ ] [AI] RED: write `test_amb_011_a_fee_counts_in_the_closings_after_it` in `tests/unit/test_end_of_day.py`, with the
+      smallest stub it imports, and run it; it fails on its assertion because step 1 reads each day's closing before
+      firing any fee, so a Day 1 fee that takes Day 2 from 10.00 to −15.00 leaves Day 2 uncharged. Command:
+      `pytest tests/unit/test_end_of_day.py`. Proof: the failure message, recorded here. Acceptance: AC-07.
+- [ ] [AI] GREEN: Read each closing in step 1 from the log as it grows, so a fee fired for an earlier day counts in the
+      days after it. Command: `pytest tests/unit/test_end_of_day.py`, then `pytest tests/unit`. Proof: both passing
+      runs, recorded here. Acceptance: AC-07.
+- [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
+      `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-07.
+
+### Cycle 5.4 — C6: E9 restores Days 2 to 4 and refunds the fees
 
 - [ ] [AI] RED: write `test_c6_e9_restores_days_2_to_4_and_refunds_the_fees` in `tests/unit/test_criteria.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because no refund fires once the days are
@@ -810,31 +869,33 @@ and is handled as the rule above says.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-11.
 
-### Cycle 5.4 — a BHD account is charged BHD 2.560
+### Cycle 5.5 — a BHD account is charged BHD 2.560
 
 - [ ] [AI] RED: write `test_amb_027_a_bhd_account_is_charged_bhd_2_560` in `tests/unit/test_end_of_day.py`, with the
-      smallest stub it imports, and run it; it fails on its assertion because the fee step charges AED 25.00 on every
-      account. Command: `pytest tests/unit/test_end_of_day.py`. Proof: the failure message, recorded here. Acceptance:
-      AC-22.
-- [ ] [AI] GREEN: Charge each account `overdraft_fee` in its own currency. Command:
+      smallest stub it imports, and run it; it is expected to pass on arrival, since step 1 takes `overdraft_fee` in the
+      account's own currency type; its red is the mutation proof that making `overdraft_fee` return the AED figure's
+      digits for BHD charges BHD 25.000. Command: `pytest tests/unit/test_end_of_day.py`. Proof: the failure message,
+      recorded here. Acceptance: AC-22.
+- [ ] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
       `pytest tests/unit/test_end_of_day.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-22.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-22.
 
-### Cycle 5.5 — a settlement above its hold debits in full
+### Cycle 5.6 — a settlement above its hold debits in full
 
 - [ ] [AI] RED: write `test_amb_030_a_settlement_above_its_hold_debits_in_full` in `tests/unit/test_end_of_day.py`, with
-      the smallest stub it imports, and run it; it fails on its assertion because the debit is capped at the hold or no
-      fee follows. Command: `pytest tests/unit/test_end_of_day.py`. Proof: the failure message, recorded here.
+      the smallest stub it imports, and run it; it is expected to pass on arrival, since Cycle 4.9's `Captured` effect
+      debits the settlement's own amount; its red is the mutation proof that capping the debit at the hold leaves the
+      day non-negative and fires no fee. Command: `pytest tests/unit/test_end_of_day.py`. Proof: the failure message,
+      recorded here. Acceptance: AC-20.
+- [ ] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
+      `pytest tests/unit/test_end_of_day.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-20.
-- [ ] [AI] GREEN: Post the full amount and release the hold; likely passes on arrival, handled as the rule above says.
-      Command: `pytest tests/unit/test_end_of_day.py`, then `pytest tests/unit`. Proof: both passing runs, recorded
-      here. Acceptance: AC-20.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-20.
 
-### Cycle 5.6 — a reversed fee on a negative day is charged again
+### Cycle 5.7 — a reversed fee on a negative day is charged again
 
 - [ ] [AI] RED: write `test_amb_035_a_fee_reversed_on_a_negative_day_is_charged_again` in
       `tests/unit/test_end_of_day.py`, with the smallest stub it imports, and run it; it fails on its assertion because
@@ -845,18 +906,18 @@ and is handled as the rule above says.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-31.
 
-### Cycle 5.7 — interest accrues on a positive closing
+### Cycle 5.8 — interest accrues on a positive closing
 
 - [ ] [AI] RED: write `test_amb_005_interest_accrues_on_a_positive_closing` in `tests/unit/test_end_of_day.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because no interest event fires. Command:
       `pytest tests/unit/test_end_of_day.py`. Proof: the failure message, recorded here. Acceptance: AC-13.
-- [ ] [AI] GREEN: Write step 2's accrual for today, only on a base above zero. Command:
-      `pytest tests/unit/test_end_of_day.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
-      Acceptance: AC-13.
+- [ ] [AI] GREEN: Write step 2's accrual for today, only on a base above zero, and add `interest_amounts` to
+      `tests/support/streams.py`. Command: `pytest tests/unit/test_end_of_day.py`, then `pytest tests/unit`. Proof: both
+      passing runs, recorded here. Acceptance: AC-13.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-13.
 
-### Cycle 5.8 — a changed closing adjusts its interest
+### Cycle 5.9 — a changed closing adjusts its interest
 
 - [ ] [AI] RED: write `test_amb_005_a_changed_closing_adjusts_its_interest` in `tests/unit/test_end_of_day.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because a backdated debit leaves Day 1's accrual
@@ -868,7 +929,7 @@ and is handled as the rule above says.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-11, AC-13.
 
-### Cycle 5.9 — C8: capitalization is the sum of the interest events
+### Cycle 5.10 — C8: capitalization is the sum of the interest events
 
 - [ ] [AI] RED: write `test_c8_capitalization_equals_the_sum_of_interest_events` in `tests/unit/test_criteria.py`, with
       the smallest stub it imports, and run it; it fails on its assertion because no capitalization fires, so no
@@ -880,19 +941,19 @@ and is handled as the rule above says.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-13.
 
-### Cycle 5.10 — C6: Day 6 closes at 285.76
+### Cycle 5.11 — C6: Day 6 closes at 285.76
 
 - [ ] [AI] RED: write `test_c6_day_6_closes_at_285_76_not_285_79` in `tests/unit/test_criteria.py`, with the smallest
-      stub it imports, and run it; it fails on its assertion because Day 6 closes at 285.00 without capitalization;
-      expected to pass on arrival once 5.9 is green, so its red is the mutation proof that removes step 3. Command:
-      `pytest tests/unit/test_criteria.py`. Proof: the failure message, recorded here. Acceptance: AC-11.
-- [ ] [AI] GREEN: No production change is expected; any gap is closed here. Command:
+      stub it imports, and run it; it is expected to pass on arrival once 5.10 is green; its red is the mutation proof
+      that removing step 3 leaves Day 6 at 285.00. Command: `pytest tests/unit/test_criteria.py`. Proof: the failure
+      message, recorded here. Acceptance: AC-11.
+- [ ] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
       `pytest tests/unit/test_criteria.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-11.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-11.
 
-### Cycle 5.11 — a day's interest never counts its own capitalization
+### Cycle 5.12 — a day's interest never counts its own capitalization
 
 - [ ] [AI] RED: write `test_amb_023_a_days_interest_never_counts_its_own_capitalization` in
       `tests/unit/test_end_of_day.py`, with the smallest stub it imports, and run it; it fails on its assertion because
@@ -904,7 +965,7 @@ and is handled as the rule above says.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-13.
 
-### Cycle 5.12 — a day restates each earlier closing it changed
+### Cycle 5.13 — a day restates each earlier closing it changed
 
 - [ ] [AI] RED: write `test_amb_022_a_day_restates_each_earlier_closing_it_changed` in `tests/unit/test_report.py`, with
       the smallest stub it imports, and run it; it fails on its assertion because the report lists no restated closing.
@@ -914,7 +975,7 @@ and is handled as the rule above says.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-11.
 
-### Cycle 5.13 — every known authorization is listed with its state
+### Cycle 5.14 — every known authorization is listed with its state
 
 - [ ] [AI] RED: write `test_amb_019_every_known_authorization_is_listed_with_its_state` in `tests/unit/test_report.py`,
       with the smallest stub it imports, and run it; it fails on its assertion because the report lists no
@@ -925,7 +986,7 @@ and is handled as the rule above says.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-10.
 
-### Cycle 5.14 — a rejected event prints as that day's error
+### Cycle 5.15 — a rejected event prints as that day's error
 
 - [ ] [AI] RED: write `test_amb_014_a_rejected_event_prints_as_that_days_error` in `tests/unit/test_report.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because the report's errors are always none.
@@ -938,7 +999,7 @@ and is handled as the rule above says.
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-15 to AC-17,
       AC-32, AC-35.
 
-### Cycle 5.15 — a refunded fee cannot be reversed
+### Cycle 5.16 — a refunded fee cannot be reversed
 
 - [ ] [AI] RED: write `test_amb_035_money_already_undone_cannot_be_undone_again` in `tests/unit/test_processing.py`,
       with the smallest stub it imports, and run it; it fails on its assertion because its new refunded-fee case, a
@@ -950,7 +1011,7 @@ and is handled as the rule above says.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-35.
 
-### Cycle 5.16 — a step that fires nothing reports its row
+### Cycle 5.17 — a step that fires nothing reports its row
 
 - [ ] [AI] RED: write `test_amb_033_a_step_that_fires_nothing_reports_its_row` in `tests/unit/test_report.py`, with the
       smallest stub it imports, and run it; it fails on its assertion because the end-of-day rows omit the empty steps.
@@ -965,19 +1026,19 @@ and is handled as the rule above says.
 ### Phase 5 Gate
 
 - [ ] [AI] Run every gate command below against the phase's combined state; each exits 0. Proof: each command and its
-      exit status, recorded here. Acceptance: AC-06 to AC-22, AC-31, AC-35. Commands:
+      exit status, recorded here. Acceptance: AC-06 to AC-20, AC-22, AC-31, AC-35. Commands:
   - `npx nx run account-ledger-cli:test:quick`
   - `npx nx run account-ledger-cli:test:integration`
   - `npx nx run account-ledger-cli:test:e2e`
   - `npm run -s check:hygiene`
   - `sh local-tmp/check-md.sh`
   - `./rhino md internal-link validate && ./rhino md heading-hierarchy validate && ./rhino md naming validate`
-- [ ] [AI] Add the phase's `WORKLOG.md` entry at the top, or extend the entry its section already has, stamped with the
-      real `date` times. Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
+- [ ] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
+      Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
 - [ ] [AI] Commit the phase as `feat(account-ledger-cli): close each day with fees, interest, and capitalization`, then
       push to `origin/main`; the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof:
-      the commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-06 to AC-22,
-      AC-31, AC-35.
+      the commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-06 to AC-20,
+      AC-22, AC-31, AC-35.
 
 Pause safety: the phase leaves every criterion green and every day report complete as data. Re-verify with
 `npx nx run account-ledger-cli:test:quick`.
@@ -986,9 +1047,12 @@ Pause safety: the phase leaves every criterion green and every day report comple
 
 The renderer, the floor-tier shell, and the golden run ([input and output](tech-docs/003-input-output-and-cli.md)).
 
-- [ ] [AI] RED, the phase's outer test: write `test_the_brief_replay_prints_output_target` in
-      `tests/e2e/test_program.py`, with `tests/support/output_target.py`. It fails on its assertion, since the program
-      still prints the greeting. Command: `pytest tests/e2e`. Proof: the diff's head, recorded here. Acceptance: AC-01.
+- [ ] [AI] RED, the phase's outer tests: write `test_the_brief_replay_prints_output_target` in
+      `tests/e2e/test_program.py`, with `tests/support/output_target.py`, and beside it the error paths
+      `test_a_missing_stream_file_exits_2`, `test_a_malformed_amount_names_its_line`,
+      `test_an_unheld_account_names_its_line`, and `test_no_argument_prints_usage_and_exits_2`. Each fails on its
+      assertion, since the program still prints the greeting and exits 0. Command: `pytest tests/e2e`. Proof: each
+      failure's head, recorded here. Acceptance: AC-01 to AC-04.
 
 ### Cycle 6.1 — a day opens with its banner and its blocks
 
@@ -1172,21 +1236,19 @@ The renderer, the floor-tier shell, and the golden run ([input and output](tech-
 - [ ] [AI] Prove the integration reader can fail: stub the parser to succeed, point `main` at a file missing a column,
       watch `test_main_reads_a_real_file_and_reports_a_missing_one`'s assertion on exit 2 fail, restore. Proof: the
       failing run's head. Acceptance: AC-02, AC-03.
-- [ ] [AI] Add the sentence naming the stream files and `OUTPUT_TARGET.md` among the test targets' inputs to
-      `repo-governance/development/workflow/nx-workspace-policy.md`, through a Rules Propagation record at
-      `local-tmp/rules-propagation-nx-inputs.md`, once the item below lists them. Proof: the record and the md gates.
-      Acceptance: AC-28.
-- [ ] [AI] GREEN, the outer test: `test_the_brief_replay_prints_output_target` passes, and the end-to-end error paths
-      for AC-02 to AC-04 pass in `tests/e2e/test_program.py`. Command: `pytest tests/e2e`. Proof: the passing run.
-      Acceptance: AC-01 to AC-04.
+- [ ] [AI] GREEN, the outer tests: the golden run and the four error paths pass in `tests/e2e/test_program.py`. Command:
+      `pytest tests/e2e`. Proof: the passing run. Acceptance: AC-01 to AC-04.
 - [ ] [AI] Prove the golden harness can fail: change one character of the expected text in the test's copy, run it,
       watch it fail with a diff naming the line, restore. Proof: the failing run's head. Acceptance: AC-01.
-- [ ] [AI] Make `run` pass `streams/challenge.csv`, and list `{projectRoot}/streams/**/*.csv` and
-      `{workspaceRoot}/OUTPUT_TARGET.md` among the test targets' inputs in `project.json`. Commands:
-      `npx nx run account-ledger-cli:run` prints the report, and
-      `npx nx show projects --affected --files=OUTPUT_TARGET.md` lists `account-ledger-cli`. Proof: both outputs; if the
-      second does not, recovery item RC4. At planning, listing the file in one target's inputs was enough, and today no
-      project is affected by it. Acceptance: AC-01.
+- [ ] [AI] Make `run` pass `streams/challenge.csv`, and list `{workspaceRoot}/OUTPUT_TARGET.md` among the test targets'
+      inputs in `project.json`, beside the streams Cycle 3.24 listed. Commands: `npx nx run account-ledger-cli:run`
+      prints the report, and `npx nx show projects --affected --files=OUTPUT_TARGET.md` lists `account-ledger-cli`.
+      Proof: both outputs; if the second does not, recovery item RC4. Today no project is affected by
+      `OUTPUT_TARGET.md`, which is what this item changes. Acceptance: AC-01.
+- [ ] [AI] Add the sentence naming the stream files and `OUTPUT_TARGET.md` among the test targets' inputs to
+      `repo-governance/development/workflow/nx-workspace-policy.md`, through a Rules Propagation record at
+      `local-tmp/rules-propagation-nx-inputs.md`, now that the item above lists them. Proof: the record and the md
+      gates. Acceptance: AC-28.
 - [ ] [AI] Complete `architecture.md` as the C4 model tech-docs 006 states: context, containers, components with the
       shell, code, and the dynamic view of one day; drop the scaffold wording. Proof: every named module exists.
       Acceptance: AC-26.
@@ -1203,8 +1265,8 @@ The renderer, the floor-tier shell, and the golden run ([input and output](tech-
   - `npm run -s check:hygiene`
   - `sh local-tmp/check-md.sh`
   - `./rhino md internal-link validate && ./rhino md heading-hierarchy validate && ./rhino md naming validate`
-- [ ] [AI] Add the phase's `WORKLOG.md` entry at the top, or extend the entry its section already has, stamped with the
-      real `date` times. Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
+- [ ] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
+      Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
 - [ ] [AI] Commit the phase as `feat(account-ledger-cli): print the daily report from a stream file`, then push to
       `origin/main`; the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof: the
       commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-01 to AC-04, AC-26,
@@ -1243,8 +1305,8 @@ The brief's one failing test (AMB-018, AMB-031, D6), as [testing strategy](tech-
   - `npm run -s check:hygiene`
   - `sh local-tmp/check-md.sh`
   - `./rhino md internal-link validate && ./rhino md heading-hierarchy validate && ./rhino md naming validate`
-- [ ] [AI] Add the phase's `WORKLOG.md` entry at the top, or extend the entry its section already has, stamped with the
-      real `date` times. Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
+- [ ] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
+      Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
 - [ ] [AI] Commit the phase as `test(account-ledger-cli): record that holds never expire as a strict expected failure`,
       then push to `origin/main`; the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`.
       Proof: the commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-23.
@@ -1264,9 +1326,10 @@ calls time, recovery item RC2 fires.
       smallest stub it imports, and run it; it fails on its assertion because the header has eight columns and no
       `final` cell is read. Command: `pytest tests/unit/test_stream_csv.py`. Proof: the failure message, recorded here.
       Acceptance: AC-03, AC-05.
-- [ ] [AI] GREEN: Add `final` to the header, read it into `Capture`, add the fault message, and add a trailing empty
-      cell to each row of `streams/challenge.csv`. Command: `pytest tests/unit/test_stream_csv.py`, then
-      `pytest tests/unit`. Proof: both passing runs, recorded here. Acceptance: AC-03, AC-05.
+- [ ] [AI] GREEN: Add `final` to the header, read it into `Capture`, add the fault message, add a trailing empty cell to
+      each row of `streams/challenge.csv`, and move `csv_text` and every fixture to nine columns. Command:
+      `pytest tests/unit/test_stream_csv.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
+      Acceptance: AC-03, AC-05.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
       `npx nx run account-ledger-cli:test:quick`. Proof: the passing run, recorded here. Acceptance: AC-03, AC-05.
 
@@ -1297,11 +1360,11 @@ calls time, recovery item RC2 fires.
 ### Cycle 8.4 — every state and trigger follow the table
 
 - [ ] [AI] RED: write `test_every_state_and_trigger_pair_follows_the_table` in `tests/unit/test_authorizations.py`, with
-      the smallest stub it imports, and run it; it fails on its assertion because the test's copy of tech-docs 001's
-      table lists a pair `transition` does not yet return as stated. Command:
+      the smallest stub it imports, and run it; it is expected to pass on arrival, since 4.9, 4.11, 8.2, and 8.3 built
+      every row; its red is the mutation proof that swapping one row's result fails the walk. Command:
       `pytest tests/unit/test_authorizations.py`. Proof: the failure message, recorded here. Acceptance: AC-18, AC-19,
       AC-21.
-- [ ] [AI] GREEN: Close any gap the walk shows; expected to pass on arrival, handled as the rule above says. Command:
+- [ ] [AI] GREEN: No production change is expected; any gap the red shows is closed here. Command:
       `pytest tests/unit/test_authorizations.py`, then `pytest tests/unit`. Proof: both passing runs, recorded here.
       Acceptance: AC-18, AC-19, AC-21.
 - [ ] [AI] REFACTOR: tidy the names and helpers the green added, adding no behaviour. Command:
@@ -1330,8 +1393,8 @@ calls time, recovery item RC2 fires.
   - `npm run -s check:hygiene`
   - `sh local-tmp/check-md.sh`
   - `./rhino md internal-link validate && ./rhino md heading-hierarchy validate && ./rhino md naming validate`
-- [ ] [AI] Add the phase's `WORKLOG.md` entry at the top, or extend the entry its section already has, stamped with the
-      real `date` times. Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
+- [ ] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
+      Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
 - [ ] [AI] Commit the phase as `feat(account-ledger-cli): keep the rest of a hold after a partial capture`, then push to
       `origin/main`; the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof: the
       commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-21.
@@ -1347,9 +1410,10 @@ Docs Propagation of Phases 3 to 8 into the assessment docs, and rule change R4 (
       `ACCEPTANCE_CRITERIA.feature`. Proof: the name check below. Acceptance: AC-24.
 - [ ] [AI] Name, in each refused criterion's paragraph of `REJECTED.md`, the tests that prove it: one for C2, C4, C7,
       and C8, and two each for C5 and C6. Proof: the name check. Acceptance: AC-24.
-- [ ] [AI] Add the proving tests' names to AMB-006, AMB-013, AMB-014, AMB-018, AMB-020, AMB-027, AMB-028, AMB-029,
-      AMB-030, AMB-031, AMB-034, and AMB-035 in `AMBIGUITIES.md`, and replace its introduction's "the ledger code, which
-      does not exist yet" with the suite that now re-derives every figure. Proof: the name check. Acceptance: AC-24.
+- [ ] [AI] Close the Resolution part of each `AMBIGUITIES.md` entry with a sentence naming the tests tech-docs 004's
+      table maps to it, every entry but AMB-032, so each entry keeps its six parts, and replace its introduction's "the
+      ledger code, which does not exist yet" with the suite that now re-derives every figure. Proof: the name check.
+      Acceptance: AC-24.
 - [ ] [AI] Delete `ACCEPTANCE_CRITERIA.feature`; apply R4 to `repo-governance/conventions/structure/assessment-docs.md`
       through Rules Propagation; drop its row from the root `README.md` and its line from this plan's README. Command:
       the first below. Proof: the output, each hit being `WORKLOG.md`, REJECTED's abandoned approach, or this plan's own
@@ -1360,12 +1424,13 @@ Docs Propagation of Phases 3 to 8 into the assessment docs, and rule change R4 (
       Acceptance: AC-24.
 
 ```bash
-grep -rln --exclude-dir=local-tmp --exclude-dir=generated-reports --exclude-dir=node_modules "ACCEPTANCE_CRITERIA" .
+grep -rln --exclude-dir=.git --exclude-dir=.nx --exclude-dir=local-tmp --exclude-dir=generated-reports \
+  --exclude-dir=node_modules "ACCEPTANCE_CRITERIA" .
 ```
 
 ```bash
 grep -ohE 'test_[a-z0-9_]+' MOVEMENT.md REJECTED.md AMBIGUITIES.md | sort -u | while read -r t; do
-  grep -rq "def $t" apps/account-ledger-cli/tests || echo "missing $t"
+  grep -rq "def $t(" apps/account-ledger-cli/tests || echo "missing $t"
 done
 ```
 
@@ -1380,8 +1445,8 @@ done
   - `sh local-tmp/check-md.sh`
   - `./rhino md internal-link validate && ./rhino md heading-hierarchy validate && ./rhino md naming validate`
   - `./rhino governance word-budget validate`
-- [ ] [AI] Add the phase's `WORKLOG.md` entry at the top, or extend the entry its section already has, stamped with the
-      real `date` times. Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
+- [ ] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
+      Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
 - [ ] [AI] Commit the phase as `docs(assessment): name the test behind every criterion and rule`, then push to
       `origin/main`; the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof: the
       commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-24, AC-25.
@@ -1422,8 +1487,8 @@ grep -rniE 'gherkin|pytest-bdd|\.feature' AGENTS.md README.md repo-governance sp
   - `./rhino governance word-budget validate`
 - [ ] [AI] Record the final unit coverage figure from `test:unit`; it is at least 80%. Proof: the figure. Acceptance:
       AC-30.
-- [ ] [AI] Add the phase's `WORKLOG.md` entry at the top, or extend the entry its section already has, stamped with the
-      real `date` times. Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
+- [ ] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
+      Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
 - [ ] [AI] Commit the phase as `docs(explanation): write the architecture trade-offs`, then push to `origin/main`; the
       pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof: the commit hash and the
       pushed range, recorded here and in the Execution Record. Acceptance: AC-27 to AC-30.
@@ -1450,27 +1515,32 @@ Dormant until their trigger fires; each closes with a disposition at reconciliat
       redo the unit's items. Proof: the gates pass after the revert.
 - [ ] [AI] RC4 — Make a change to OUTPUT_TARGET affect the project. Trigger:
       `npx nx show projects --affected --files=OUTPUT_TARGET.md` does not list `account-ledger-cli` in Phase 6. Decision
-      owner: the executor. Procedure: add the file to the project's inputs so Nx attributes it, per the
-      [Nx workspace policy](../../../repo-governance/development/workflow/nx-workspace-policy.md), and record the
-      finding in `learnings.md`. Proof: the command lists the project.
+      owner: the executor. Procedure: add the file to the named inputs of every test target so Nx attributes it, per the
+      [Nx workspace policy](../../../repo-governance/development/workflow/nx-workspace-policy.md); if it still is not
+      listed, set `cache: false` on `test:e2e`, the target that reads it, and record the finding and the choice in
+      `learnings.md`. Proof: the command lists the project, or the target's configuration shows `cache: false`.
 
 ## Archival
 
 After every substantive phase is terminal. Nothing here starts before the Phase 10 gate. The completion gate is the
 execution check alone (D11).
 
-- [ ] [AI] Run [Execution Check](../../../repo-governance/workflows/plan/plan-execution-check.md) and record its
-      terminal verdict; archival needs a permitting one. Proof: the verdict. Acceptance: AC-30.
 - [ ] [AI] Give each dormant recovery item its dated disposition. Proof: every item carries one.
 - [ ] [AI] Triage `learnings.md`: route each entry to one owner or discard it with a reason, or write the empty-log
       record. Proof: no entry left unresolved.
+- [ ] [AI] Run [Execution Check](../../../repo-governance/workflows/plan/plan-execution-check.md) and record its
+      terminal verdict; archival needs a permitting one. Proof: the verdict. Acceptance: AC-30.
 - [ ] [AI] Run [Dev Artifact Clean-Up](../../../repo-governance/workflows/maintenance/dev-artifact-clean-up.md) and
       record what it removed. Proof: the record.
 - [ ] [AI] Move the plan to `plans/done/YYYY-MM-DD__in-memory-account-ledger-init/` with the completion date; update
       `plans/in-progress/README.md`, `plans/done/README.md`, and every live link to the old path; run the full
       validation from the archived state; add the WORKLOG entry; commit as
-      `docs(plan): archive the in-memory ledger plan` and push. Command:
-      `grep -rln --exclude-dir=local-tmp --exclude-dir=node_modules "plans/in-progress/in-memory-account-ledger-init" .`
-      finds only history. Proof: the command's output and the pushed range.
+      `docs(plan): archive the in-memory ledger plan` and push. Command: the command below finds only history. Proof:
+      the command's output and the pushed range.
+
+```bash
+grep -rln --exclude-dir=.git --exclude-dir=.nx --exclude-dir=local-tmp --exclude-dir=node_modules \
+  "plans/in-progress/in-memory-account-ledger-init" .
+```
 
 [cycle]: ../../../repo-governance/development/quality/testing/test-driven-development/001-cycle-and-evidence.md

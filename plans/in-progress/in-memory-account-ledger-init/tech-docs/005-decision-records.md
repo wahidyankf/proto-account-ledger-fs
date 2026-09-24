@@ -59,15 +59,17 @@ themselves are not repeated here: each is an entry in [AMBIGUITIES](../../../../
 
 ## D3 — Every Resolved Rule Is Built and Tested
 
-- **Evidence.** AMB-013, 027, 028, 029, 030, 034, and 035 state what the ledger does, yet the brief's stream triggers
-  none of what they add; it triggers only AMB-013's final settlement, through E5.
+- **Evidence.** AMB-008, 009, 010, 013, 027, 028, 029, 030, 034, and 035 state what the ledger does, yet the brief's
+  stream triggers none of what they add; it triggers only AMB-013's final settlement, through E5, and decides its two
+  authorizations on credits already value-dated.
 - **Selected.** Build and test all of them; AMB-013 last, with a fallback the owner approved (delivery Phase 8).
 - **Alternatives.** Build only those that come nearly free (AMB-027, 029, 030) and reword the rest as not built; or
   build only what the stream triggers.
 - **Prior art.** REJECTED already promises a test for every refused criterion.
 - **Trade-offs.** Each skipped rule becomes a claim without proof in a defense that asks for proof; building all costs
   about seven more tests and the partial-capture state.
-- **Consequences.** AC-14 to AC-22 and AC-31 to AC-33.
+- **Consequences.** AC-14 to AC-22, AC-31 to AC-33, AC-35, and AC-37; every behaviour entry names its test, as tech-docs
+  004 maps them (AC-24).
 - **Revisit when.** The fallback's trigger fires (delivery Phase 8).
 
 ## D6 — The Failing Test Is One Plain Unit Test
@@ -192,9 +194,21 @@ themselves are not repeated here: each is an entry in [AMBIGUITIES](../../../../
 - **Prior art.** The scaffold binds `greeting.feature` at three layers through pytest-bdd.
 - **Trade-offs.** Gherkin reads well to an assessor but adds two machines, the bindings and a report parser, that prove
   nothing about the ledger and must be defended without AI; the hybrid keeps both costs and two styles.
-- **Consequences.** Supersedes the gate's D4 (features by domain) and D5 (the report as a docstring). pytest-bdd and the
-  behaviour-driven rules are retired through Rules Propagation (tech-docs 006).
+- **Consequences.** Supersedes D4 and D5, recorded below as superseded. pytest-bdd and the behaviour-driven rules are
+  retired through Rules Propagation (tech-docs 006).
 - **Revisit when.** Behaviour must be agreed with someone who reads Gherkin but not Python.
+
+## D4 and D5 — Superseded by D12
+
+- **Evidence.** Both assumed Gherkin: D4 split the feature files by domain with each criterion a tag, and D5 held the
+  full report text in a scenario kept equal to OUTPUT_TARGET.
+- **Selected.** D4 chose features by domain with criterion tags; D5 chose the report scenario with a test keeping it
+  equal to OUTPUT_TARGET.
+- **Alternatives.** D4: one feature per criterion; D5: figures only, with no full-text scenario.
+- **Prior art.** The scaffold's `greeting.feature`.
+- **Trade-offs.** Recorded in D12, which removed their premise.
+- **Consequences.** None survive: D12 replaced both on 2026-09-24, before any was built.
+- **Revisit when.** D12 is revisited.
 
 ## D12b — ACCEPTANCE_CRITERIA.feature Is Deleted
 
@@ -332,7 +346,7 @@ themselves are not repeated here: each is an entry in [AMBIGUITIES](../../../../
 
 - **Evidence.** The brief reverses one debit and says nothing of other targets; the plan accepted any.
 - **Selected.** Any accepted event, incoming or fired, as AMB-035 resolves; after a fired end-of-day event is reversed,
-  the next close fires again whatever the rules still require (D20b, the second question).
+  the next close fires again whatever the rules still require, the owner's answer to a second question.
 - **Alternatives.** Only accepted incoming postings, the recommendation; those plus a void of an approved authorization;
   or any accepted event with a reversed fired event waived for good, the recommendation for the second question.
 - **Prior art.** Operations teams correct bank-generated fees and interest through the same reversal path as a

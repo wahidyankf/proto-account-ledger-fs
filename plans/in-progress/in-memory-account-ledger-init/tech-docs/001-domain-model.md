@@ -191,7 +191,8 @@ balances.py
 An entry's effect on the ledger balance is plus its amount for a credit, an instalment, a refund, and a capitalization;
 minus for a debit, a settlement, and a fee; and minus the effect of its target for a reversal, counted from the
 reversal's own value day. An authorization and an interest event have no effect on the ledger balance. The same log
-answers every question: a closing "as known at the end of Day 5" is `closing` over the log as it stood then.
+answers every question: a closing "as known at the end of Day 5" is `closing` over the log as it stood then, which
+`Replay.log_at` returns (tech-docs 002).
 
 `interest_base` exists because capitalization runs after interest on the same day (AMB-023): a day's interest is
 computed before its capitalization posts, so a later re-evaluation of that day must not count it either, or accrued

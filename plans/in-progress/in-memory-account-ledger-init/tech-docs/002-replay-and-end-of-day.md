@@ -7,8 +7,15 @@ returns a value computed from one.
 
 ```text
 replay.py
-  replay(stream, config) -> tuple[DayReport, ...]      Day 0, then one report per day of the window
+  replay(stream, config) -> Replay
+  Replay          reports: tuple[DayReport, ...]       Day 0, then one per day of the window
+                  logs: tuple[Log, ...]                the log as it stood at the end of each of those days
+                  report(day) -> DayReport, log_at(day) -> Log
 ```
+
+A test observes the replay at any day through `report` and `log_at`, and asks the balance functions of the domain model
+about that log: Day 2's closing as known at the end of Day 5 is `closing(result.log_at(Day(5)), account, Day(2))`. To
+stop after a given event, a test replays the stream up to it, which the support builder `through(stream, "E5")` gives.
 
 The stream is replayed in the order it is listed (AMB-015). The driver keeps a current day, starting at the window's
 first day, and a log, starting empty:

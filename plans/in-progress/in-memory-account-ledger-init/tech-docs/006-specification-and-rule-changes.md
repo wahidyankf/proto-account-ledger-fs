@@ -16,7 +16,7 @@ No Gherkin scenario becomes durable: D12 retires the corpus. The durable contrac
 Every other criterion in [prd](../prd.md) stays plan-only. Each is proven by the pytest test it names, which is the
 durable form of a rule once the plan is archived, and by the delivery item that creates the test:
 
-- AC-05 to AC-23 and AC-31 to AC-36: the rule or criterion is owned by AMBIGUITIES, MOVEMENT, or REJECTED, which name
+- AC-05 to AC-23 and AC-31 to AC-37: the rule or criterion is owned by AMBIGUITIES, MOVEMENT, or REJECTED, which name
   the test (Phase 9); a second statement in `specs/` would be a copy. Verified by the RED and GREEN items of the cycle
   each criterion names, and by Phase 9's name check.
 - AC-24, AC-25, AC-27: document outcomes, verified by the Phase 9 and Phase 10 items that write them.
@@ -37,7 +37,7 @@ durable form of a rule once the plan is archived, and by the delivery item that 
 + L3 Components: shell (cli, stream_csv, render) around the core (money, ids, config, events, log, balances,
 +   authorizations, processing, end_of_day, replay, report), with every dependency pointing inward
 + L4 Code: Money and Amount, the ID types, the IncomingEvent and FiredEvent unions, the LogEntry union and Rejection,
-+   AuthorizationState and its transition table, DayReport, and how each refers to the others
++   AuthorizationState and its transition table, DayReport and Replay, and how each refers to the others
 + Dynamic: one day, from the first event processed to the report, through the three end-of-day steps
 + Constraints: every effect in the shell; balances recomputed from the log (D7); holds never expire (AMB-018)
 ```

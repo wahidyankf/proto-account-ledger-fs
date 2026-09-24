@@ -50,7 +50,7 @@ labels [File Impact](../../../../repo-governance/conventions/structure/plans/013
 │       │   ├── test_ids.py                [N] every identifier's constructor and marker text
 │       │   ├── test_config.py             [N] the configuration's constructor
 │       │   ├── test_stream_csv.py         [N] every parse fault
-│       │   ├── test_authorizations.py     [N] every pair of state and trigger
+│       │   ├── test_authorizations.py     [N] every state and trigger pair; the decision rules
 │       │   ├── test_processing.py         [N] duplicates, reversals, force-posts, instalments
 │       │   ├── test_end_of_day.py         [N] each step's rules
 │       │   ├── test_criteria.py           [N] C1 to C8
