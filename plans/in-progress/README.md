@@ -8,4 +8,5 @@ Execution reads and ticks `delivery.md` in place, following
 
 ## Directory Map
 
-No plan folders right now.
+- [in-memory-account-ledger-core](in-memory-account-ledger-core/README.md) — the ledger core and its assessment
+  deliverables.
