@@ -8,5 +8,5 @@ Execution reads and ticks `delivery.md` in place, following
 
 ## Directory Map
 
-- [in-memory-account-ledger-core](in-memory-account-ledger-core/README.md) — the ledger core and its assessment
+- [in-memory-account-ledger-init](in-memory-account-ledger-init/README.md) — the ledger core and its assessment
   deliverables.

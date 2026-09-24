@@ -8,6 +8,7 @@ earlier work is claimed.
 
 | When                   | What                                                                                       |
 | ---------------------- | ------------------------------------------------------------------------------------------ |
+| 2026-09-24 23:18–03:40 | Plan rewritten: D11 revised, D19 to D23, two audits fixed; AC-31 to AC-36 added            |
 | 2026-09-24 23:03–03:33 | Resolved AMB-035; refined AMB-006, 014, 020, 026, and 034; Gherkin listed as abandoned     |
 | 2026-09-24 22:59–23:02 | Plan review: renamed it in-memory-account-ledger-init; D18, event amounts are positive     |
 | 2026-09-24 22:55–23:15 | Worklog entries now sum up one section of work each, stamped with its real start and end   |
