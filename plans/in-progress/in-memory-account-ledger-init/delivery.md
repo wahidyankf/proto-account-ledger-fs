@@ -6,6 +6,10 @@ first.
 
 ## Execution Record
 
+- Phase 0 (2026-09-25 04:04–04:08): baseline green, `test:quick`, `test:integration`, `test:e2e`, and `check:hygiene`
+  all exit 0, unit coverage 90.00%, at 07e72d9. The quality gate returned PASS_WITH_FINDINGS after one repair cycle,
+  every finding fixed in 07e72d9.
+
 ## Execution Checkout
 
 - **Working copy.** The main checkout at the repository root, on `main`, with no worktree and no task branch, per the
@@ -69,15 +73,21 @@ Within a phase, cycles run in the order listed, since each GREEN is sized agains
 The plan and the quality gate's repairs are already on `origin/main`; this phase records the state the work starts from
 and writes the gate helper every later gate runs.
 
-- [ ] [AI] Confirm the checkout: on `main`, level with `origin/main`, with nothing uncommitted. Command:
+- [x] [AI] Confirm the checkout: on `main`, level with `origin/main`, with nothing uncommitted. Command:
       `/usr/bin/git fetch origin && /usr/bin/git status -sb`. Proof: the output, recorded here. Acceptance: AC-30.
-- [ ] [AI] Install the toolchain. Command: `npm install`. Proof: exit 0. Acceptance: AC-30.
-- [ ] [AI] Record the baseline: run `npx nx run account-ledger-cli:test:quick`, `test:integration`, `test:e2e`, and
+  - Result (2026-09-25 04:04): `## main...origin/main` at 07e72d9, level with the remote; only ignored scratch files
+    outside version control.
+- [x] [AI] Install the toolchain. Command: `npm install`. Proof: exit 0. Acceptance: AC-30.
+  - Result: `npm install` exit 0.
+- [x] [AI] Record the baseline: run `npx nx run account-ledger-cli:test:quick`, `test:integration`, `test:e2e`, and
       `npm run -s check:hygiene` before any change. Proof: each exit status and the unit coverage figure, as the first
       Execution Record line; a failure is fixed at its cause inside this phase, and recorded as pre-existing.
       Acceptance: AC-30.
-- [ ] [AI] Write `local-tmp/check-md.sh`, the Markdown check every gate runs, as shown below. Command:
+  - Result, with `--skip-nx-cache`: `test:quick` 0 (pyright, ruff, 1 passed, coverage 90.00%), `test:integration` 0,
+    `test:e2e` 0, `npm run -s check:hygiene` 0. Nothing pre-existing failed.
+- [x] [AI] Write `local-tmp/check-md.sh`, the Markdown check every gate runs, as shown below. Command:
       `sh local-tmp/check-md.sh`. Proof: exit 0 on the clean checkout. Acceptance: AC-30.
+  - Result: written as shown; `sh local-tmp/check-md.sh` exit 0 on the clean checkout.
 
 The script lists every Markdown file changed since `HEAD` or new and untracked, never a deleted one, and exits non-zero
 if prettier rejects one or a line outside `repo-governance/` and the harness directories passes 120 characters:
@@ -101,8 +111,9 @@ PY
 
 ### Phase 0 Gate
 
-- [ ] [AI] Run `sh local-tmp/check-md.sh`, `./rhino md internal-link validate`, `./rhino md heading-hierarchy validate`,
+- [x] [AI] Run `sh local-tmp/check-md.sh`, `./rhino md internal-link validate`, `./rhino md heading-hierarchy validate`,
       and `./rhino md naming validate`. Proof: each exit status. Acceptance: AC-30.
+  - Result (04:06): check-md 0, internal-link 0, heading-hierarchy 0, naming 0.
 - [ ] [AI] Add the `WORKLOG.md` entry for the baseline, then commit this file's Phase 0 record and the entry as
       `docs(plan): record the ledger plan's baseline` and push. Command: `/usr/bin/git push origin main`. Proof: the
       commit hash and pushed range. Acceptance: AC-24.
