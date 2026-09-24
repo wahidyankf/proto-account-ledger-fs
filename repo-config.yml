@@ -122,7 +122,11 @@ policies:
         - { glob: ".claude/README.md", fail: 750 }
         - { glob: ".codex/README.md", fail: 750 }
     directory-map:
-      trees: []
+      trees:
+        - { path: repo-governance }
+        - { path: plans }
+        - { path: specs }
+        - { path: docs }
 
 gates:
   composition:

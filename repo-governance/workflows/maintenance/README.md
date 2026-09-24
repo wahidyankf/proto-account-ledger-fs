@@ -21,5 +21,6 @@ of these workflows keep it current, releasable, and governed by rules written in
 
 - [Dev Artifact Clean-Up](dev-artifact-clean-up.md)
 - [Rules Propagation](rules-propagation.md)
+- [Rules Propagation Modules](rules-propagation/README.md)
 - [Rules Grooming](rules-grooming.md)
 - [Rules Quality Gate](rules-quality-gate.md)
