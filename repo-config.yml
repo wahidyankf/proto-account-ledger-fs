@@ -202,6 +202,17 @@ gates:
             { literal: validate },
           ]
       run-on: { pre-push: {}, pull-request: {}, main: {} }
+    - id: directory-map
+      type: check
+      command:
+        executable: ./rhino
+        args:
+          [
+            { literal: governance },
+            { literal: directory-map },
+            { literal: validate },
+          ]
+      run-on: { pre-push: {}, pull-request: {}, main: {} }
     - id: internal-link
       type: check
       command:
