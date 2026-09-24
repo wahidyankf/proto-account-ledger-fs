@@ -78,6 +78,11 @@ first.
   a partial capture keeps the rest of its hold, and every state and trigger follows the table. Last gate passed:
   Phase 8. Next: Phase 9.
 - Phase 8 committed as `378a7a1` and pushed, `6a1e713..378a7a1`.
+- Phase 9: the assessment docs name their tests (MOVEMENT's 10, REJECTED's refusals, 34 AMBIGUITIES entries, 52 distinct
+  names, each found); R4 retired `ACCEPTANCE_CRITERIA.feature` from the assessment-docs convention; the root README
+  gained its run-and-read section. Gate 06:32–06:35, every command exit 0.
+- Phase 9 commits: `58e690d` (the feature file's deletion only, a failed `git add`) and `02ce7aa` (the rest), pushed as
+  `378a7a1..02ce7aa`.
 
 ## Execution Checkout
 
@@ -2513,36 +2518,96 @@ done
     check-md 0; internal-link && heading-hierarchy && naming 0; word-budget 0.
 - [ ] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
       Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
-- [ ] [AI] Commit the phase as `docs(assessment): name the test behind every criterion and rule`, then push to
+- [x] [AI] Commit the phase as `docs(assessment): name the test behind every criterion and rule`, then push to
       `origin/main`; the pre-push hook runs every test layer. Command: `/usr/bin/git push origin main`. Proof: the
       commit hash and the pushed range, recorded here and in the Execution Record. Acceptance: AC-24, AC-25.
+  - `58e690d` (06:36) carries that subject but only the deletion of `ACCEPTANCE_CRITERIA.feature`: the `git add` after
+    it named the deleted path and failed, so the commit took only what `git rm` had staged. `02ce7aa` (06:37),
+    `docs(assessment): add the phase 9 edits left out of 58e690d`, carries every other edit; no amend without the
+    owner's instruction.
+  - `/usr/bin/git push origin main`: `378a7a1..02ce7aa  main -> main`; the pre-push hook's gates passed and Nx ran no
+    test task, since no project is affected by a documentation-only change.
+  - During the gate, at 06:34:28 while `check:hygiene` ran (none of its gates formats Python), `cli.py` was reformatted
+    at 88 columns against the app's `line-length = 120`, most likely by an editor's format-on-save; the change was
+    layout only, was backed up to `local-tmp/cli.py.reformatted-0634`, and was restored from HEAD, uncommitted.
 
 Pause safety: the phase leaves assessment docs that agree with the code and cite its tests. Re-verify with
 `npx nx run account-ledger-cli:test:quick`.
 
 ## Phase 10 — The Trade-Offs Document and Final Verification
 
-- [ ] [AI] Write `docs/explanation/architecture-trade-offs.md` with the brief's four sections, drawn from the built
+- [x] [AI] Write `docs/explanation/architecture-trade-offs.md` with the brief's four sections, drawn from the built
       code: the log scan (D7) and the projection that defers it, value-dated entries and one control, every way an
       authorization ends other than a matching settlement, and every simplification with its deferred risk, among them
       the hold lifetime, the fee waiver a reversal cannot make (D20), and a live stream's quarantine (D21). Proof: the
       section headings, and a read confirming it restates neither the stream nor Part 1's rule text. Acceptance: AC-27.
-- [ ] [AI] List it in `docs/explanation/README.md`. Proof: the md gates. Acceptance: AC-27.
-- [ ] [AI] Search for any live rule requiring Gherkin with the command below. Proof: each hit listed here with why it is
+  - Done 06:43. Headings: "Append-only at scale", "Value-dated entries in production", "Authorization lifecycle", "What
+    you cut and why". It covers the log scan and the projection that defers it; value dates' operational and regulatory
+    surface and one control, maker-checker approval for any value date before the booking day; eight ways an
+    authorization ends other than a matching settlement, each with its scenario and mandate; and fourteen cuts with
+    their risks, among them the hold lifetime, the fee waiver, and a live stream's quarantine.
+  - The scale figures were measured, not estimated: a scratch replay (`local-tmp/bench_days.py`) of 6, 30, 60, and 120
+    days took 0.01, 0.61, 4.93, and 38.49 s, and 100 times the brief's events in six days (`local-tmp/bench.py`) 0.16 s.
+  - Read: no event ID, authorization name, or account ID appears (`grep -nE '\bE[0-9]+\b|Auth-[A-Z]|ACC-00'` printed
+    nothing), and no Part 1 rule is quoted; rules are cited by AMB identifier.
+- [x] [AI] List it in `docs/explanation/README.md`. Proof: the md gates. Acceptance: AC-27.
+  - Done 06:43. The directory map's "No documents yet." is replaced by its entry. Md gates: check-md passed;
+    internal-link 0 (1372 links, no findings); heading-hierarchy 0; naming 0.
+- [x] [AI] Search for any live rule requiring Gherkin with the command below. Proof: each hit listed here with why it is
       not a requirement, such as catalog text conditional on a repository that uses Gherkin, the scenario clauses of
       `red-green-refactor.md` and `swe-code-maker.md` that R1 names, or a binding that records it as not applicable.
       Acceptance: AC-28.
+  - Done 06:45. The command printed 31 hits in 19 files; none requires writing or binding Gherkin here.
+  - States that none is written: `AGENTS.md:78` ("No Gherkin is written or bound"),
+    `apps/account-ledger-cli/README.md:24` (no corpus, no step binding), and
+    `repo-governance/development/quality/testing/README.md:16` ("this repository binds only its layers").
+  - A binding that records it as not applicable: `behaviour-driven-development.md:46` (Discovery and Scenarios, Bindings
+    and Exemptions, Compliance and Reporting, and Scenario First not applicable; Layers and Adapters adopted with "every
+    test" for "every scenario"), and `specification-tree.md:84` (`behaviours/` not applicable). Their other hits
+    (`behaviour-driven-development.md:3` and `:22`; `specification-tree.md:6`, `:13`, `:40`, `:45`, `:80`;
+    `conventions/structure/README.md:32`) are the catalog text those bindings set aside, and the modules
+    `001-discovery-and-scenarios.md:4`, `:63`, `:64`, `003-bindings-and-exemptions.md:60`, and
+    `004-compliance-and-reporting.md:21` are the modules the binding declares not applicable.
+  - Catalog text conditional on a repository that uses Gherkin: `planning-capabilities/001-workflow-roster.md:4` and
+    `:24` (the review exists only in "a repository that supports Gherkin acceptance criteria"),
+    `002-skill-and-agent-roster.md:18` and `:60` (a roster row, and "no Gherkin criteria" as a recordable absence),
+    `workflows/plan/README.md:26`, `workflows/quality/red-green-refactor.md:66`, and
+    `.agents/agents/swe-code-checker.md:92` (naming that same conditional review). The scenario clauses R1 names,
+    `red-green-refactor.md`'s "any scenario that specifies the behaviour" and `swe-code-maker.md:53`'s "A scenario that
+    specifies the behaviour is added or updated before its red", do not contain the word, so the search does not list
+    them; under the binding no scenario specifies any behaviour, so each requires nothing.
+  - Plan-authoring guidance, not a test rule: `.agents/skills/plan-writing-gherkin-criteria/SKILL.md:2` and `:10`,
+    `.agents/skills/README.md:36`, and `.agents/agents/plan-maker.md:16` guide how a plan's acceptance criteria are
+    phrased; no plans convention requires the form
+    (`grep -rniE 'gherkin|scenario' repo-governance/conventions/structure/plans*` lists only `013-file-impact.md:21`).
+  - Examples of a file-impact tree: `plan-specification-changes.md:39` and `plans/013-file-impact.md:21` name an
+    illustrative `specs/importer.feature`.
 
 ```bash
 grep -rniE 'gherkin|pytest-bdd|\.feature' AGENTS.md README.md repo-governance specs apps .agents --include='*.md'
 ```
 
-- [ ] [AI] Read the governance for each choice AC-29 lists and record where each is stated. Proof: the list of paths.
+- [x] [AI] Read the governance for each choice AC-29 lists and record where each is stated. Proof: the list of paths.
       Acceptance: AC-29.
+  - Done 06:45. Read and located:
+  - Typed result values (S3): `repo-governance/development/quality/stacks/python-standards.md:50`, "This repository
+    records **returned result values**".
+  - Hand-written state machine (D8): `python-standards.md:46`, "State machines are hand-written: one `match` over the
+    state and trigger unions is the table."
+  - Shapes (D14 to D18), in `python-standards.md`'s Domain Types table: money one class per currency wrapping a
+    `Decimal` at its places (D14, D14b) at line 38; the positive amount (D18) at 39; identifiers and days as value
+    objects (D15) at 40; one dataclass per state (D17) at 41; no illegal value representable (D16) at 44–45.
+  - Split test-first cycle (D9a):
+    `repo-governance/conventions/structure/plans/011-phase-boundaries-and-delivery-choices.md:48`, **split cycle**.
+    Baseline phase (D9b): the same module, line 38, **Phase 0 baseline**. Phase gates (D9c): line 27, **phase gate**.
+    Reopening an archived plan (D9d): line 61, **reopen**.
+  - Completion gate (D11): `repo-governance/workflows/plan/plan-execution.md:69`, **execution check only**.
+  - Command-line tier (D13): `apps/account-ledger-cli/README.md:70`–73, the floor tier of the command-line interface
+    convention, with its statuses published in place of `--help`.
 
 ### Phase 10 Gate
 
-- [ ] [AI] Run every gate command below against the phase's combined state; each exits 0. Proof: each command and its
+- [x] [AI] Run every gate command below against the phase's combined state; each exits 0. Proof: each command and its
       exit status, recorded here. Acceptance: AC-27 to AC-30. Commands:
   - `npx nx run account-ledger-cli:test:quick`
   - `npx nx run account-ledger-cli:test:integration`
@@ -2551,8 +2616,13 @@ grep -rniE 'gherkin|pytest-bdd|\.feature' AGENTS.md README.md repo-governance sp
   - `sh local-tmp/check-md.sh`
   - `./rhino md internal-link validate && ./rhino md heading-hierarchy validate && ./rhino md naming validate`
   - `./rhino governance word-budget validate`
-- [ ] [AI] Record the final unit coverage figure from `test:unit`; it is at least 80%. Proof: the figure. Acceptance:
+  - Run 06:45–06:47, every command exit 0 (logs local-tmp/p10-1.log to p10-7.log): test:quick 0 (All checks passed; 111
+    passed, 1 xfailed; coverage TOTAL 96%); test:integration 0 (2 passed); test:e2e 0 (6 passed); check:hygiene 0;
+    check-md 0; internal-link && heading-hierarchy && naming 0; word-budget 0.
+- [x] [AI] Record the final unit coverage figure from `test:unit`; it is at least 80%. Proof: the figure. Acceptance:
       AC-30.
+  - 96% line coverage (`TOTAL 1252 55 96%` in `local-tmp/p10-1.log`, the `test:unit` step of `test:quick`), above the
+    80% gate.
 - [ ] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
       Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
 - [ ] [AI] Commit the phase as `docs(explanation): write the architecture trade-offs`, then push to `origin/main`; the
