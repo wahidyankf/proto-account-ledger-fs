@@ -202,7 +202,7 @@ def get_currency(money: Money) -> str:
 
 
 def require_same_currency[M: (Aed, Bhd)](sample: M, money: Money) -> Result[M, CurrencyMismatch]:
-    """Narrow a value known only as ``Money`` to the currency of ``sample``."""
+    """The money as the currency of ``sample``, or a mismatch when it is in the other currency."""
     if isinstance(money, type(sample)):
         return Ok(money)
     return Err(_make_mismatch(sample, money))

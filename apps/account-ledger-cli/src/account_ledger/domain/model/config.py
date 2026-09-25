@@ -20,7 +20,7 @@ type AnyAccount = Account[Aed] | Account[Bhd]
 
 
 def is_aed(account: AnyAccount) -> TypeIs[Account[Aed]]:
-    """Narrow an account to its currency; the other branch is ``Account[Bhd]``."""
+    """Whether the account is in AED; when it is not, the type checker knows it is ``Account[Bhd]``."""
     return isinstance(account.opening, Aed)
 
 
