@@ -8,12 +8,12 @@ The repository is an Nx monorepo. Rhino and husky gate every commit and push, an
 
 ## Prerequisites
 
-| Tool         | Version                    | Pinned by                                 |
-| ------------ | -------------------------- | ----------------------------------------- |
-| Node.js      | 24.x                       | `.nvmrc`, `package.json`                  |
-| uv           | 0.12 or later              | installed separately                      |
-| Python       | 3.14.x                     | `apps/account-ledger-cli/.python-version` |
-| Python tools | ruff, pyright, pytest, cov | `apps/account-ledger-cli/uv.lock`         |
+| Tool         | Version                                | Pinned by                                 |
+| ------------ | -------------------------------------- | ----------------------------------------- |
+| Node.js      | 24.x                                   | `.nvmrc`, `package.json`                  |
+| uv           | 0.12 or later                          | installed separately                      |
+| Python       | 3.14.x                                 | `apps/account-ledger-cli/.python-version` |
+| Python tools | ruff, pyright, pylint, vulture, pytest | `apps/account-ledger-cli/uv.lock`         |
 
 ## Getting Started
 
@@ -68,7 +68,7 @@ tables:
 | --------------------------------------------- | ---------------------------------------------------- |
 | [apps/](apps/)                                | runnable applications, such as `account-ledger-cli`  |
 | [libs/](libs/README.md)                       | reusable libraries (none yet)                        |
-| [specs/](specs/README.md)                     | the as-built architecture, as a C4 model             |
+| [specs/](specs/README.md)                     | the as-built architecture and its domain model       |
 | [docs/](docs/README.md)                       | documentation for people                             |
 | [plans/](plans/README.md)                     | delivery plans                                       |
 | [repo-governance/](repo-governance/README.md) | principles, conventions, standards, and workflows    |
