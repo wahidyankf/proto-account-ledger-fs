@@ -39,6 +39,7 @@ from account_ledger.domain.model.money import (
     MoneyFault,
     NotADecimal,
     NotPositive,
+    TooManyDigits,
     TooManyPlaces,
     format_digits,
     split_amount_of,
@@ -101,6 +102,8 @@ def _describe_amount_fault(text: str, fault: MoneyFault | NotPositive) -> str:
             return f"amount '{text}' is not a decimal number"
         case TooManyPlaces(places=places, currency=currency):
             return f"amount '{text}' has more than {places} places for {currency}"
+        case TooManyDigits(digits=digits):
+            return f"amount '{text}' has more than {digits} digits"
         case NotPositive():
             return f"amount '{text}' must be above zero"
 
@@ -216,7 +219,9 @@ def _parse_held_event(
 
 def parse_stream(text: str, config: LedgerConfig) -> Result[tuple[IncomingEvent, ...], StreamError]:
     """The stream's events in listed order, or the first fault; the header is line 1."""
-    rows = list(csv.reader(io.StringIO(text)))
+    if isinstance(read_rows := _read_rows(text), Err):
+        return read_rows
+    rows = read_rows.value
     if not rows or tuple(rows[0]) != COLUMNS:
         return Err(StreamError(1, f"line 1: expected the header {','.join(COLUMNS)}"))
     events: list[IncomingEvent] = []
@@ -228,3 +233,13 @@ def parse_stream(text: str, config: LedgerConfig) -> Result[tuple[IncomingEvent,
             return Err(StreamError(line, f"line {line}: {event.error.message}"))
         events.append(event.value)
     return Ok(tuple(events))
+
+
+def _read_rows(text: str) -> Result[list[list[str]], StreamError]:
+    """The stream's rows as CSV, or a fault on the line where the reader refuses one, such as a cell past its field
+    limit; the reader refuses by raising, so the refusal is caught here and returned."""
+    reader = csv.reader(io.StringIO(text))
+    try:
+        return Ok(list(reader))
+    except csv.Error as fault:
+        return Err(StreamError(reader.line_num, f"line {reader.line_num}: {fault}"))

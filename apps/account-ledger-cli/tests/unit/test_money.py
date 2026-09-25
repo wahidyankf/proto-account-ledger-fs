@@ -13,6 +13,7 @@ from account_ledger.domain.model.money import (
     Money,
     NotADecimal,
     NotPositive,
+    TooManyDigits,
     TooManyInstalments,
     TooManyPlaces,
     compute_daily_interest,
@@ -43,6 +44,14 @@ def test_bhd_refuses_more_than_three_places() -> None:
     assert Bhd.parse("10.0001") == Err(TooManyPlaces("10.0001", places=3, currency="BHD"))
     assert Bhd.parse("10") == Bhd.parse("10.000")
     assert Bhd.parse("ten") == Err(NotADecimal("ten"))
+
+
+def test_an_amount_past_the_working_precision_is_refused() -> None:
+    """NUMBERS.md: money is held in the default 28-digit context, so an amount that needs more digits at its currency's
+    places is refused rather than rounded or left to fail."""
+    assert Aed.parse("99999999999999999999999999.99") == Ok(Aed(Decimal("99999999999999999999999999.99")))
+    assert Aed.parse("999999999999999999999999999.99") == Err(TooManyDigits("999999999999999999999999999.99", 28))
+    assert Bhd.parse("1e30") == Err(TooManyDigits("1E+30", 28))
 
 
 def test_an_amount_must_be_above_zero() -> None:

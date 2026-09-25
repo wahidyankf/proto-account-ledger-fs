@@ -32,7 +32,7 @@ def test_a_stream_file_prints_its_report_and_exits_0() -> None:
 USAGE = "usage: account-ledger-cli <stream.csv>\n"
 
 
-def read_brief(path: str) -> Result[str, OSError]:
+def read_brief(path: str) -> Result[str, OSError | UnicodeDecodeError]:
     """A reader that holds only the brief's stream, at any path."""
     return Ok(BRIEF_CSV)
 
@@ -52,14 +52,16 @@ def test_no_argument_is_a_usage_error_exiting_2(argv: list[str]) -> None:
     [
         (FileNotFoundError(2, "No such file or directory"), "no such file"),
         (PermissionError(13, "Permission denied"), "Permission denied"),
+        (UnicodeDecodeError("utf-8", b"\xff", 0, 1, "invalid start byte"), "not UTF-8 text"),
     ],
 )
-def test_an_unreadable_file_exits_2(fault: OSError, reason: str) -> None:
+def test_an_unreadable_file_exits_2(fault: OSError | UnicodeDecodeError, reason: str) -> None:
     """AC-02: a file that cannot be read prints `error: cannot read PATH: REASON` and exits 2; REASON is `no such file`
-    for a missing file, and the operating system's message otherwise (tech-docs 003)."""
+    for a missing file, `not UTF-8 text` for one that does not decode, and the operating system's message otherwise
+    (tech-docs 003)."""
     out, err = io.StringIO(), io.StringIO()
 
-    def fail_read(path: str) -> Result[str, OSError]:
+    def fail_read(path: str) -> Result[str, OSError | UnicodeDecodeError]:
         """A reader that fails as the operating system would."""
         return Err(fault)
 
@@ -134,7 +136,7 @@ def test_an_interrupt_exits_130() -> None:
     """AC-36: an interrupt ends the run quietly with 130, as a shell reports SIGINT (D13)."""
     out, err = io.StringIO(), io.StringIO()
 
-    def interrupt_read(path: str) -> Result[str, OSError]:
+    def interrupt_read(path: str) -> Result[str, OSError | UnicodeDecodeError]:
         """A reader interrupted by Ctrl-C."""
         raise KeyboardInterrupt
 

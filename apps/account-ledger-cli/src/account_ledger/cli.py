@@ -18,7 +18,7 @@ CLOSED_PIPE = 141  # the reader has gone, as a shell reports SIGPIPE: 128 + 13
 INTERRUPTED = 130  # as a shell reports SIGINT: 128 + 2
 
 
-type Reader = Callable[[str], Result[str, OSError]]
+type Reader = Callable[[str], Result[str, OSError | UnicodeDecodeError]]
 
 
 def run_cli(argv: Sequence[str], read_text: Reader, out: TextIO, err: TextIO) -> int:
@@ -58,9 +58,16 @@ def _replay_file(argv: Sequence[str], read_text: Reader, out: TextIO, err: TextI
     return 0
 
 
-def _describe_fault(fault: OSError) -> str:
-    """`no such file` for a missing file, and the operating system's message otherwise (tech-docs 003)."""
-    return "no such file" if isinstance(fault, FileNotFoundError) else fault.strerror or str(fault)
+def _describe_fault(fault: OSError | UnicodeDecodeError) -> str:
+    """`no such file` for a missing file, `not UTF-8 text` for one that does not decode, and the operating system's
+    message otherwise (tech-docs 003)."""
+    match fault:
+        case FileNotFoundError():
+            return "no such file"
+        case UnicodeDecodeError():
+            return "not UTF-8 text"
+        case OSError():
+            return fault.strerror or str(fault)
 
 
 def main() -> int:
@@ -74,10 +81,10 @@ def main() -> int:
     return status
 
 
-def _read_file(path: str) -> Result[str, OSError]:
-    """The stream file's text, read as UTF-8, or the operating system's refusal; ``read_text`` refuses by raising, so
-    the refusal is caught here and returned."""
+def _read_file(path: str) -> Result[str, OSError | UnicodeDecodeError]:
+    """The stream file's text, read as UTF-8, or the refusal of a file that cannot be read or decoded; ``read_text``
+    refuses by raising, so the refusal is caught here and returned."""
     try:
         return Ok(Path(path).read_text(encoding="utf-8"))
-    except OSError as fault:
+    except (OSError, UnicodeDecodeError) as fault:
         return Err(fault)

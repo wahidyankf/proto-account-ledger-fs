@@ -6,7 +6,7 @@ happens here.
 
 from collections.abc import Iterable
 from dataclasses import dataclass
-from decimal import ROUND_DOWN, ROUND_HALF_EVEN, Decimal, InvalidOperation
+from decimal import ROUND_DOWN, ROUND_HALF_EVEN, Decimal, InvalidOperation, getcontext
 from enum import Enum
 
 from account_ledger.domain.model.ids import InstalmentCount
@@ -29,7 +29,15 @@ class TooManyPlaces:
     currency: str
 
 
-type MoneyFault = NotADecimal | TooManyPlaces
+@dataclass(frozen=True, slots=True)
+class TooManyDigits:
+    """The value needs more digits at its currency's places than the working precision holds (NUMBERS.md)."""
+
+    text: str
+    digits: int
+
+
+type MoneyFault = NotADecimal | TooManyPlaces | TooManyDigits
 
 
 def _read_decimal(text: str) -> Result[Decimal, NotADecimal]:
@@ -48,6 +56,8 @@ def _make_scaled_value(value: Decimal, places: int, currency: str) -> Result[Dec
     exponent = value.as_tuple().exponent
     if isinstance(exponent, int) and exponent < -places:
         return Err(TooManyPlaces(str(value), places=places, currency=currency))
+    if value.adjusted() + 1 + places > (precision := getcontext().prec):  # quantize would refuse it by raising
+        return Err(TooManyDigits(str(value), precision))
     return Ok(value.quantize(Decimal(1).scaleb(-places)))
 
 

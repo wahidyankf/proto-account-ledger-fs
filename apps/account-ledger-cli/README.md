@@ -64,9 +64,9 @@ makes every `mark.xfail` strict, and every test target fails if `strict=False` a
 
 A UTF-8 CSV with the header `event,booked,type,account,amount,value_date,reference,instalments,final` and one event per
 row; `final` is `yes`, `no`, or blank for `yes`, on a settlement only. Amounts are read as decimals in the account's
-currency and never pass through a float. The first fault stops the run with its line number, the header being line 1; a
-well-formed event the ledger refuses, such as a second reversal of the same event, is not a fault, and prints on that
-day's Errors row instead.
+currency and never pass through a float; one that needs more than the 28 digits of the working precision at its places
+is refused. The first fault stops the run with its line number, the header being line 1; a well-formed event the ledger
+refuses, such as a second reversal of the same event, is not a fault, and prints on that day's Errors row instead.
 
 ## Exit Statuses
 
@@ -87,9 +87,9 @@ D13 records.
 | `141`  | output closed early, as by `\| head`         | what was taken  | nothing                                  |
 | `130`  | interrupted                                  | what was taken  | nothing                                  |
 
-`REASON` is `no such file` for a missing file and the operating system's message otherwise. A currency mismatch prints
-`error: internal: FOUND met where EXPECTED was required`. Both streams are written as UTF-8 whatever the locale, because
-the report prints `−` (U+2212) for a negative amount.
+`REASON` is `no such file` for a missing file, `not UTF-8 text` for one that does not decode, and the operating system's
+message otherwise. A currency mismatch prints `error: internal: FOUND met where EXPECTED was required`. Both streams are
+written as UTF-8 whatever the locale, because the report prints `−` (U+2212) for a negative amount.
 
 ## Known Weakness
 
