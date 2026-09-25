@@ -19,14 +19,13 @@ applies. It implements [Explicit Over Implicit](../../../principles/explicit-ove
 - **Toolchain:** each project is a uv project with `.python-version`, `requires-python`, and a committed `uv.lock`,
   following [Native-First Toolchain](../../workflow/native-first-toolchain.md).
 - **Lint and format:** `ruff check` and `ruff format --check` report nothing.
-- **Dead code:** vulture, reading `src` and `tests` together, reports nothing, so a name no code uses and code after a
-  `return` are deleted, not kept. Ruff and pyright read one module at a time and miss a public name no module uses.
-- **Complexity:** each function's McCabe complexity must stay at 10 or below (ruff `C901`) and its nesting at 3 blocks
-  or below (`PLR1702`). This makes a function that gathers too many branches or nests too deep get split while it is
-  still small.
+- **Dead code:** vulture, reading `src` and `tests` together, reports nothing, so unused names and unreachable code are
+  deleted; ruff and pyright, reading one module at a time, miss a public name no module uses.
+- **Complexity:** each function's McCabe complexity must stay at most 10 (ruff `C901`) and its nesting at most 3 blocks
+  (`PLR1702`), so an overgrown function is split early.
 - **Docstrings:** every module, class, method, and function must carry a docstring, private ones included, so a reader
-  learns what each piece is for without reading its body. Magic methods are exempt, since Python fixes their meaning.
-  Ruff's `D1` checks public names and pylint private ones; neither reads a nested function, which should carry one too.
+  learns each piece's purpose without its body. Magic methods are exempt, as Python fixes their meaning. Ruff's `D1`
+  checks public names and pylint private ones; neither reads a nested function, which should carry one too.
 - **Types:** pyright in `strict` mode reports zero errors and warnings; every signature is annotated.
 - **Suppressions:** `Any`, `cast()`, `# type: ignore`, and `# noqa` each take the narrowest scope and state their
   reason, as [Lint Strictness](../checks/lint-strictness.md) requires.
@@ -40,6 +39,11 @@ Functions are named by a verb and its object, variables by nouns, and a type gen
 
 Each operation is a method of its subject type, save four named cases, and no class derives from another but a
 `Protocol`, `Generic`, `Enum`, or exception, as [Operations](python-standards/003-operations.md) holds.
+
+## Layout
+
+A blank line parts each step of a body, after its docstring, around each block, and before its return, as
+[Layout](python-standards/004-layout.md) holds.
 
 ## Functional Core
 
@@ -78,11 +82,12 @@ CPython reuses bytecode whose source kept its size and modification second.
 ## Enforcement
 
 The `lint`, `typecheck`, and `test:*` Nx targets enforce the gates, inheritance included, in hooks. Review applies the
-domain shapes, the failure rules, the variable names, where each operation lives, and the mutation-proof step. Test
-levels and coverage follow [Test Boundaries and Gates](../testing/test-boundaries-and-gates.md).
+domain shapes, the failure rules, the variable names, where each operation lives, the layout, and the mutation-proof
+step. Test levels and coverage follow [Test Boundaries and Gates](../testing/test-boundaries-and-gates.md).
 
 ## Modules
 
 1. [Naming](python-standards/001-naming.md)
 2. [Failures](python-standards/002-failures.md)
 3. [Operations](python-standards/003-operations.md)
+4. [Layout](python-standards/004-layout.md)
