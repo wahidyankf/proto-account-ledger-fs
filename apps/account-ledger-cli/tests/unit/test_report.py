@@ -4,13 +4,13 @@ from typing import assert_never
 
 import pytest
 
-from account_ledger.authorizations import Approved, AuthorizationState, Declined, Settled
-from account_ledger.config import CHALLENGE
-from account_ledger.events import IncomingEvent
-from account_ledger.ids import AccountId, AuthorizationId, Day, text
-from account_ledger.money import Amount
-from account_ledger.replay import replay
-from account_ledger.report import Capitalized, DayReport, Fired, NothingFired, Restatement, Step
+from account_ledger.core.authorizations import Approved, AuthorizationState, Declined, Settled
+from account_ledger.core.config import CHALLENGE
+from account_ledger.core.events import IncomingEvent
+from account_ledger.core.ids import AccountId, AuthorizationId, Day, text
+from account_ledger.core.money import Amount
+from account_ledger.core.replay import replay
+from account_ledger.core.report import Capitalized, DayReport, Fired, NothingFired, Restatement, Step
 from support.brief_stream import brief_stream
 from support.streams import ACC_001, ACC_002, authorization, credit, debit, reversal
 from support.values import aed, bhd

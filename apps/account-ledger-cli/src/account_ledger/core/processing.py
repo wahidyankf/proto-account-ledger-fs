@@ -2,7 +2,7 @@
 
 from typing import assert_never
 
-from account_ledger.authorizations import (
+from account_ledger.core.authorizations import (
     Approved,
     AuthorizationState,
     Declined,
@@ -14,9 +14,9 @@ from account_ledger.authorizations import (
     transition,
     trigger_of,
 )
-from account_ledger.balances import available_of
-from account_ledger.config import LedgerConfig
-from account_ledger.events import (
+from account_ledger.core.balances import available_of
+from account_ledger.core.config import LedgerConfig
+from account_ledger.core.events import (
     Authorization,
     Credit,
     Debit,
@@ -28,8 +28,8 @@ from account_ledger.events import (
     Reversal,
     Settlement,
 )
-from account_ledger.ids import Day, EventId, FeeId, IncomingId, InstalmentCount, InstalmentId, RefundId
-from account_ledger.log import (
+from account_ledger.core.ids import Day, EventId, FeeId, IncomingId, InstalmentCount, InstalmentId, RefundId
+from account_ledger.core.log import (
     Accepted,
     AlreadyReversed,
     AlreadyUndone,
@@ -50,7 +50,7 @@ from account_ledger.log import (
     first,
     instalments_of,
 )
-from account_ledger.money import TooManyInstalments, split_of
+from account_ledger.core.money import TooManyInstalments, split_of
 
 
 def process(log: Log, event: IncomingEvent, today: Day, config: LedgerConfig) -> Log:

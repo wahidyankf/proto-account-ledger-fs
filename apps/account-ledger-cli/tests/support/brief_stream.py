@@ -1,6 +1,6 @@
 """The brief's stream, E1 to E10, built in code, so a unit test never reads the stream file."""
 
-from account_ledger.events import (
+from account_ledger.core.events import (
     Authorization,
     Capture,
     Credit,
@@ -11,8 +11,8 @@ from account_ledger.events import (
     Settlement,
     Whole,
 )
-from account_ledger.ids import AccountId, AuthorizationId, Day, IncomingId, InstalmentCount
-from account_ledger.money import Amount
+from account_ledger.core.ids import AccountId, AuthorizationId, Day, IncomingId, InstalmentCount
+from account_ledger.core.money import Amount
 from support.values import aed, bhd
 
 ACC_001, ACC_002 = AccountId("ACC-001"), AccountId("ACC-002")

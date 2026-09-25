@@ -7,10 +7,10 @@ from collections.abc import Callable, Sequence
 from pathlib import Path
 from typing import TextIO
 
-from account_ledger.config import CHALLENGE
-from account_ledger.render import render
-from account_ledger.replay import replay
-from account_ledger.stream_csv import StreamError, parse_stream
+from account_ledger.adapters.render import render
+from account_ledger.adapters.stream_csv import StreamError, parse_stream
+from account_ledger.core.config import CHALLENGE
+from account_ledger.core.replay import replay
 
 USAGE = "usage: account-ledger-cli <stream.csv>"
 CLOSED_PIPE = 141  # the reader has gone, as a shell reports SIGPIPE: 128 + 13

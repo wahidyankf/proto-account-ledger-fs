@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from enum import Enum
 
-from account_ledger.ids import (
+from account_ledger.core.ids import (
     AccountId,
     AuthorizationId,
     CapitalizationId,
@@ -16,7 +16,7 @@ from account_ledger.ids import (
     InterestId,
     RefundId,
 )
-from account_ledger.money import Aed, Amount, Bhd, Direction
+from account_ledger.core.money import Aed, Amount, Bhd, Direction
 
 type AnyAmount = Amount[Aed] | Amount[Bhd]
 

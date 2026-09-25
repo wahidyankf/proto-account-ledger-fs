@@ -2,7 +2,7 @@
 
 import pytest
 
-from account_ledger.ids import (
+from account_ledger.core.ids import (
     AccountId,
     AuthorizationId,
     CapitalizationId,

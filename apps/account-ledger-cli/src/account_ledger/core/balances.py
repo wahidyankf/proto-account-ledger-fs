@@ -3,9 +3,9 @@
 from collections.abc import Iterator
 from typing import assert_never
 
-from account_ledger.authorizations import Approved, Declined, PartiallySettled, Settled, records
-from account_ledger.config import Account, AnyAccount, is_aed
-from account_ledger.events import (
+from account_ledger.core.authorizations import Approved, Declined, PartiallySettled, Settled, records
+from account_ledger.core.config import Account, AnyAccount, is_aed
+from account_ledger.core.events import (
     Authorization,
     Capitalization,
     Credit,
@@ -20,9 +20,9 @@ from account_ledger.events import (
     Settlement,
     Whole,
 )
-from account_ledger.ids import AccountId, CapitalizationId, Day, EventId
-from account_ledger.log import Accepted, Log, LoggedEvent, SettlementAccepted, first, instalments_of
-from account_ledger.money import Aed, Bhd, CurrencyMismatch, Direction, Money, same_as
+from account_ledger.core.ids import AccountId, CapitalizationId, Day, EventId
+from account_ledger.core.log import Accepted, Log, LoggedEvent, SettlementAccepted, first, instalments_of
+from account_ledger.core.money import Aed, Bhd, CurrencyMismatch, Direction, Money, same_as
 
 
 def _effects(log: Log, account_id: AccountId) -> list[tuple[Day, Money]]:

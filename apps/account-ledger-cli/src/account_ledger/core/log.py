@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from account_ledger.events import (
+from account_ledger.core.events import (
     Authorization,
     Credit,
     Debit,
@@ -14,10 +14,10 @@ from account_ledger.events import (
     Reversal,
     Settlement,
 )
-from account_ledger.ids import Day, EventId, IncomingId
+from account_ledger.core.ids import Day, EventId, IncomingId
 
 if TYPE_CHECKING:  # authorizations reads the log, so the states are imported for annotations only
-    from account_ledger.authorizations import AuthorizationState
+    from account_ledger.core.authorizations import AuthorizationState
 
 
 @dataclass(frozen=True, slots=True)

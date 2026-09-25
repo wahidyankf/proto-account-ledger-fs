@@ -3,8 +3,8 @@
 from dataclasses import dataclass
 from typing import assert_never
 
-from account_ledger.events import AnyAmount, Authorization, Capture, Settlement
-from account_ledger.log import (
+from account_ledger.core.events import AnyAmount, Authorization, Capture, Settlement
+from account_ledger.core.log import (
     Accepted,
     AuthorizationDecided,
     Captured,
@@ -14,7 +14,7 @@ from account_ledger.log import (
     Rejected,
     SettlementAccepted,
 )
-from account_ledger.money import Money, NotPositive, amount_of, below, rest_of, sum_of
+from account_ledger.core.money import Money, NotPositive, amount_of, below, rest_of, sum_of
 
 
 @dataclass(frozen=True, slots=True)

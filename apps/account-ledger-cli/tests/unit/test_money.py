@@ -4,8 +4,8 @@ from decimal import Decimal
 
 import pytest
 
-from account_ledger.ids import InstalmentCount
-from account_ledger.money import (
+from account_ledger.core.ids import InstalmentCount
+from account_ledger.core.money import (
     Aed,
     Amount,
     Bhd,

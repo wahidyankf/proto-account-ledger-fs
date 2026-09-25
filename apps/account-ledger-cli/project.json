@@ -41,6 +41,7 @@
       "cache": true,
       "inputs": [
         "{projectRoot}/src/**/*.py",
+        "{projectRoot}/src/**/ruff.toml",
         "{projectRoot}/pyproject.toml",
         "{projectRoot}/uv.lock",
         "{projectRoot}/.python-version",

@@ -4,8 +4,8 @@ from dataclasses import replace
 
 import pytest
 
-from account_ledger.config import CHALLENGE, Account, ConfigFault, LedgerConfig
-from account_ledger.ids import AccountId, Day
+from account_ledger.core.config import CHALLENGE, Account, ConfigFault, LedgerConfig
+from account_ledger.core.ids import AccountId, Day
 from support.values import aed, bhd
 
 ACC_001 = Account(AccountId("ACC-001"), aed("0.00"))

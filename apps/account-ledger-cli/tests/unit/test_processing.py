@@ -4,12 +4,12 @@ from dataclasses import replace
 
 import pytest
 
-from account_ledger.authorizations import Settled
-from account_ledger.balances import closing, closing_of, holds
-from account_ledger.config import CHALLENGE, AnyAccount
-from account_ledger.events import IncomingEvent
-from account_ledger.ids import Day, FeeId, IncomingId, InstalmentId, RefundId
-from account_ledger.log import (
+from account_ledger.core.authorizations import Settled
+from account_ledger.core.balances import closing, closing_of, holds
+from account_ledger.core.config import CHALLENGE, AnyAccount
+from account_ledger.core.events import IncomingEvent
+from account_ledger.core.ids import Day, FeeId, IncomingId, InstalmentId, RefundId
+from account_ledger.core.log import (
     Accepted,
     AlreadyReversed,
     AlreadyUndone,
@@ -20,8 +20,8 @@ from account_ledger.log import (
     ReversesAReversal,
     UnknownTarget,
 )
-from account_ledger.money import Amount
-from account_ledger.replay import replay
+from account_ledger.core.money import Amount
+from account_ledger.core.replay import replay
 from support.brief_stream import brief_stream
 from support.states import entries_for, state_of
 from support.streams import ACC_001, ACC_002, authorization, credit, debit, reversal, settlement, through

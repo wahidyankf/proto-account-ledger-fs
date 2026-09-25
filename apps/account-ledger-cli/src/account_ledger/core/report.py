@@ -6,10 +6,10 @@ from enum import Enum
 from types import MappingProxyType
 from typing import assert_never
 
-from account_ledger.authorizations import AuthorizationRecord, records
-from account_ledger.balances import accrued_days_of, available_of, closing_of
-from account_ledger.config import AnyAccount, LedgerConfig
-from account_ledger.events import (
+from account_ledger.core.authorizations import AuthorizationRecord, records
+from account_ledger.core.balances import accrued_days_of, available_of, closing_of
+from account_ledger.core.config import AnyAccount, LedgerConfig
+from account_ledger.core.events import (
     Authorization,
     Capitalization,
     Credit,
@@ -23,8 +23,8 @@ from account_ledger.events import (
     Reversal,
     Settlement,
 )
-from account_ledger.ids import AccountId, Day, text
-from account_ledger.log import (
+from account_ledger.core.ids import AccountId, Day, text
+from account_ledger.core.log import (
     Accepted,
     AlreadyReversed,
     AlreadyUndone,
@@ -39,7 +39,7 @@ from account_ledger.log import (
     UnknownTarget,
     instalments_of,
 )
-from account_ledger.money import Money
+from account_ledger.core.money import Money
 
 
 @dataclass(frozen=True, slots=True)

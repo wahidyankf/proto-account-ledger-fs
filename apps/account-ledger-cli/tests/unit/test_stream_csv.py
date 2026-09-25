@@ -1,10 +1,10 @@
 """The stream reader: a valid stream parses to its events; each fault names its line."""
 
-from account_ledger.config import CHALLENGE
-from account_ledger.events import Authorization, Capture, Credit, Debit, Instalments, Reversal, Settlement, Whole
-from account_ledger.ids import AccountId, AuthorizationId, Day, FeeId, IncomingId, InstalmentCount
-from account_ledger.money import Amount
-from account_ledger.stream_csv import StreamError, parse_stream
+from account_ledger.adapters.stream_csv import StreamError, parse_stream
+from account_ledger.core.config import CHALLENGE
+from account_ledger.core.events import Authorization, Capture, Credit, Debit, Instalments, Reversal, Settlement, Whole
+from account_ledger.core.ids import AccountId, AuthorizationId, Day, FeeId, IncomingId, InstalmentCount
+from account_ledger.core.money import Amount
 from support.streams import HEADER, csv_text
 from support.values import aed, bhd
 

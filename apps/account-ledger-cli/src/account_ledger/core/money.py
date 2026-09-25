@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from decimal import ROUND_DOWN, ROUND_HALF_EVEN, Decimal, InvalidOperation
 from enum import Enum
 
-from account_ledger.ids import InstalmentCount
+from account_ledger.core.ids import InstalmentCount
 
 
 @dataclass(frozen=True, slots=True)

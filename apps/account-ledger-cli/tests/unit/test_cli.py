@@ -5,10 +5,10 @@ import io
 import pytest
 
 from account_ledger import cli
+from account_ledger.adapters.render import render
 from account_ledger.cli import run
-from account_ledger.config import CHALLENGE
-from account_ledger.render import render
-from account_ledger.replay import replay
+from account_ledger.core.config import CHALLENGE
+from account_ledger.core.replay import replay
 from support.brief_stream import BRIEF_CSV, brief_stream
 
 

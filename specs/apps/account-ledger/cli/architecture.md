@@ -54,22 +54,32 @@ standard streams, in UTF-8 whatever the locale, since the report prints the minu
 
 ## L3 — Components
 
-The shell holds every effect and every raw value; the core is pure. Every dependency points inward, from the shell to
-the core and, inside the core, from the driver down to the types.
+The shell holds every effect and every raw value; the adapters translate between text and the core's types; the core
+holds every business rule. The adapters and the core are pure. Every dependency points inward, from the shell to the
+adapters and the core, from the adapters to the core's types, and, inside the core, from the driver down to the types.
+Each layer is a place in the package: the shell is `cli.py` at its root, the adapters are `adapters/`, and the core is
+`core/`, whose own `ruff.toml` refuses any import of `account_ledger.adapters` or `account_ledger.cli` (TID251).
 
 ```text
-  shell   +--------------------------------------------------------------------------------+
-          | cli: run(argv, read_text, out, err) -> exit code; main binds the real effects   |
-          +--------------------------------------------------------------------------------+
-               | text               | events                   | reports
-               v                    v                          v
-          +--------------+   +--------------------------+   +--------------------------+
-          | stream_csv   |   | replay (driver)          |   | render                   |
-          | text -> the  |   | the stream in listed     |   | DayReport -> text, as    |
-          | events, or   |   | order, each day closed   |   | OUTPUT_TARGET prints it  |
-          | a StreamError|   | on time                  |   |                          |
-          +--------------+   +--------------------------+   +--------------------------+
-  --------------------------------------------------------------------------------------------- core
+  shell      +--------------------------------------------------------------------------------+
+  cli.py     | cli: run(argv, read_text, out, err) -> exit code; main binds the real effects   |
+             +--------------------------------------------------------------------------------+
+                  | text                   | events                 | reports
+                  v                        |                        v
+  adapters   +--------------------------+  |  +--------------------------+
+  adapters/  | stream_csv               |  |  | render                   |
+             | text -> the events, or   |  |  | DayReport -> text, as    |
+             | a StreamError            |  |  | OUTPUT_TARGET prints it  |
+             +--------------------------+  |  +--------------------------+
+                  | builds the types       |        | reads report, log, and the types
+  ---------------------------------------------------------------------------------------------------
+  core                                     v
+  core/                       +--------------------------+
+                              | replay (driver)          |
+                              | the stream in listed     |
+                              | order, each day closed   |
+                              | on time                  |
+                              +--------------------------+
                               | each event     | each close       | each day
                               v                v                  v
                         +------------+   +------------+     +------------+
