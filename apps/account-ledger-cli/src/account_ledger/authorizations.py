@@ -108,6 +108,8 @@ def trigger_of(settlement: Settlement) -> Trigger:
             return SettleFinal(settlement.amount)
         case Capture.PARTIAL:
             return SettlePartial(settlement.amount)
+        case _:
+            assert_never(settlement.capture)
 
 
 @dataclass(frozen=True, slots=True)

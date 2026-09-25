@@ -58,6 +58,8 @@ def _moved(log: Log, event: LoggedEvent) -> tuple[Money, ...]:
                     return (event.amount.money,)
                 case Instalments():
                     return ()  # a credit in instalments posts nothing itself; its instalments post the parts
+                case _:
+                    assert_never(event.posting)
         case Instalment() | FeeRefund() | Capitalization():
             return (event.amount.money,)
         case Debit() | Settlement() | Fee():
@@ -70,6 +72,8 @@ def _moved(log: Log, event: LoggedEvent) -> tuple[Money, ...]:
             target = first(log, reverses)
             undone = () if target is None else _undone(log, target.event)
             return tuple(-moved for moved in undone)  # counted from the reversal's own value day
+        case _:
+            assert_never(event)
 
 
 def _undone(log: Log, target: LoggedEvent) -> tuple[Money, ...]:
@@ -194,6 +198,8 @@ def _signed_interest(event: InterestAccrual | InterestAdjustment) -> Money:
             return -amount.money
         case InterestAccrual(amount=amount) | InterestAdjustment(amount=amount):
             return amount.money
+        case _:
+            assert_never(event)
 
 
 def _same[M: (Aed, Bhd)](like: M, money: Money) -> M:
