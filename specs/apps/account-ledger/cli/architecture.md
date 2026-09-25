@@ -165,6 +165,8 @@ money     Aed | Bhd = Money             AmountIn[M: (Aed, Bhd)], above zero    D
           Amount = AmountIn[Aed] | AmountIn[Bhd]
 ids       Day   AccountId   AuthorizationId   IncomingId   InstalmentCount
           EventId = IncomingId | InstalmentId | FeeId | RefundId | InterestId | CapitalizationId
+          AccountId, AuthorizationId, IncomingId each a _TextIdBase (PATTERN, KIND, SHAPE); FeeId, RefundId,
+          InterestId each a _DayEventIdBase (PREFIX); every event ID kind has format()
 events    IncomingEvent = Credit | Debit | Authorization | Settlement | Reversal     each holds an Amount
           GeneratedEvent = Instalment | Fee | FeeRefund | InterestAccrual | InterestAdjustment | Capitalization
 config    AccountIn[M] = id + opening M   LedgerConfig = accounts, first_day, last_day, capitalization_days

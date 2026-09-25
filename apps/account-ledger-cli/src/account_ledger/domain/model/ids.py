@@ -3,6 +3,7 @@
 import re
 from collections.abc import Iterator
 from dataclasses import dataclass
+from typing import ClassVar, Self
 
 from account_ledger.common.result import Err, Ok, Result
 
@@ -88,19 +89,32 @@ class Day:
 
 
 @dataclass(frozen=True, slots=True)
-class AccountId:
-    """An account, such as ACC-001."""
+class _TextIdBase:
+    """An ID the stream writes as text, checked against its kind's pattern: each kind names its PATTERN, the KIND a
+    fault calls it, and the SHAPE its guard states."""
 
+    PATTERN: ClassVar[re.Pattern[str]]
+    KIND: ClassVar[str]
+    SHAPE: ClassVar[str]
     value: str
 
     def __post_init__(self) -> None:
-        if not _ACCOUNT.fullmatch(self.value):
-            raise ValueError(f"an account ID is ACC- and three digits, not {self.value!r}")
+        if not self.PATTERN.fullmatch(self.value):
+            raise ValueError(f"{self.SHAPE}, not {self.value!r}")
 
-    @staticmethod
-    def parse(text: str) -> Result[AccountId, IdFault]:
-        """The account ID the text holds, or a fault for one not of the form `ACC-001`."""
-        return Ok(AccountId(text)) if _ACCOUNT.fullmatch(text) else Err(IdFault("account ID", text))
+    @classmethod
+    def parse(cls, text: str) -> Result[Self, IdFault]:
+        """The ID the text holds, or a fault for text not of its kind's form."""
+        return Ok(cls(text)) if cls.PATTERN.fullmatch(text) else Err(IdFault(cls.KIND, text))
+
+
+@dataclass(frozen=True, slots=True)
+class AccountId(_TextIdBase):
+    """An account, such as ACC-001."""
+
+    PATTERN: ClassVar[re.Pattern[str]] = _ACCOUNT
+    KIND: ClassVar[str] = "account ID"
+    SHAPE: ClassVar[str] = "an account ID is ACC- and three digits"
 
     @property
     def number(self) -> str:
@@ -109,35 +123,21 @@ class AccountId:
 
 
 @dataclass(frozen=True, slots=True)
-class AuthorizationId:
+class AuthorizationId(_TextIdBase):
     """A hold, such as Auth-A."""
 
-    value: str
-
-    def __post_init__(self) -> None:
-        if not _AUTHORIZATION.fullmatch(self.value):
-            raise ValueError(f"a authorization ID is Auth- and letters or digits, not {self.value!r}")
-
-    @staticmethod
-    def parse(text: str) -> Result[AuthorizationId, IdFault]:
-        """The authorization ID the text holds, or a fault for one not of the form `Auth-A`."""
-        return Ok(AuthorizationId(text)) if _AUTHORIZATION.fullmatch(text) else Err(IdFault("authorization ID", text))
+    PATTERN: ClassVar[re.Pattern[str]] = _AUTHORIZATION
+    KIND: ClassVar[str] = "authorization ID"
+    SHAPE: ClassVar[str] = "an authorization ID is Auth- and letters or digits"
 
 
 @dataclass(frozen=True, slots=True)
-class IncomingId:
+class IncomingId(_TextIdBase):
     """An incoming event, such as E1."""
 
-    value: str
-
-    def __post_init__(self) -> None:
-        if not _INCOMING.fullmatch(self.value):
-            raise ValueError(f"an incoming event ID is E and digits, not {self.value!r}")
-
-    @staticmethod
-    def parse(text: str) -> Result[IncomingId, IdFault]:
-        """The event ID the text holds, or a fault for one not of the form `E1`."""
-        return Ok(IncomingId(text)) if _INCOMING.fullmatch(text) else Err(IdFault("event ID", text))
+    PATTERN: ClassVar[re.Pattern[str]] = _INCOMING
+    KIND: ClassVar[str] = "event ID"
+    SHAPE: ClassVar[str] = "an incoming event ID is E and digits"
 
     def format(self) -> str:
         """The ID as the report prints it, such as E1."""
@@ -161,42 +161,40 @@ class InstalmentId:
 
 
 @dataclass(frozen=True, slots=True)
-class FeeId:
+class _DayEventIdBase:
+    """An ID the ledger generates for an account's event about one day, at the close of another, printed as its
+    PREFIX, the account's digits, and the two days, such as FEE-001-D2@D5; built from its parts, never stored as a
+    string."""
+
+    PREFIX: ClassVar[str]
+    account: AccountId
+    for_day: Day
+    generated_day: Day
+
+    def format(self) -> str:
+        """The ID as the report prints it."""
+        return f"{self.PREFIX}-{self.account.number}-D{self.for_day.number}@D{self.generated_day.number}"
+
+
+@dataclass(frozen=True, slots=True)
+class FeeId(_DayEventIdBase):
     """FEE-001-D2@D5: an account's fee for a day, generated at the close of another."""
 
-    account: AccountId
-    for_day: Day
-    generated_day: Day
-
-    def format(self) -> str:
-        """The ID as the report prints it; built from its parts, never stored as a string."""
-        return f"FEE-{self.account.number}-D{self.for_day.number}@D{self.generated_day.number}"
+    PREFIX: ClassVar[str] = "FEE"
 
 
 @dataclass(frozen=True, slots=True)
-class RefundId:
+class RefundId(_DayEventIdBase):
     """REFUND-001-D2@D6: the refund of an account's fee for a day."""
 
-    account: AccountId
-    for_day: Day
-    generated_day: Day
-
-    def format(self) -> str:
-        """The ID as the report prints it; built from its parts, never stored as a string."""
-        return f"REFUND-{self.account.number}-D{self.for_day.number}@D{self.generated_day.number}"
+    PREFIX: ClassVar[str] = "REFUND"
 
 
 @dataclass(frozen=True, slots=True)
-class InterestId:
+class InterestId(_DayEventIdBase):
     """INT-001-D2@D5: an account's interest event for a day."""
 
-    account: AccountId
-    for_day: Day
-    generated_day: Day
-
-    def format(self) -> str:
-        """The ID as the report prints it; built from its parts, never stored as a string."""
-        return f"INT-{self.account.number}-D{self.for_day.number}@D{self.generated_day.number}"
+    PREFIX: ClassVar[str] = "INT"
 
 
 @dataclass(frozen=True, slots=True)
