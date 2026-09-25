@@ -78,6 +78,15 @@ first, above all [the target layout](tech-docs/001-target-layout.md) and
   lines left uncovered pass on internal faults only a bug brings. The evidence is 26f2e12, pushed before this line and
   its WORKLOG entry, which a failed script had left out; they follow in the next commit. Last gate passed: Phase 8. Next
   item: Archival, the first. No budget partly spent.
+- **2026-09-25 21:29, the execution check.** The first Execution Check returned BLOCKED. F1: RC1 to RC4 were ticked
+  though none fired; each is unticked under its dated `Not triggered` disposition, which closes it. F2: the trade-offs
+  document's three bullets on unbounded state, joined in 9827e54, are split again as a forward fix, with a learning. F3:
+  `test_cli.py`'s AC-36 docstring now names the event source, as Phase 6 meant. F4: the file-impact tree grew by
+  `specs/apps/account-ledger/README.md` and `tests/support/values.py`, each named by its Phase 3 and Phase 6 item. F5:
+  AC-14's sweep hits one past WORKLOG entry, which 005 forbids rewording, though AC-14 exempts only `plans/done/` and
+  this plan; the hit is recorded in Phase 7 and Phase 8, and AC-14 is met in substance. F6: the triage and cleanup
+  times, first written as 21:18 to 21:21, are corrected to 21:15 to 21:17 from the session's command times, before
+  40bf7b5 at 21:17. Last gate passed: Phase 8. Next item: Archival, the execution check again. No budget partly spent.
 
 ## Execution Checkout
 
@@ -877,7 +886,8 @@ Reads each document against the tree and carries every change the restructure ma
       says the figures were measured again after the restructure. Its five uses of "history" for the code now say the
       account's entries, and a figure is worked out by a method of the Account aggregate, not a function. - Proof: the
       measurements above; `git diff docs/explanation/architecture-trade-offs.md` changes prose only, the table
-      untouched.
+      untouched. - Correction, 21:29: the diff also joined the three bullets on unbounded state into one, which the
+      execution check found; split again as a forward fix, recorded in the Execution Record and learnings.
 - [x] [AI] Extend `local-tmp/restructure/doc_sweep.py` with the names the restructure removed, and run the removed-name
       check over every tracked Markdown file and the Phase 0 checks over the Phase 0 scope. Command:
       `python3 local-tmp/restructure/doc_sweep.py`. Proof: no hit outside `plans/done/` and this plan. Acceptance:
@@ -983,39 +993,41 @@ Pause safety: every criterion is proven on `origin/main`. Re-verify with `sh loc
 
 Each stays dormant until its trigger fires, and closes with one terminal disposition.
 
-- [x] [AI] RC1 — a behaviour differs. Trigger: the corpus compare, the inventory compare, or a suite fails after a
+- [ ] [AI] RC1 — a behaviour differs. Trigger: the corpus compare, the inventory compare, or a suite fails after a
       refactor item. Owner: the executor. Procedure: stop the phase; diff the failing block against the baseline; find
       the item whose change made it by rerunning the corpus after reverting each of the phase's uncommitted file changes
       in turn from a saved patch in `local-tmp/restructure/`; fix the cause so the corpus matches; never edit the Phase
-      0 record. Proof: the compare equal again, recorded under the item. Acceptance: AC-02. - Disposition 2026-09-25
-      21:17: not triggered. The corpus and inventory compares passed at every phase gate from Phase 1 to Phase 8, and no
-      suite failed after a refactor item.
-- [x] [AI] RC2 — a cited or baseline test cannot keep its name or cases. Trigger: `inventory.py --compare` or
+      0 record. Proof: the compare equal again, recorded under the item. Acceptance: AC-02.
+  > Not triggered — 2026-09-25 21:15: The corpus and inventory compares passed at every phase gate from Phase 1 to Phase
+  > 8, and no suite failed after a refactor item.
+- [ ] [AI] RC2 — a cited or baseline test cannot keep its name or cases. Trigger: `inventory.py --compare` or
       `cited_names.py` fails and the test cannot be carried as it is. Owner: the owner, since an assessment doc cites
       it. Procedure: keep the test as it is in a file of its own beside its target, amend the test tree in
       [the target layout](tech-docs/001-target-layout.md) to list that file, log the change in the Execution Record, and
       record why in learnings; never rename it and never edit an assessment doc. Proof: both scripts pass, and AC-13's
-      compare with the amended tree. Acceptance: AC-03, AC-04, AC-13. - Disposition 2026-09-25 21:17: not triggered.
-      Every cited and baseline test kept its name and cases (`cited 60 ... missing 0`; every baseline name kept with its
-      count), so the target layout was never amended.
-- [x] [AI] RC3 — a pushed phase proves wrong. Trigger: a later phase finds a defect a pushed phase made that a forward
+      compare with the amended tree. Acceptance: AC-03, AC-04, AC-13.
+  > Not triggered — 2026-09-25 21:15: Every cited and baseline test kept its name and cases (`cited 60 ... missing 0`;
+  > every baseline name kept with its count), so the target layout was never amended.
+- [ ] [AI] RC3 — a pushed phase proves wrong. Trigger: a later phase finds a defect a pushed phase made that a forward
       fix cannot reach before submission. Owner: the executor. Procedure: `/usr/bin/git revert` of that phase's commits,
       newest first, as new commits, pushed; the phase then reruns. Proof: the gate passes on the reverted tree.
-      Acceptance: AC-16. - Disposition 2026-09-25 21:17: not triggered. No pushed phase proved wrong; the Phase 8 record
-      line left out of 26f2e12 was a forward fix, 9305a7b, not a defect in a phase's work, so nothing was reverted.
-- [x] [AI] RC4 — a hook fails a commit or a push. Trigger: the pre-commit or pre-push hook exits non-zero. Owner: the
+      Acceptance: AC-16.
+  > Not triggered — 2026-09-25 21:15: No pushed phase proved wrong; the Phase 8 record line left out of 26f2e12 was a
+  > forward fix, 9305a7b, not a defect in a phase's work, so nothing was reverted. The bullets Phase 7 joined in the
+  > trade-offs document, which the execution check found, were split again as a forward fix too.
+- [ ] [AI] RC4 — a hook fails a commit or a push. Trigger: the pre-commit or pre-push hook exits non-zero. Owner: the
       executor. Procedure: read its output, fix the cause, and commit again; never `--no-verify`. Proof: the hook
-      passes. Acceptance: AC-16. - Disposition 2026-09-25 21:17: not triggered. Every pre-commit and pre-push hook
-      passed on the first run, and none was bypassed.
+      passes. Acceptance: AC-16.
+  > Not triggered — 2026-09-25 21:15: Every pre-commit and pre-push hook passed on the first run, and none was bypassed.
 
 ## Archival
 
 After every substantive phase is terminal. The completion gate is the execution check alone.
 
 - [x] [AI] Give each dormant recovery item its dated disposition. Proof: every item carries one. Acceptance: AC-16. -
-      Done 21:17: RC1 to RC4 each not triggered, with the reason under it.
+      Done 21:15: RC1 to RC4 each not triggered, with the reason under it.
 - [x] [AI] Triage `learnings.md`: route each entry to one owner or discard it with a reason, or record that the log is
-      empty. Proof: no entry unresolved. Acceptance: AC-16. - Done 21:19: four entries, each failing the keep test and
+      empty. Proof: no entry unresolved. Acceptance: AC-16. - Done 21:16: four entries, each failing the keep test and
       discarded with its reason under it: the evidence README, which the directory-map gate already catches; two
       scratch-script faults, which no durable rule owns; and the Phase 8 record line, closed in 9305a7b and audited by
       the execution check. None held a secret or belonged to another repository.
@@ -1023,7 +1035,7 @@ After every substantive phase is terminal. The completion gate is the execution 
       terminal verdict; archival needs a permitting one. Proof: the verdict. Acceptance: AC-16.
 - [x] [AI] Run [Dev Artifact Clean-Up](../../../repo-governance/workflows/maintenance/dev-artifact-clean-up.md) over
       this task's scratch in `local-tmp/`, including `local-tmp/restructure/baseline/`. Proof: the record of what it
-      removed. Acceptance: AC-16. - Done 21:21, integration `local-main`, outcome `pass`, before the execution check,
+      removed. Acceptance: AC-16. - Done 21:17, integration `local-main`, outcome `pass`, before the execution check,
       whose fifth step reads the cleanup as done: removed `local-tmp/restructure/` (221 files: the baseline copy, the
       probes, the backups, and every scratch script, `gate.sh`, `tick.py`, `corpus.py`, `mutate.py`, and `scale.py`
       among them), `local-tmp/check-md.sh`, `local-tmp/run.sh`, `local-tmp/arch.bak`, the closed
