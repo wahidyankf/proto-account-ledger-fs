@@ -1,4 +1,5 @@
-"""One stream for each reason a reversal or a reused ID is refused, with the reason and the error text it prints."""
+"""One stream for each reason an event is refused, a reversal or a reused event or authorization ID, with the reason
+and the error text it prints."""
 
 from account_ledger.domain.account.rejections import (
     AlreadyReversed,

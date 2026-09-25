@@ -1,6 +1,6 @@
 """The Account aggregate, topic by topic as its class reads: authorizations and settlements (AMB-008 to AMB-013,
-AMB-029, AMB-030), reversals (AMB-028, AMB-035), fees (AMB-011, AMB-027, AMB-035), and interest (AMB-005, AMB-023,
-AMB-035)."""
+AMB-029, AMB-030), reversals (AMB-028, AMB-035, AMB-037), fees (AMB-011, AMB-027, AMB-035), and interest (AMB-005,
+AMB-023, AMB-035)."""
 
 from dataclasses import replace
 
