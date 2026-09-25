@@ -111,7 +111,7 @@ def test_amb_035_a_reversal_of_an_event_that_moved_no_money_is_refused(target: s
 
 
 def test_amb_035_reversing_a_credit_in_instalments_undoes_every_instalment() -> None:
-    """AMB-035: E10 posts nothing itself, so its reversal undoes the three instalments it fired."""
+    """AMB-035: E10 posts nothing itself, so its reversal undoes the three instalments it generated."""
     stream = (
         make_credit("E10", 5, "10.000", account="ACC-002", instalments=3),
         make_reversal("E11", 5, "E10", account="ACC-002"),
@@ -188,7 +188,7 @@ def test_amb_035_a_reversed_settlement_leaves_its_authorization_settled() -> Non
 
 
 def test_amb_035_a_reversed_instalment_stays_reversed() -> None:
-    """AMB-035: an instalment is fired when its credit is processed, not at a close, so once reversed it stays
+    """AMB-035: an instalment is generated when its credit is processed, not at a close, so once reversed it stays
     reversed at every later close."""
     stream = (
         make_credit("E1", 1, "10.000", account="ACC-002", instalments=3),

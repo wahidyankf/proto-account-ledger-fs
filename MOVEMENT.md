@@ -6,18 +6,18 @@ The full analysis behind [OUTPUT_TARGET](OUTPUT_TARGET.md): the constraints and 
 marked pending, with a key under its table naming the entries it waits on.
 
 Each day has three tables. **Events processed** lists the day's events from the brief, with E10's instalments under E10.
-**EOD applied** lists the end-of-day steps and the events each fires: 1, fee re-evaluation, which fires overdraft fees
-and refunds those no longer due; 2, interest, which fires the day's accrual and any adjustment a late event makes due
-(AMB-005); 3, on Day 6 only, capitalization, in that order (AMB-023); an accrual stays out of the ledger balance until
-it capitalizes (AMB-007). A step that moves nothing fires no event and shows —. **Closing Summary** is the state
-OUTPUT_TARGET prints.
+**EOD applied** lists the end-of-day steps and the events each generates: 1, fee re-evaluation, which generates
+overdraft fees and refunds those no longer due; 2, interest, which generates the day's accrual and any adjustment a late
+event makes due (AMB-005); 3, on Day 6 only, capitalization, in that order (AMB-023); an accrual stays out of the ledger
+balance until it capitalizes (AMB-007). A step that moves nothing generates no event and shows —. **Closing Summary** is
+the state OUTPUT_TARGET prints.
 
-An event the ledger fires is named by kind, account, the day it is for, and the day it fires (AMB-024): `FEE-001-D2@D5`
-is ACC-001's overdraft fee for Day 2, fired on Day 5 and value-dated that day (AMB-003); `REFUND-001-D2@D6` refunds it
-(AMB-004); `INT-001-D2@D5` adjusts Day 2's interest; `CAP-001@D6` capitalizes it. A hold moves no ledger balance and
-shows under authorizations; it reduces the available balance from its value date (AMB-010).
+An event the ledger generates is named by kind, account, the day it is for, and the day it is generated (AMB-024):
+`FEE-001-D2@D5` is ACC-001's overdraft fee for Day 2, generated on Day 5 and value-dated that day (AMB-003);
+`REFUND-001-D2@D6` refunds it (AMB-004); `INT-001-D2@D5` adjusts Day 2's interest; `CAP-001@D6` capitalizes it. A hold
+moves no ledger balance and shows under authorizations; it reduces the available balance from its value date (AMB-010).
 
-The ledger is an append-only log of events, the brief's and those it fires itself, and every balance here is an
+The ledger is an append-only log of events, the brief's and those it generates itself, and every balance here is an
 aggregation over that log by value date, recomputed when a late event arrives (AMB-004, AMB-024). Balances are the state
 as known at the end of each day, and a day a late event reaches adds the earlier closings it restated (AMB-022). Every
 day lists both accounts and every known authorization (AMB-025); OUTPUT_TARGET shows the printed text, and repeats these
@@ -329,7 +329,7 @@ Closing Summary:
 | Errors                  | none                                              | none          |
 
 E10 is booked Day 5 but arrives after E9, so it is processed on Day 6 as a late event value-dated Day 5 (AMB-015): Day 6
-restates ACC-002's Day 5 and fires its interest for Day 5 as an adjustment.
+restates ACC-002's Day 5 and generates its interest for Day 5 as an adjustment.
 
 Readings that touch this day without changing a figure: AMB-028, on reversing a reversal, and AMB-035, on what a
 reversal such as E9 may target.
@@ -346,28 +346,28 @@ reversal such as E9 may target.
   value-dated Day 4 and cannot reach them, and every fee is value-dated Day 5 (AMB-003). After E9 on Day 6 they return
   to 250.00 and 650.00, because no fee is value-dated before Day 5 (AMB-003) and no refund before Day 6 (AMB-004).
 - **Fees for Days 2, 4, and 5** are assessed under AMB-002's resolution, because before any fee Day 2 closes at −370.00,
-  Days 4 and 5 at −335.00, and Day 3 at +30.00; all three fire at the close of Day 5 (AMB-016) and are value-dated Day 5
-  (AMB-003).
+  Days 4 and 5 at −335.00, and Day 3 at +30.00; all three are generated at the close of Day 5 (AMB-016) and are
+  value-dated Day 5 (AMB-003).
 - **Day 4 restated on Day 5** is 285.00 − 620.00 = −335.00, and Day 5 closes at −335.00 − 3 × 25.00 = −410.00; after E9,
   Day 4 is 285.00 again and Day 5 is 285.00 − 75.00 = 210.00, its fees still in and their refunds on Day 6.
-- **Interest on Days 1 to 3** is fired as known (AMB-005): 250.00 × 0.0004 = 0.10 on Days 1 and 2, and 650.00 × 0.0004 =
-  0.26 on Day 3. On Day 5, E7 makes Day 2's due interest 0.00 and Day 3's 0.01 (on 30.00), so adjustments of −0.10 and
-  −0.25 fire; on Day 6, E9 restores 250.00 and 650.00, so +0.10 and +0.25 fire. Day 4 accrues 285.00 × 0.0004 = 0.114 →
-  0.11, adjusted by −0.11 on Day 5 and +0.11 on Day 6, and Day 5 earns 210.00 × 0.0004 = 0.084 → 0.08 on Day 6. No
-  unrounded accrual here is a tie, so half-even (AMB-006) and half-up agree, and no accrual joins the base before it
-  capitalizes (AMB-007).
+- **Interest on Days 1 to 3** is generated as known (AMB-005): 250.00 × 0.0004 = 0.10 on Days 1 and 2, and 650.00 ×
+  0.0004 = 0.26 on Day 3. On Day 5, E7 makes Day 2's due interest 0.00 and Day 3's 0.01 (on 30.00), so adjustments of
+  −0.10 and −0.25 are generated; on Day 6, E9 restores 250.00 and 650.00, so +0.10 and +0.25 are generated. Day 4
+  accrues 285.00 × 0.0004 = 0.114 → 0.11, adjusted by −0.11 on Day 5 and +0.11 on Day 6, and Day 5 earns 210.00 × 0.0004
+  = 0.084 → 0.08 on Day 6. No unrounded accrual here is a tie, so half-even (AMB-006) and half-up agree, and no accrual
+  joins the base before it capitalizes (AMB-007).
 - **ACC-001 accrues nothing on Day 5**, because its Day 5 closing as known is negative under every option, before or
   after the day's fees.
-- **ACC-002 fires no accrual on Days 1 to 4**, because its balance is zero until E10 and interest accrues on positive
-  balances only.
-- **Available balance** equals the closing from Day 4 onwards: E5 carries no marker, so it is final and releases all of
-  Auth-A's hold (AMB-013), and Auth-B, declined, holds nothing.
-- **Auth-B** is declined against an available balance of 285.00 − 620.00 − 90.00 = −425.00, and fees fire only at the
-  close of Day 5, after it (AMB-016).
+- **ACC-002 generates no accrual on Days 1 to 4**, because its balance is zero until E10 and interest accrues on
+  positive balances only.
+- **Available balance** equals the closing from Day 4 onwards: E5 carries no `final` flag, so it is final and releases
+  all of Auth-A's hold (AMB-013), and Auth-B, declined, holds nothing.
+- **Auth-B** is declined against an available balance of 285.00 − 620.00 − 90.00 = −425.00, and fees are generated only
+  at the close of Day 5, after it (AMB-016).
 - **Day 6** brings no new fee: after E9 every day closes at or above zero under every option. It refunds the fees for
   Days 2, 4, and 5, because their value-dated closings are then 250.00, 285.00, and 210.00, all at or above zero; each
   refund is value-dated Day 6 under AMB-004's resolution.
-- **Day 6 closes at 285.76 and 10.008**, because the refunds fire before interest and capitalization fires last
+- **Day 6 closes at 285.76 and 10.008**, because the refunds are generated before interest, and capitalization last
   (AMB-023): ACC-001 accrues 285.00 × 0.0004 = 0.114 → 0.11 for Day 6 and capitalizes 0.10 + 0.10 + 0.26 + 0.11 − 0.10 −
   0.25 − 0.11 + 0.10 + 0.25 + 0.11 + 0.08 + 0.11 = 0.76; ACC-002 accrues 10.000 × 0.0004 = 0.004 for Days 5 and 6 and
   capitalizes 0.008. Neither account holds anything, so available equals closing.

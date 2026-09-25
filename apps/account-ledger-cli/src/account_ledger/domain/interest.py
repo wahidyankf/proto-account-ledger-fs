@@ -23,7 +23,7 @@ from account_ledger.domain.reversals import list_reversed_targets
 
 
 def accrue_interest(log: Log, account: AnyAccount, today: Day, first_day: Day) -> Result[Log, CurrencyMismatch]:
-    """For each day so far whose interest differs from what was fired for it, the difference: today's accrual, or an
+    """For each day so far whose interest differs from what was generated for it, the difference: today's accrual, or an
     adjustment of an earlier day, value-dated today (AMB-005)."""
     if isinstance(changes := _list_interest_changes(log, account, today, first_day), Err):
         return changes
@@ -35,7 +35,7 @@ def accrue_interest(log: Log, account: AnyAccount, today: Day, first_day: Day) -
 def _list_interest_changes(
     log: Log, account: AnyAccount, today: Day, first_day: Day
 ) -> Result[tuple[tuple[Day, Money], ...], CurrencyMismatch]:
-    """Each day from ``first_day`` to ``today`` whose interest differs from what has fired, with the difference."""
+    """Each day from ``first_day`` to ``today`` whose interest differs from what was generated, with the difference."""
     # Both branches read alike; each narrows the account to one currency for the generic call.
     if is_aed(account):
         return _find_interest_changes(log, account, today, first_day)
@@ -45,7 +45,7 @@ def _list_interest_changes(
 def _find_interest_changes[M: (Aed, Bhd)](
     log: Log, account: Account[M], today: Day, first_day: Day
 ) -> Result[tuple[tuple[Day, M], ...], CurrencyMismatch]:
-    """Each day from ``first_day`` to ``today`` whose interest differs from what has fired, in its currency."""
+    """Each day from ``first_day`` to ``today`` whose interest differs from what was generated, in its currency."""
     changes: list[tuple[Day, M]] = []
     for day in first_day.span_to(today):
         if isinstance(change := _compute_interest_change(log, account, day), Err):
@@ -56,24 +56,28 @@ def _find_interest_changes[M: (Aed, Bhd)](
 
 
 def _compute_interest_change[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> Result[M, CurrencyMismatch]:
-    """The day's interest on its base, less what has fired for it."""
+    """The day's interest on its base, less what was generated for it."""
     if isinstance(base := compute_interest_base(log, account, day), Err):
         return base
-    return sum_interest_fired(log, account, day).map(lambda fired: compute_daily_interest(base.value) - fired)
+    return sum_interest_generated(log, account, day).map(
+        lambda generated: compute_daily_interest(base.value) - generated
+    )
 
 
 def _make_interest_event(
     account: AccountId, day: Day, today: Day, change: Money
 ) -> InterestAccrual | InterestAdjustment:
-    """The event that fires a day's interest change: an accrual for today, an adjustment for an earlier day."""
+    """The event that generates a day's interest change: an accrual for today, an adjustment for an earlier day."""
     direction = Direction.UP if change.value > 0 else Direction.DOWN
     made_amount = make_amount_of(change if direction is Direction.UP else -change)
     assert isinstance(made_amount, Ok)  # a change is never zero
     amount = made_amount.value
-    marker = InterestId(account, day, today)
-    if day == today:  # nothing is fired for today before its close, so today's change is its first, positive accrual
-        return InterestAccrual(marker, account, today, amount)
-    return InterestAdjustment(marker, account, today, direction, amount)
+    interest_id = InterestId(account, day, today)
+    if (
+        day == today
+    ):  # nothing is generated for today before its close, so today's change is its first, positive accrual
+        return InterestAccrual(interest_id, account, today, amount)
+    return InterestAdjustment(interest_id, account, today, direction, amount)
 
 
 def capitalize_interest(log: Log, account: AnyAccount, today: Day) -> Result[Log, CurrencyMismatch]:
@@ -115,7 +119,7 @@ def compute_accrued[M: (Aed, Bhd)](log: Log, account: Account[M]) -> Result[M, C
 def list_accrued_days[M: (Aed, Bhd)](
     log: Log, account: Account[M], capitalization: CapitalizationId
 ) -> Result[tuple[Day, ...], CurrencyMismatch]:
-    """The days whose interest a capitalization pays: each day whose interest events, fired since the account's
+    """The days whose interest a capitalization pays: each day whose interest events, generated since the account's
     previous capitalization, do not net to zero (tech-docs 003)."""
     zero = type(account.opening).make_zero()
     accrued_days: list[Day] = []
@@ -130,7 +134,7 @@ def list_accrued_days[M: (Aed, Bhd)](
 def _map_interest_since_capitalization(
     log: Log, account_id: AccountId, capitalization: CapitalizationId
 ) -> dict[Day, list[Money]]:
-    """Each day's signed interest events fired since the capitalization before this one, up to this one."""
+    """Each day's signed interest events generated since the capitalization before this one, up to this one."""
     undone_ids = list_reversed_targets(log, account_id)
     interest_by_day: dict[Day, list[Money]] = {}
     for event in list_counted_events(log, account_id):
@@ -140,7 +144,7 @@ def _map_interest_since_capitalization(
             case Capitalization(id=capitalization_id) if capitalization_id not in undone_ids:
                 interest_by_day = {}
             case InterestAccrual() | InterestAdjustment() if event.id not in undone_ids:
-                interest_by_day.setdefault(event.id.covered_day, []).append(_sign_interest(event))
+                interest_by_day.setdefault(event.id.for_day, []).append(_sign_interest(event))
             case _:
                 pass
     return interest_by_day
@@ -171,17 +175,17 @@ def compute_interest_base[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day
     return compute_closing(log, account, day).flat_map(lambda closing: sum_money(closing, capitalized_moneys))
 
 
-def sum_interest_fired[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> Result[M, CurrencyMismatch]:
+def sum_interest_generated[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> Result[M, CurrencyMismatch]:
     """The account's interest events for a day, net of their directions and reversals (tech-docs 002, step 2)."""
     undone_ids = list_reversed_targets(log, account.id)
-    fired_moneys = [
+    generated_values = [
         _sign_interest(event)
         for event in list_counted_events(log, account.id)
         if isinstance(event, InterestAccrual | InterestAdjustment)
-        and event.id.covered_day == day
+        and event.id.for_day == day
         and event.id not in undone_ids
     ]
-    return sum_money(type(account.opening).make_zero(), fired_moneys)
+    return sum_money(type(account.opening).make_zero(), generated_values)
 
 
 def _sign_interest(event: InterestAccrual | InterestAdjustment) -> Money:

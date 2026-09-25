@@ -56,7 +56,7 @@ class Step(Enum):
 
 
 class Note(Enum):
-    """Why a step's row shows nothing fired of its kind (tech-docs 002); the renderer prints its text."""
+    """Why a step's row shows nothing generated of its kind (tech-docs 002); the renderer prints its text."""
 
     NO_FEE = auto()
     NO_NEW_FEE = auto()
@@ -68,8 +68,8 @@ type EndOfDayEvent = Fee | FeeRefund | InterestAccrual | InterestAdjustment
 
 
 @dataclass(frozen=True, slots=True)
-class Fired:
-    """An event a step fired at the day's close."""
+class Generated:
+    """An event a step generated at the day's close."""
 
     step: Step
     event: EndOfDayEvent
@@ -84,8 +84,8 @@ class Capitalized:
 
 
 @dataclass(frozen=True, slots=True)
-class NothingFired:
-    """A step that fired nothing of its kind for these accounts."""
+class NothingGenerated:
+    """A step that generated nothing of its kind for these accounts."""
 
     step: Step
     accounts: tuple[AccountId, ...]
@@ -94,7 +94,7 @@ class NothingFired:
 
 @dataclass(frozen=True, slots=True)
 class Processed:
-    """An incoming event processed that day, the entry it made whatever its outcome, and the instalments it fired."""
+    """An incoming event processed that day, the entry it made whatever its outcome, and the instalments it made."""
 
     event: IncomingEvent
     entry: LogEntry
@@ -112,7 +112,7 @@ class DayReport:
     restatements: tuple[Restatement, ...]
     authorizations: tuple[AuthorizationRecord, ...]
     errors: Mapping[AccountId, tuple[Rejected, ...]]
-    end_of_day: tuple[Fired | Capitalized | NothingFired, ...]
+    end_of_day: tuple[Generated | Capitalized | NothingGenerated, ...]
 
 
 def build_report(
@@ -160,7 +160,7 @@ def _map_balances(
 
 
 def _list_processed_events(log: Log, day: Day) -> tuple[Processed, ...]:
-    """Every incoming event processed that day, in log order, with the instalments it fired (tech-docs 002)."""
+    """Every incoming event processed that day, in log order, with the instalments it generated (tech-docs 002)."""
     processed_events: list[Processed] = []
     for entry in log:
         event = _select_incoming_event(entry)
@@ -171,7 +171,7 @@ def _list_processed_events(log: Log, day: Day) -> tuple[Processed, ...]:
 
 
 def _select_incoming_event(entry: LogEntry) -> IncomingEvent | None:
-    """The entry's event if it came from the stream, or ``None`` if the ledger fired it."""
+    """The entry's event if it came from the stream, or ``None`` if the ledger generated it."""
     match entry.event:
         case Credit() | Debit() | Authorization() | Settlement() | Reversal() as event:
             return event
@@ -181,61 +181,62 @@ def _select_incoming_event(entry: LogEntry) -> IncomingEvent | None:
 
 def _build_end_of_day_rows(
     log: Log, day: Day, config: LedgerConfig
-) -> Result[tuple[Fired | Capitalized | NothingFired, ...], CurrencyMismatch]:
-    """Each step's events in the order fired, with a row for a step that fired nothing of its kind (tech-docs 002)."""
-    fired_events = [entry.event for entry in log if isinstance(entry, Accepted) and entry.processed_day == day]
+) -> Result[tuple[Generated | Capitalized | NothingGenerated, ...], CurrencyMismatch]:
+    """Each step's events in the order generated, with a row for a step that generated nothing of its kind
+    (tech-docs 002)."""
+    generated_events = [entry.event for entry in log if isinstance(entry, Accepted) and entry.processed_day == day]
     everyone = tuple(account.id for account in config.accounts)
-    rows = _build_fee_rows(fired_events, everyone) + _build_interest_rows(fired_events, everyone)
+    rows = _build_fee_rows(generated_events, everyone) + _build_interest_rows(generated_events, everyone)
     if day not in config.capitalization_days:  # step 3 has no row on any other day
         return Ok(tuple(rows))
-    if isinstance(capitalization_rows := _build_capitalization_rows(log, fired_events, config.accounts), Err):
+    if isinstance(capitalization_rows := _build_capitalization_rows(log, generated_events, config.accounts), Err):
         return capitalization_rows
     return Ok(tuple(rows + capitalization_rows.value))
 
 
 def _build_fee_rows(
-    fired_events: Sequence[LoggedEvent], everyone: tuple[AccountId, ...]
-) -> list[Fired | Capitalized | NothingFired]:
-    """Step 1: each fee or refund fired, then a note when no fee was."""
-    fees = [event for event in fired_events if isinstance(event, Fee | FeeRefund)]
-    rows: list[Fired | Capitalized | NothingFired] = [Fired(Step.FEES, event) for event in fees]
+    generated_events: Sequence[LoggedEvent], everyone: tuple[AccountId, ...]
+) -> list[Generated | Capitalized | NothingGenerated]:
+    """Step 1: each fee or refund generated, then a note when no fee was."""
+    fees = [event for event in generated_events if isinstance(event, Fee | FeeRefund)]
+    rows: list[Generated | Capitalized | NothingGenerated] = [Generated(Step.FEES, event) for event in fees]
     if not any(isinstance(event, Fee) for event in fees):
-        rows.append(NothingFired(Step.FEES, everyone, Note.NO_NEW_FEE if fees else Note.NO_FEE))
+        rows.append(NothingGenerated(Step.FEES, everyone, Note.NO_NEW_FEE if fees else Note.NO_FEE))
     return rows
 
 
 def _build_interest_rows(
-    fired_events: Sequence[LoggedEvent], everyone: tuple[AccountId, ...]
-) -> list[Fired | Capitalized | NothingFired]:
-    """Step 2: each account's interest events fired, then a note for each account that accrued none."""
-    rows: list[Fired | Capitalized | NothingFired] = []
+    generated_events: Sequence[LoggedEvent], everyone: tuple[AccountId, ...]
+) -> list[Generated | Capitalized | NothingGenerated]:
+    """Step 2: each account's interest events generated, then a note for each account that accrued none."""
+    rows: list[Generated | Capitalized | NothingGenerated] = []
     for account in everyone:
         interest = [
             event
-            for event in fired_events
+            for event in generated_events
             if isinstance(event, InterestAccrual | InterestAdjustment) and event.account == account
         ]
-        rows.extend(Fired(Step.INTEREST, event) for event in interest)
+        rows.extend(Generated(Step.INTEREST, event) for event in interest)
         if not any(isinstance(event, InterestAccrual) for event in interest):
-            rows.append(NothingFired(Step.INTEREST, (account,), Note.NO_INTEREST))
+            rows.append(NothingGenerated(Step.INTEREST, (account,), Note.NO_INTEREST))
     return rows
 
 
 def _build_capitalization_rows(
-    log: Log, fired_events: Sequence[LoggedEvent], accounts: tuple[AnyAccount, ...]
-) -> Result[list[Fired | Capitalized | NothingFired], CurrencyMismatch]:
+    log: Log, generated_events: Sequence[LoggedEvent], accounts: tuple[AnyAccount, ...]
+) -> Result[list[Generated | Capitalized | NothingGenerated], CurrencyMismatch]:
     """Step 3: each account's capitalization with the days it gathers, or a note when none was paid."""
-    rows: list[Fired | Capitalized | NothingFired] = []
+    rows: list[Generated | Capitalized | NothingGenerated] = []
     for account in accounts:
         capitalizations = [
-            event for event in fired_events if isinstance(event, Capitalization) and event.account == account.id
+            event for event in generated_events if isinstance(event, Capitalization) and event.account == account.id
         ]
         for event in capitalizations:
             if isinstance(accrued_days := list_accrued_days_of(log, account, event.id), Err):
                 return accrued_days
             rows.append(Capitalized(event, accrued_days.value))
         if not capitalizations:
-            rows.append(NothingFired(Step.CAPITALIZATION, (account.id,), Note.NO_CAPITALIZATION))
+            rows.append(NothingGenerated(Step.CAPITALIZATION, (account.id,), Note.NO_CAPITALIZATION))
     return Ok(rows)
 
 

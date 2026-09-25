@@ -9,8 +9,8 @@ Each day opens with a banner between two lines of `=`, then prints the same thre
 drawn as a plain-text table: the events processed, the end-of-day steps applied, and the closing summary (AMB-033).
 Every figure is fixed, since no entry in [AMBIGUITIES](AMBIGUITIES.md) is open. A Detail cell prints MOVEMENT's text up
 to its first semicolon, leaving out the notes after it, and a block with nothing in it prints `none`. Every event the
-ledger fires is printed with its marker, such as `FEE-001-D2@D5`, and a step that fires none prints `-` (AMB-024). Day 0
-is the opening state, printed before the window (AMB-001); a declined authorization is a state (AMB-019); each day
+ledger generates is printed with its ID, such as `FEE-001-D2@D5`, and a step that generates none prints `-` (AMB-024).
+Day 0 is the opening state, printed before the window (AMB-001); a declined authorization is a state (AMB-019); each day
 prints one report as known that day, with the earlier closings it restated (AMB-022); and every day lists both accounts
 and every known authorization (AMB-025). The program prints it, and an end-to-end test compares the two (AMB-026).
 

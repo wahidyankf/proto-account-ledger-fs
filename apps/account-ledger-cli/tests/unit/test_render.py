@@ -214,7 +214,7 @@ def test_capitalization_names_the_days_it_accrued() -> None:
 def test_the_texts_beyond_output_target_follow_its_patterns() -> None:
     """D22, tech-docs 003: a duplicate prints `duplicate of E1, no effect`; a force-post against a known hold prints as
     E6 does; a rejected event prints its usual detail, with its reason under Errors, several joined by `; `; and a
-    reversal of a fired event names its marker."""
+    reversal of a generated event names its ID."""
     stream = (
         make_credit("E1", 1, "400.00"),
         make_credit("E1", 1, "400.00"),
@@ -266,8 +266,8 @@ def test_a_partially_settled_authorization_prints_its_remaining_hold() -> None:
     assert find_cell(lines[day_3:], "| Authorizations", 1) == "Auth-A settled for 160.00"
 
 
-def test_a_step_that_fires_nothing_prints_its_note() -> None:
-    """AMB-033, tech-docs 002: a step that fires nothing of its kind prints the note for it in its Detail cell."""
+def test_a_step_that_generates_nothing_prints_its_note() -> None:
+    """AMB-033, tech-docs 002: a step that generates nothing of its kind prints the note for it in its Detail cell."""
     brief = render_reports(unwrap_ok(process_stream(build_brief_stream(), CHALLENGE)).reports)
     aed_only_text = render_reports(
         (unwrap_ok(process_stream((make_credit("E1", 1, "100.00"),), CHALLENGE)).find_report(Day(6)),)

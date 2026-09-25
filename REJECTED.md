@@ -13,10 +13,10 @@ are accepted, as [MOVEMENT](MOVEMENT.md) states beside each.
 Refused on both counts (AMB-002, AMB-003). The fee is assessed "once per day per account when that day's closing ledger
 balance … is negative", and a closing sums every event value-dated on or before its day, so E7's −620.00, value-dated
 Day 2, reaches every later closing: Day 2 falls to −370.00, Day 3 recovers to +30.00 with E4, and Days 4 and 5 fall to
-−335.00 once E5 and E6 settle. All three negative days are E7's doing, so E7 causes three fees, not one. Each is fired
-at the close of Day 5, when E7 arrives, and value-dated Day 5, labelled for the day it is for (`FEE-001-D2@D5`,
-`FEE-001-D4@D5`, `FEE-001-D5@D5`); none is dated Day 2, because a day already closed is never rewritten. Even with E6
-rejected, Day 4 would close at −155.00, so no reading of the stream gives exactly one fee.
+−335.00 once E5 and E6 settle. All three negative days are E7's doing, so E7 causes three fees, not one. Each is
+generated at the close of Day 5, when E7 arrives, and value-dated Day 5, labelled for the day it is for
+(`FEE-001-D2@D5`, `FEE-001-D4@D5`, `FEE-001-D5@D5`); none is dated Day 2, because a day already closed is never
+rewritten. Even with E6 rejected, Day 4 would close at −155.00, so no reading of the stream gives exactly one fee.
 `test_c2_e7_causes_three_fees_all_value_dated_day_5` asserts the three.
 
 ### C4 — Rejecting a settlement with an unknown authorization

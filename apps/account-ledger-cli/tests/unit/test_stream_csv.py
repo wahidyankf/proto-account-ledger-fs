@@ -183,7 +183,7 @@ def test_a_day_outside_the_window_is_refused() -> None:
 
 
 def test_a_reversal_reference_must_be_an_event_id() -> None:
-    """A reversal's reference must be an event ID, a fired marker included."""
+    """A reversal's reference must be an event ID, a generated ID included."""
     assert find_fault(type="REVERSAL", amount="", reference="Auth-A") == StreamError(
         2, "line 2: reference 'Auth-A' is not an event ID"
     )

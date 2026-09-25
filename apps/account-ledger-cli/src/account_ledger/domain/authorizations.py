@@ -64,14 +64,14 @@ type AuthorizationState = Approved | PartiallySettled | Declined | Settled
 
 @dataclass(frozen=True, slots=True)
 class SettleFinal:
-    """The trigger a final settlement fires, with its amount."""
+    """The trigger a final settlement generates, with its amount."""
 
     amount: AnyAmount
 
 
 @dataclass(frozen=True, slots=True)
 class SettlePartial:
-    """The trigger a settlement followed by more captures fires, with its amount."""
+    """The trigger a settlement followed by more captures generates, with its amount."""
 
     amount: AnyAmount
 
@@ -141,7 +141,7 @@ def _compute_rest(hold: AnyAmount, taken_amount: AnyAmount) -> Result[AnyAmount,
 
 
 def derive_trigger(settlement: Settlement) -> Trigger:
-    """The trigger a settlement fires, from its capture and amount."""
+    """The trigger a settlement generates, from its capture and amount."""
     match settlement.capture:
         case Capture.FINAL:
             return SettleFinal(settlement.amount)

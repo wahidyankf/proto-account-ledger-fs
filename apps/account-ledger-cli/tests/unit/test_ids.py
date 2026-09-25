@@ -1,4 +1,4 @@
-"""Identifiers, days, and counts refuse malformed values, and markers print their parts."""
+"""Identifiers, days, and counts refuse malformed values, and generated IDs print their parts."""
 
 import pytest
 
@@ -55,7 +55,7 @@ def test_authorization_id_refuses_a_malformed_value() -> None:
 
 
 def test_event_id_refuses_a_malformed_value() -> None:
-    """Every event ID form parses, the incoming ones and each marker the ledger fires; any other text is a fault."""
+    """Every event ID form parses, the incoming ones and each ID the ledger generates; any other text is a fault."""
     acc_001 = AccountId("ACC-001")
     for malformed_id in ("FEE-1", "E", "e7", "E7-", "FEE-001-D2", "CAP-001@D", "INT-01-D2@D5", "REFUND-001-D2@6"):
         assert parse_event_id(malformed_id) == Err(IdFault("event ID", malformed_id))
@@ -85,9 +85,9 @@ def test_instalment_count_refuses_a_malformed_value() -> None:
         InstalmentCount(361)
 
 
-def test_a_marker_prints_its_kind_account_and_days() -> None:
+def test_a_generated_id_prints_its_kind_account_and_days() -> None:
     """Every event ID prints back as the text it was parsed from."""
     acc_002 = AccountId("ACC-002")
-    for marker in ("E7", "E10-3", "FEE-002-D2@D5", "REFUND-002-D2@D6", "INT-002-D5@D6", "CAP-002@D6"):
-        assert format_id(unwrap_ok(parse_event_id(marker))) == marker
+    for event_id in ("E7", "E10-3", "FEE-002-D2@D5", "REFUND-002-D2@D6", "INT-002-D5@D6", "CAP-002@D6"):
+        assert format_id(unwrap_ok(parse_event_id(event_id))) == event_id
     assert format_id(FeeId(acc_002, Day(4), Day(5))) == "FEE-002-D4@D5"

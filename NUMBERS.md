@@ -18,7 +18,7 @@ Both are listed, as AMB-032 resolves.
 | Overdraft fee           | AED 25.00                | 25.00 per fee day; at half, AMB-004's gap is 37.50, not 75.00 |
 | Fee cap                 | once per day per account | re-evaluation (AMB-002) can never charge a day twice          |
 | Daily interest rate     | 0.04% = 0.0004           | 285.00 accrues 0.114 → 0.11; at half, 0.057 → 0.06            |
-| Interest floor          | positive balances only   | a zero or negative closing fires no accrual                   |
+| Interest floor          | positive balances only   | a zero or negative closing generates no accrual               |
 | Capitalization day      | Day 6                    | one credit per account, value-dated Day 6                     |
 | AED precision           | 2 decimal places         | every AED amount is quantized to 0.01                         |
 | BHD precision           | 3 decimal places         | every BHD amount is quantized to 0.001                        |
@@ -68,7 +68,7 @@ precision is sized for; halving it to 5 × 10¹¹ would refuse more amounts and 
 ### Instalment limit
 
 A credit is posted in 2 to 360 instalments; a count outside that range is a fault in the input (AMB-014). Every
-instalment is fired and kept in memory, so without a ceiling one credit at the amount limit could ask for some 10¹⁴
+instalment is generated and kept in memory, so without a ceiling one credit at the amount limit could ask for some 10¹⁴
 parts and exhaust memory before processing ends. 360 is a monthly plan over thirty years, the longest schedule in common
 use; halving it to 180 would refuse a thirty-year plan and guard against nothing the ceiling does not already stop.
 
@@ -84,9 +84,9 @@ equal as possible and the remainder on the last. 3.334 × 3 = 10.002 invents 0.0
 
 ### Hold released on settlement
 
-Resolved in AMB-013: a final settlement, which is every settlement without a marker, releases the whole hold, and one
-marked as followed by more captures keeps the rest. Releasing half of Auth-A's hold, 100.00, would still reserve funds
-no merchant can claim.
+Resolved in AMB-013: a final settlement, which is every settlement without a `final` flag, releases the whole hold, and
+one marked as followed by more captures keeps the rest. Releasing half of Auth-A's hold, 100.00, would still reserve
+funds no merchant can claim.
 
 ### Day representation
 

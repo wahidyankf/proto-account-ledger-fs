@@ -10,7 +10,7 @@ from account_ledger.domain.model.event_log import Rejection
 from account_ledger.domain.model.events import IncomingEvent
 from account_ledger.domain.model.ids import AccountId, AuthorizationId, Day, format_id
 from account_ledger.domain.model.money import Amount
-from account_ledger.domain.report import Capitalized, DayReport, Fired, Note, NothingFired, Restatement, Step
+from account_ledger.domain.report import Capitalized, DayReport, Generated, Note, NothingGenerated, Restatement, Step
 from account_ledger.domain.stream_processing import process_stream
 from support.brief_stream import build_brief_stream
 from support.refusals import REFUSALS
@@ -70,15 +70,15 @@ def test_amb_014_a_rejected_event_is_that_days_error(
 
 
 def list_rows(day_report: DayReport) -> list[tuple[int, str | Note, tuple[str, ...]]]:
-    """Each end-of-day row as its step, its marker or note, and its accounts."""
+    """Each end-of-day row as its step, its generated ID or note, and its accounts."""
     found_rows: list[tuple[int, str | Note, tuple[str, ...]]] = []
     for row in day_report.end_of_day:
         match row:
-            case Fired(step=step, event=event):
+            case Generated(step=step, event=event):
                 found_rows.append((step.value, format_id(event.id), (event.account.value,)))
             case Capitalized(event=event):
                 found_rows.append((Step.CAPITALIZATION.value, format_id(event.id), (event.account.value,)))
-            case NothingFired(step=step, accounts=accounts, note=note):
+            case NothingGenerated(step=step, accounts=accounts, note=note):
                 found_rows.append((step.value, note, tuple(account.value for account in accounts)))
             case _:
                 assert_never(row)
@@ -88,9 +88,9 @@ def list_rows(day_report: DayReport) -> list[tuple[int, str | Note, tuple[str, .
 BOTH = ("ACC-001", "ACC-002")
 
 
-def test_amb_033_a_step_that_fires_nothing_reports_its_row() -> None:
-    """AMB-033: every end-of-day step is printed with the events it fires, and a step that fires nothing prints a row
-    saying so (tech-docs 002)."""
+def test_amb_033_a_step_that_generates_nothing_reports_its_row() -> None:
+    """AMB-033: every end-of-day step is printed with the events it generates, and a step that generates nothing prints
+    a row saying so (tech-docs 002)."""
     result = unwrap_ok(process_stream(build_brief_stream(), CHALLENGE))
 
     assert list_rows(result.find_report(Day(1))) == [

@@ -54,9 +54,9 @@ tables:
 - **Events processed** lists every incoming event the day processed, in the order processed, with its booked day, its
   kind, its account, what it moved, and its value date. A credit in instalments is followed by one row per instalment; a
   late event carries a value date before the day it is printed under.
-- **EOD applied** lists what the day's close fired, by step: 1 fee re-evaluation (fees and refunds), 2 interest
+- **EOD applied** lists what the day's close generated, by step: 1 fee re-evaluation (fees and refunds), 2 interest
   (accruals for the day and adjustments for earlier days), and 3 capitalization, on a capitalization day only. Each
-  fired event shows its marker; a step that fired nothing shows a row with `-` in place of a marker.
+  generated event shows its ID; a step that generated nothing shows a row with `-` in place of an ID.
 - **Closing summary** gives one column per account in its own currency. A `restated` row appears for each earlier day
   whose closing changed since it was last printed, the new figure in place of the old; then come the day's closing
   ledger balance, its available balance after holds, every authorization with its state, and the errors, which are the

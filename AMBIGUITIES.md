@@ -20,7 +20,7 @@ as AMB-034, come last. Figures were first taken from a scratch run of the event 
 Every entry is resolved, and every figure follows the resolutions. Those that move figures most: fees re-evaluated for
 every day (AMB-002), dated on the day the check runs (AMB-003), refunded on Day 6 once E9 makes their days non-negative
 (AMB-004), interest accrued as known and corrected by later events (AMB-005), E6 honoured as a force-post (AMB-012),
-fees fired at day close (AMB-016), and the end-of-day order that capitalizes last (AMB-023). [MOVEMENT](MOVEMENT.md)
+fees generated at day close (AMB-016), and the end-of-day order that capitalizes last (AMB-023). [MOVEMENT](MOVEMENT.md)
 holds every figure.
 
 Reference balances for ACC-001 before E7 arrives, by value date:
@@ -149,7 +149,7 @@ values") turns on this, and a refund's own value date moves the interest.
 | Option                                        | Day 6 before interest | Interest | Day 6 after capitalization |
 | --------------------------------------------- | --------------------- | -------- | -------------------------- |
 | Refund, dated on the fee's value date (Day 5) | 285.00                | 0.79     | 285.79                     |
-| Refund, dated the day it is fired (Day 6)     | 285.00                | 0.76     | 285.76                     |
+| Refund, dated the day it is generated (Day 6) | 285.00                | 0.76     | 285.76                     |
 | Keep the fees                                 | 210.00                | 0.73     | 210.73                     |
 
 Dated on the fee's value date, Day 5 (AMB-003), a refund and its fee cancel in every closing they touch; dated Day 6,
@@ -161,19 +161,20 @@ rule as the ledger now states it. Refunds are new records, so nothing is mutated
 
 **Status.** Resolved.
 
-**Resolution.** The ledger is event-sourced: an append-only log of events, including the fees and refunds it fires at
-end of day, and balances that are aggregations over the log by value date, recomputed when a late event arrives. After
-E9, Day 6's end-of-day check finds Days 2, 4, and 5 no longer negative and fires one AED 25.00 fee refund for each,
-naming the day it is for and value-dated Day 6; the fees stay in the log. A later correction to interest follows the
-same rule: a new event, dated the day it is recognised. _Test:_ `test_c6_e9_restores_days_2_to_4_and_refunds_the_fees`.
+**Resolution.** The ledger is event-sourced: an append-only log of events, including the fees and refunds it generates
+at end of day, and balances that are aggregations over the log by value date, recomputed when a late event arrives.
+After E9, Day 6's end-of-day check finds Days 2, 4, and 5 no longer negative and generates one AED 25.00 fee refund for
+each, naming the day it is for and value-dated Day 6; the fees stay in the log. A later correction to interest follows
+the same rule: a new event, dated the day it is recognised. _Test:_
+`test_c6_e9_restores_days_2_to_4_and_refunds_the_fees`.
 
 **Rationale.** It is the principle of AMB-002 and AMB-003 applied to undoing a charge: the log is never edited, and what
-the ledger fires never reaches back into a past day, so a correction is a new event on the day it is recognised, as a
-production ledger fires it at end of day. E9 still restates Days 2 to 5, because the brief value-dates it Day 2. The fee
-rule reads value-dated closings, which after E9 are non-negative, so keeping the fees would leave charges the rule no
-longer supports. The cost is accepted: Day 5's value-dated closing stays at 210.00, with its fees on Day 5 and their
-refunds on Day 6, and interest (AMB-005) totals 0.76 instead of 0.79, so criterion 6's "all balances and fees return to
-their pre-E7 values" holds for Day 6's closing and the net fees but not for Day 5 or the interest, so
+the ledger generates never reaches back into a past day, so a correction is a new event on the day it is recognised, as
+a production ledger generates it at end of day. E9 still restates Days 2 to 5, because the brief value-dates it Day 2.
+The fee rule reads value-dated closings, which after E9 are non-negative, so keeping the fees would leave charges the
+rule no longer supports. The cost is accepted: Day 5's value-dated closing stays at 210.00, with its fees on Day 5 and
+their refunds on Day 6, and interest (AMB-005) totals 0.76 instead of 0.79, so criterion 6's "all balances and fees
+return to their pre-E7 values" holds for Day 6's closing and the net fees but not for Day 5 or the interest, so
 [REJECTED](REJECTED.md) refuses it.
 
 ## AMB-005 — Which balance daily interest accrues on
@@ -190,11 +191,11 @@ different totals.
 | ---------------------------------------------------------------------- | ------------- | ------------- |
 | Hindsight: at capitalization, from final value-dated closings          | 0.76          | 0.008         |
 | As known: each day's accrual fixed at that day's close, never restated | 0.68          | 0.008         |
-| As known, corrected: a late event fires an adjusting accrual           | 0.76          | 0.008         |
+| As known, corrected: a late event generates an adjusting accrual       | 0.76          | 0.008         |
 
-The as-known figure is 0.10 + 0.10 + 0.26 + 0.11 + 0.00 (Day 5 as known was −410.00) + 0.11. Corrected, E7 fires −0.46
-on Day 5 for Days 2 to 4, and E9 fires +0.54 on Day 6 for Days 2 to 5, each dated the day it is recognised, as AMB-004's
-resolution does for fees; the total then matches hindsight.
+The as-known figure is 0.10 + 0.10 + 0.26 + 0.11 + 0.00 (Day 5 as known was −410.00) + 0.11. Corrected, E7 generates
+−0.46 on Day 5 for Days 2 to 4, and E9 generates +0.54 on Day 6 for Days 2 to 5, each dated the day it is recognised, as
+AMB-004's resolution does for fees; the total then matches hindsight.
 
 **Recommended**: as known, corrected. It follows AMB-004's resolution: each accrual printed on a day is final, and a
 late event corrects interest with a new event instead of restating an old one, while the total still reflects the
@@ -202,13 +203,13 @@ balances the ledger finally holds.
 
 **Status.** Resolved.
 
-**Resolution.** Each day's accrual is an event fired at that day's close, on the closing ledger balance as known then.
-When a late event changes a past day's closing, the end-of-day check that sees it fires an adjusting accrual for that
-day, value-dated the day it is recognised and naming the day it is for. ACC-001 accrues 0.68 as known, adjusted by −0.46
-on Day 5 for E7 and +0.54 on Day 6 for E9, 0.76 in all; ACC-002 accrues 0.008. _Tests:_
+**Resolution.** Each day's accrual is an event generated at that day's close, on the closing ledger balance as known
+then. When a late event changes a past day's closing, the end-of-day check that sees it generates an adjusting accrual
+for that day, value-dated the day it is recognised and naming the day it is for. ACC-001 accrues 0.68 as known, adjusted
+by −0.46 on Day 5 for E7 and +0.54 on Day 6 for E9, 0.76 in all; ACC-002 accrues 0.008. _Tests:_
 `test_amb_005_interest_accrues_on_a_positive_closing` and `test_amb_005_a_changed_closing_adjusts_its_interest`.
 
-**Rationale.** It is AMB-004's principle applied to interest: an accrual is fired when its day closes, on what the
+**Rationale.** It is AMB-004's principle applied to interest: an accrual is generated when its day closes, on what the
 ledger knew, so the accrual printed that day is final, and a correction is a new event rather than a restatement. The
 corrections bring the total to what the final value-dated closings earn, as hindsight would, so interest still follows
 "the closing ledger balance" once the ledger knows it; never correcting would leave 0.68 and ignore balances the ledger
@@ -265,8 +266,8 @@ no rounded accrual in this stream (ACC-001 still totals 0.76), but it would in a
 **Status.** Resolved.
 
 **Resolution.** No compounding. Accrual events build up in a separate accrued-interest total, apart from the ledger
-balance, and join it only when the capitalization event fires at the end of Day 6; each day's interest is on that day's
-closing ledger balance alone. _Tests:_ `test_c6_day_6_closes_at_285_76_not_285_79` and
+balance, and join it only when the capitalization event is generated at the end of Day 6; each day's interest is on that
+day's closing ledger balance alone. _Tests:_ `test_c6_day_6_closes_at_285_76_not_285_79` and
 `test_the_brief_stream_prints_output_target`.
 
 **Rationale.** The brief puts interest on "the closing ledger balance" and has accruals "capitalize as a single credit
@@ -424,8 +425,9 @@ hold. The choice changes ACC-001's available balance from Day 4 onwards.
 
 **Resolution.** A settlement carries whether it is final. A final settlement debits its amount and releases the whole
 hold; a settlement marked as followed by more captures debits its amount and keeps the rest on hold until a later
-capture or its lapse (AMB-018). A settlement that carries no marker, as every one in the brief, is final, so E5 debits
-185.00 and releases all 200.00 of Auth-A's hold. _Tests:_ `test_c3_auth_a_settlement_is_accepted_and_releases_the_hold`,
+capture or its lapse (AMB-018). A settlement that carries no `final` flag, as every one in the brief, is final, so E5
+debits 185.00 and releases all 200.00 of Auth-A's hold. _Tests:_
+`test_c3_auth_a_settlement_is_accepted_and_releases_the_hold`,
 `test_amb_013_a_non_final_settlement_keeps_the_rest_of_the_hold`, and
 `test_amb_013_a_partial_capture_reaching_the_hold_settles`.
 
@@ -433,8 +435,8 @@ capture or its lapse (AMB-018). A settlement that carries no marker, as every on
 its deposit, and the unused hold goes back to the customer at once, while a merchant shipping an order in parts marks
 the earlier captures as partial so the rest stays reserved for it. Releasing always would drop a later capture's
 reservation, and keeping always would lock funds no merchant claims, behind a lifetime the brief never gives. The
-brief's events carry no marker, so the model adds the field and treats its absence as final, which gives every figure in
-this stream the same value as releasing the whole hold.
+brief's events carry no `final` flag, so the model adds the field and treats its absence as final, which gives every
+figure in this stream the same value as releasing the whole hold.
 
 ## AMB-014 — Whether rejected and declined events are recorded
 
@@ -488,7 +490,7 @@ possibly its interest change.
 | Listed order; E10 rejected         | 0.000        | 0.000, plus an error   | 0.000    |
 
 In the late-arrival option, E10 is processed on Day 6 with value date Day 5, so Day 6's report restates Day 5 to 10.000
-and fires an interest adjustment of 0.004 for Day 5.
+and generates an interest adjustment of 0.004 for Day 5.
 
 **Recommended**, held loosely: sort by booked day. The booked day is a business fact about when the bank recorded the
 event, while list position is presentation; because the events commute, the deviation from "in this order" changes no
@@ -499,7 +501,7 @@ backdating machinery E7 and E9 already need.
 
 **Resolution.** The stream is processed in the order it is listed. E10, booked Day 5, arrives after E9 and after Day 5
 has closed, so it is processed on Day 6 as a late event value-dated Day 5: Day 5's report shows ACC-002 at 0.000, and
-Day 6's restates its Day 5 to the instalments value-dated Day 5 and fires Day 5's interest as an adjustment. A day
+Day 6's restates its Day 5 to the instalments value-dated Day 5 and generates Day 5's interest as an adjustment. A day
 closes on time and never waits for an event that may still come. _Test:_
 `test_amb_015_a_late_event_is_processed_on_the_current_day`.
 
@@ -528,13 +530,13 @@ at day close, they come after. That changes the available balance Auth-B is chec
 
 **Status.** Resolved.
 
-**Resolution.** Fees and their refunds fire only in the end-of-day fee step, as events in the log, after every event
-booked that day; a backdated event that arrives mid-day assesses nothing until its day closes. E7's fees fire at the
-close of Day 5, after E8. _Test:_ `test_c2_e7_causes_three_fees_all_value_dated_day_5`.
+**Resolution.** Fees and their refunds are generated only in the end-of-day fee step, as events in the log, after every
+event booked that day; a backdated event that arrives mid-day assesses nothing until its day closes. E7's fees are
+generated at the close of Day 5, after E8. _Test:_ `test_c2_e7_causes_three_fees_all_value_dated_day_5`.
 
-**Rationale.** A fee is an event the ledger fires at the end of the day, as a production ledger runs its fee job at day
-close, not a side effect of whichever event happens to arrive. Criterion 1's "evaluated at end of Day 5 and before any
-fee is assessed" describes exactly that moment. Auth-B is then checked against −425.00, without the fees, and is
+**Rationale.** A fee is an event the ledger generates at the end of the day, as a production ledger runs its fee job at
+day close, not a side effect of whichever event happens to arrive. Criterion 1's "evaluated at end of Day 5 and before
+any fee is assessed" describes exactly that moment. Auth-B is then checked against −425.00, without the fees, and is
 declined either way (AMB-021).
 
 ## AMB-017 — Whether the E10 instalments are spread over days
@@ -576,8 +578,8 @@ open: Auth-B is declined, and Auth-A is settled finally, so AMB-013 keeps none o
 
 **Resolution.** No hold expires: an approved hold stays active until a settlement releases it. This is the design
 limitation the deliberately failing test exposes: it processes a hold left unsettled past a card network's usual
-lifetime and asserts that the hold has lapsed, which it never does. The fix, a lifetime after which the ledger fires a
-hold-expiry event, is described in the architecture document. _Test:_
+lifetime and asserts that the hold has lapsed, which it never does. The fix, a lifetime after which the ledger generates
+a hold-expiry event, is described in the architecture document. _Test:_
 `test_known_weakness_an_unsettled_hold_never_lapses`.
 
 **Rationale.** The brief gives no hold lifetime, and any number would be invented and would need its own defence in
@@ -716,19 +718,19 @@ the capitalization credit.
 
 **Options.**
 
-- Fee re-evaluation, which fires new fees and refunds any whose day is no longer negative (AMB-004); then the interest
-  step, which fires the day's accrual on the resulting closing and any adjustment (AMB-005); then, on Day 6 only,
-  capitalization as one credit value-dated Day 6. **Recommended**: interest then accrues on the closing the fee rule
-  leaves, and never on itself; the printed Day 6 closing includes the credit.
+- Fee re-evaluation, which generates new fees and refunds any whose day is no longer negative (AMB-004); then the
+  interest step, which generates the day's accrual on the resulting closing and any adjustment (AMB-005); then, on Day 6
+  only, capitalization as one credit value-dated Day 6. **Recommended**: interest then accrues on the closing the fee
+  rule leaves, and never on itself; the printed Day 6 closing includes the credit.
 - Interest accrual before fee re-evaluation.
 - Capitalization before Day 6's accrual.
 
 **Status.** Resolved.
 
 **Resolution.** Every day closes in three steps: fee re-evaluation, then interest, then, on Day 6 only, capitalization.
-On Day 6 the refunds for Days 2, 4, and 5 fire first and bring ACC-001 to 285.00; interest then accrues 0.11 for Day 6
-and fires the adjustments E9 makes due; capitalization last credits every accrual, AED 0.76 as `CAP-001@D6` and BHD
-0.008 as `CAP-002@D6`, both value-dated Day 6. Day 6 closes at 285.76 and 10.008. _Tests:_
+On Day 6 the refunds for Days 2, 4, and 5 are generated first and bring ACC-001 to 285.00; interest then accrues 0.11
+for Day 6 and generates the adjustments E9 makes due; capitalization last credits every accrual, AED 0.76 as
+`CAP-001@D6` and BHD 0.008 as `CAP-002@D6`, both value-dated Day 6. Day 6 closes at 285.76 and 10.008. _Tests:_
 `test_amb_023_a_days_interest_never_counts_its_own_capitalization` and `test_c6_day_6_closes_at_285_76_not_285_79`.
 
 **Rationale.** Accrual is interest earned and recorded, capitalization is that interest paid into the balance, as a day
@@ -748,26 +750,26 @@ brief does not say how far "record" reaches.
 
 **Options.**
 
-- Every event, from the brief or fired by the ledger, is immutable; balances, holds, and authorization states are
+- Every event, from the brief or generated by the ledger, is immutable; balances, holds, and authorization states are
   derived by folding over them and never stored as mutable fields; every state change, such as a hold settled or a fee
   refunded, is a new record. **Recommended**: nothing the ledger holds can then be edited.
 - Only event records are immutable; derived state is stored and updated in place.
 
 **Status.** Resolved.
 
-**Resolution.** The ledger is event-sourced, as AMB-004 records: every event, from the brief or fired by the ledger, is
-appended to a log and never mutated or deleted; balances, holds, and authorization states are aggregations over the log,
-never stored as mutable fields; and every change, such as a hold settled, a fee refunded, or interest corrected, is a
-new event. An event the ledger fires is named by kind, account, the day it is for, and the day it fires, such as
-`FEE-001-D2@D5`, and a step that would move nothing fires no event. _Test:_
-`test_a_marker_prints_its_kind_account_and_days`.
+**Resolution.** The ledger is event-sourced, as AMB-004 records: every event, from the brief or generated by the ledger,
+is appended to a log and never mutated or deleted; balances, holds, and authorization states are aggregations over the
+log, never stored as mutable fields; and every change, such as a hold settled, a fee refunded, or interest corrected, is
+a new event. An event the ledger generates is named by kind, account, the day it is for, and the day it is generated,
+such as `FEE-001-D2@D5`, and a step that would move nothing generates no event. _Test:_
+`test_a_generated_id_prints_its_kind_account_and_days`.
 
 **Rationale.** "No event record is ever mutated or deleted" then holds in spirit as well as in letter, because nothing
 the ledger holds is edited in place, and any day's view can be rebuilt by processing the log again. A backdated event, a
-refund, or an interest correction is a new event that every aggregation picks up. The marker keeps the ledger's own
-events apart from E1 to E10 and stays stable when a late event adds or removes a fired event, where a running number
-would shift; firing nothing when nothing moves keeps the log to events that change a balance, as interest accrues on
-"positive balances only".
+refund, or an interest correction is a new event that every aggregation picks up. The generated ID keeps the ledger's
+own events apart from E1 to E10 and stays stable when a late event adds or removes a generated event, where a running
+number would shift; generating nothing when nothing moves keeps the log to events that change a balance, as interest
+accrues on "positive balances only".
 
 ## AMB-025 — What each day's report lists
 
@@ -786,8 +788,8 @@ no activity, and whether an authorization appears only on the day it changes or 
 **Status.** Resolved.
 
 **Resolution.** Every day's report lists both accounts, each in its own currency, even on a day with no activity; every
-authorization known by the end of that day, with its state then; the fees and refunds fired that day, each naming the
-day it is for; and that day's errors, or none. Day 3 therefore shows Auth-A approved with its hold of 200.00, and
+authorization known by the end of that day, with its state then; the fees and refunds generated that day, each naming
+the day it is for; and that day's errors, or none. Day 3 therefore shows Auth-A approved with its hold of 200.00, and
 ACC-002 prints 0.000 on Days 1 to 4. _Tests:_ `test_amb_019_every_known_authorization_is_listed_with_its_state` and
 `test_the_brief_stream_prints_output_target`.
 
@@ -1010,7 +1012,7 @@ closing can be traced to what moved it.
 
 **Options.**
 
-- Also print, for each day, the events processed, every end-of-day step with the events it fires (fees, fee refunds,
+- Also print, for each day, the events processed, every end-of-day step with the events it generates (fees, fee refunds,
   interest accruals and adjustments, and the capitalization), and each account's available balance. **Recommended**:
   every printed figure can then be verified from the output alone.
 - Exactly the four items.
@@ -1018,12 +1020,12 @@ closing can be traced to what moved it.
 **Status.** Resolved.
 
 **Resolution.** The report prints the four named items and more. Each day prints three tables: the events processed;
-every end-of-day step with the events it fires, fees, fee refunds, interest accruals and adjustments, and the
+every end-of-day step with the events it generates, fees, fee refunds, interest accruals and adjustments, and the
 capitalization; and a closing summary with the closing ledger balance, the available balance, any restated earlier
 closings (AMB-022), authorization states, and errors, for both accounts (AMB-025). Each day opens with a banner, its
 name between two full-width lines of `=`, and every table is drawn as a plain-text box, with `+`, `-`, and `|` borders,
 as [OUTPUT_TARGET](OUTPUT_TARGET.md) shows; a block with nothing in it prints none. _Tests:_
-`test_amb_033_a_step_that_fires_nothing_reports_its_row` and `test_the_brief_stream_prints_output_target`.
+`test_amb_033_a_step_that_generates_nothing_reports_its_row` and `test_the_brief_stream_prints_output_target`.
 
 **Rationale.** The brief's "prints, per day" names what the report must hold, not everything it may. With only the four
 items, Auth-B's decline could not be checked without the available balance, and Day 5's −410.00 and its fee for Day 2
@@ -1053,9 +1055,9 @@ routine retry. AMB-028 settles this for a reversal only.
 **Resolution.** Idempotent by event ID. The event ID is the idempotency key: an event whose ID is already in the log,
 with the same content in every field, is appended with the outcome duplicate (AMB-014), has no effect, and is not an
 error; one whose ID is already in the log with different content, the booked day included, is refused, recorded with its
-outcome (AMB-014), and printed as that day's error. The rule covers every event, from the brief or fired by the ledger,
-and AMB-028's rule for a repeated reversal is this rule applied to a reversal. Nothing repeats in this stream, so no
-figure moves. _Tests:_ `test_amb_034_a_repeated_event_is_logged_as_a_duplicate_with_no_effect`,
+outcome (AMB-014), and printed as that day's error. The rule covers every event, from the brief or generated by the
+ledger, and AMB-028's rule for a repeated reversal is this rule applied to a reversal. Nothing repeats in this stream,
+so no figure moves. _Tests:_ `test_amb_034_a_repeated_event_is_logged_as_a_duplicate_with_no_effect`,
 `test_amb_034_a_repeated_reversal_or_settlement_is_a_duplicate`,
 `test_amb_034_a_reused_id_with_different_content_is_refused`, and
 `test_amb_034_the_same_event_booked_another_day_is_refused`.
@@ -1063,11 +1065,11 @@ figure moves. _Tests:_ `test_amb_034_a_repeated_event_is_logged_as_a_duplicate_w
 **Rationale.** An event already carries an ID, so it is the natural key: a retry after a timeout delivers the same ID
 and content and must not move a balance twice, and an alarm for it would be false. The same ID with different content
 cannot be a retry, so dropping it silently could lose a real transaction; it is a clash someone must see. The ledger's
-own markers, such as `FEE-001-D2@D5`, are built from kind, account, and days (AMB-024), so re-running a day's close
-fires the same IDs and cannot charge a fee twice. Appending the retry as a duplicate keeps every delivery in the log, so
-an auditor sees that a retry arrived and when, and processing the log again shows it moved nothing. The rule relies on
-the sender keeping IDs unique, which the brief does not state; a sender that reuses an ID for a new event sees it
-refused, not applied.
+own generated IDs, such as `FEE-001-D2@D5`, are built from kind, account, and days (AMB-024), so re-running a day's
+close generates the same IDs and cannot charge a fee twice. Appending the retry as a duplicate keeps every delivery in
+the log, so an auditor sees that a retry arrived and when, and processing the log again shows it moved nothing. The rule
+relies on the sender keeping IDs unique, which the brief does not state; a sender that reuses an ID for a new event sees
+it refused, not applied.
 
 ## AMB-035 — What a reversal may target
 
@@ -1075,37 +1077,38 @@ refused, not applied.
 deleted." E7 is a debit, and nothing else is reversed in this stream.
 
 **Why it is problematic.** The brief does not say which events a reversal may undo: an unknown ID, a declined or refused
-event, an authorization, or an event the ledger fires itself, such as a fee, an interest event, an instalment, or a
+event, an authorization, or an event the ledger generates itself, such as a fee, an interest event, an instalment, or a
 capitalization. Reversing a fee whose day is still negative also meets the fee rule, which would charge that day again.
 
 **Options.**
 
 - Only an accepted incoming credit, debit, or settlement, anything else refused. **Recommended**: the ledger corrects
-  its own events by re-evaluating them, so reversing one would fight the rule that fired it.
+  its own events by re-evaluating them, so reversing one would fight the rule that generated it.
 - Any accepted incoming posting, plus an approved authorization, whose reversal releases its hold, as a card void does.
-- Any accepted event, incoming or fired; after a fired end-of-day event is reversed, the next close fires again whatever
-  the rules still require.
-- Any accepted event, with a reversed fired event waived and never fired again.
+- Any accepted event, incoming or generated; after a generated end-of-day event is reversed, the next close generates
+  again whatever the rules still require.
+- Any accepted event, with a reversed generated event waived and never generated again.
 
 **Status.** Resolved.
 
-**Resolution.** Any accepted event, incoming or fired, may be reversed. A reversal of an unknown ID, or of an event that
-moved no money, declined or rejected, is refused, recorded with its outcome (AMB-014), and printed as that day's error;
-an authorization is approved, never accepted, so a reversal of one is refused the same way, and a reversal of a reversal
-stays refused (AMB-028). Each event's money is undone at most once, whichever event undoes it: a reversal is refused
-when its target is an instalment of a credit already reversed, a credit one of whose instalments is already reversed, or
-a fee already refunded. A refund may itself be reversed, which puts its fee back in force for the next close to judge
-again. A reversal undoes only what its target moved, so a reversed settlement leaves its authorization's state and hold
-as they are, and reversing a credit posted in instalments undoes every instalment. After a fee, an interest event, or a
-capitalization is reversed, the next close re-evaluates as always and fires again whatever the rules still require,
-under a new marker for that close: a fee reversed while its day is still negative is charged again. An instalment is
-fired when its credit is processed, not at a close, so a reversed instalment stays reversed. None of this occurs in this
-stream, so no figure moves. _Tests:_ `test_amb_035_a_capitalization_reversed_on_its_own_day_leaves_that_days_interest`,
+**Resolution.** Any accepted event, incoming or generated, may be reversed. A reversal of an unknown ID, or of an event
+that moved no money, declined or rejected, is refused, recorded with its outcome (AMB-014), and printed as that day's
+error; an authorization is approved, never accepted, so a reversal of one is refused the same way, and a reversal of a
+reversal stays refused (AMB-028). Each event's money is undone at most once, whichever event undoes it: a reversal is
+refused when its target is an instalment of a credit already reversed, a credit one of whose instalments is already
+reversed, or a fee already refunded. A refund may itself be reversed, which puts its fee back in force for the next
+close to judge again. A reversal undoes only what its target moved, so a reversed settlement leaves its authorization's
+state and hold as they are, and reversing a credit posted in instalments undoes every instalment. After a fee, an
+interest event, or a capitalization is reversed, the next close re-evaluates as always and generates again whatever the
+rules still require, under a new generated ID for that close: a fee reversed while its day is still negative is charged
+again. An instalment is generated when its credit is processed, not at a close, so a reversed instalment stays reversed.
+None of this occurs in this stream, so no figure moves. _Tests:_
+`test_amb_035_a_capitalization_reversed_on_its_own_day_leaves_that_days_interest`,
 `test_amb_035_a_fee_reversed_on_a_negative_day_is_charged_again`,
 `test_amb_035_a_reversal_of_an_event_that_moved_no_money_is_refused`,
 `test_amb_035_a_reversal_of_an_unknown_event_is_refused`, `test_amb_035_a_reversal_undoes_what_its_target_moved`,
 `test_amb_035_a_reversed_capitalization_returns_its_interest_to_accrued`,
-`test_amb_035_a_reversed_instalment_stays_reversed`, `test_amb_035_a_reversed_interest_event_is_fired_again`,
+`test_amb_035_a_reversed_instalment_stays_reversed`, `test_amb_035_a_reversed_interest_event_is_generated_again`,
 `test_amb_035_a_reversed_refund_puts_its_fee_back_in_force`,
 `test_amb_035_a_reversed_settlement_leaves_its_authorization_settled`,
 `test_amb_035_money_already_undone_cannot_be_undone_again`, and

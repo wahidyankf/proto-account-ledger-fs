@@ -18,9 +18,9 @@ from support.streams import (
     ACC_001,
     ACC_002,
     list_capitalization_amounts,
-    list_fee_markers,
+    list_fee_ids,
     list_interest_amounts,
-    list_refund_markers,
+    list_refund_ids,
     take_through,
 )
 from support.values import make_aed, make_bhd
@@ -101,7 +101,7 @@ def test_c2_e7_causes_three_fees_all_value_dated_day_5() -> None:
     Day 5 value-dated Day 2, so Day 5's close finds Days 2, 4, and 5 negative and charges each, value-dated Day 5."""
     log = unwrap_ok(process_stream(build_brief_stream(), CHALLENGE)).find_log(Day(5))
 
-    assert list_fee_markers(log) == ["FEE-001-D2@D5", "FEE-001-D4@D5", "FEE-001-D5@D5"]
+    assert list_fee_ids(log) == ["FEE-001-D2@D5", "FEE-001-D4@D5", "FEE-001-D5@D5"]
     fees = [entry.event for entry in log if isinstance(entry, Accepted) and isinstance(entry.event, Fee)]
     assert [(fee.amount, fee.value_day) for fee in fees] == [(Amount(make_aed("25.00")), Day(5))] * 3
 
@@ -117,8 +117,8 @@ def test_c6_e9_restores_days_2_to_4_and_refunds_the_fees() -> None:
         make_aed("650.00"),
         make_aed("285.00"),
     ]
-    assert list_fee_markers(log) == ["FEE-001-D2@D5", "FEE-001-D4@D5", "FEE-001-D5@D5"]
-    assert list_refund_markers(log) == ["REFUND-001-D2@D6", "REFUND-001-D4@D6", "REFUND-001-D5@D6"]
+    assert list_fee_ids(log) == ["FEE-001-D2@D5", "FEE-001-D4@D5", "FEE-001-D5@D5"]
+    assert list_refund_ids(log) == ["REFUND-001-D2@D6", "REFUND-001-D4@D6", "REFUND-001-D5@D6"]
 
 
 def test_c8_capitalization_equals_the_sum_of_interest_events() -> None:
@@ -129,14 +129,14 @@ def test_c8_capitalization_equals_the_sum_of_interest_events() -> None:
 
     assert list_capitalization_amounts(log) == [("CAP-001@D6", make_aed("0.76")), ("CAP-002@D6", make_bhd("0.008"))]
     aed_total, bhd_total = Aed.make_zero(), Bhd.make_zero()
-    for marker, money in list_interest_amounts(log):
+    for event_id, money in list_interest_amounts(log):
         match money:
-            case Aed() if marker.startswith("INT-001"):
+            case Aed() if event_id.startswith("INT-001"):
                 aed_total = aed_total + money
-            case Bhd() if marker.startswith("INT-002"):
+            case Bhd() if event_id.startswith("INT-002"):
                 bhd_total = bhd_total + money
             case _:
-                raise AssertionError(f"{marker} in the wrong currency")
+                raise AssertionError(f"{event_id} in the wrong currency")
     assert (aed_total, bhd_total) == (make_aed("0.76"), make_bhd("0.008"))
 
 

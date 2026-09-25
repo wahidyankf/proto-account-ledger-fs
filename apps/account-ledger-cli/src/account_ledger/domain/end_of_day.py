@@ -14,7 +14,7 @@ type _Step = Callable[[Log, AnyAccount], Result[Log, CurrencyMismatch]]
 
 
 def close_day(log: Log, today: Day, config: LedgerConfig) -> Result[Log, CurrencyMismatch]:
-    """The log with every event the close of ``today`` fires: each step runs for every account before the next."""
+    """The log with every event the close of ``today`` generates: each step runs for every account before the next."""
     steps: list[_Step] = [
         lambda step_log, account: assess_fees(step_log, account, today, config.first_day),
         lambda step_log, account: accrue_interest(step_log, account, today, config.first_day),

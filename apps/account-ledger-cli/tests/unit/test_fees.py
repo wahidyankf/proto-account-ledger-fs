@@ -11,7 +11,7 @@ from account_ledger.domain.model.money import Amount
 from account_ledger.domain.stream_processing import process_stream
 from support.brief_stream import build_brief_stream
 from support.results import unwrap_ok
-from support.streams import ACC_002, list_fee_markers, list_refund_markers, make_credit, make_debit, make_reversal
+from support.streams import ACC_002, list_fee_ids, list_refund_ids, make_credit, make_debit, make_reversal
 from support.values import make_bhd
 
 
@@ -20,7 +20,7 @@ def test_amb_011_a_day_still_negative_is_not_charged_again() -> None:
     however many closes find it negative."""
     log = unwrap_ok(process_stream((make_debit("E1", 1, "10.00"),), CHALLENGE)).find_log(Day(2))
 
-    assert list_fee_markers(log) == ["FEE-001-D1@D1", "FEE-001-D2@D2"]
+    assert list_fee_ids(log) == ["FEE-001-D1@D1", "FEE-001-D2@D2"]
 
 
 def test_amb_011_a_fee_counts_in_the_closings_after_it() -> None:
@@ -30,7 +30,7 @@ def test_amb_011_a_fee_counts_in_the_closings_after_it() -> None:
 
     log = unwrap_ok(process_stream(stream, CHALLENGE)).find_log(Day(2))
 
-    assert list_fee_markers(log) == ["FEE-001-D1@D2", "FEE-001-D2@D2"]
+    assert list_fee_ids(log) == ["FEE-001-D1@D2", "FEE-001-D2@D2"]
 
 
 def test_amb_027_a_bhd_account_is_charged_bhd_2_560() -> None:
@@ -40,17 +40,17 @@ def test_amb_027_a_bhd_account_is_charged_bhd_2_560() -> None:
 
     fees = [entry.event for entry in log if isinstance(entry, Accepted) and isinstance(entry.event, Fee)]
     assert [fee.amount for fee in fees] == [Amount(make_bhd("2.560"))]
-    assert list_fee_markers(log) == ["FEE-002-D1@D1"]
+    assert list_fee_ids(log) == ["FEE-002-D1@D1"]
     assert unwrap_ok(compute_closing(log, ACC_002, Day(1))) == make_bhd("-3.560")
 
 
 def test_amb_035_a_fee_reversed_on_a_negative_day_is_charged_again() -> None:
-    """AMB-035: a fee reversed while its day is still negative is charged again, under a marker for today."""
+    """AMB-035: a fee reversed while its day is still negative is charged again, under a generated ID for today."""
     stream = (make_debit("E1", 1, "10.00"), make_reversal("E2", 2, "FEE-001-D1@D1"))
 
     log = unwrap_ok(process_stream(stream, CHALLENGE)).find_log(Day(2))
 
-    assert list_fee_markers(log) == ["FEE-001-D1@D1", "FEE-001-D1@D2", "FEE-001-D2@D2"]
+    assert list_fee_ids(log) == ["FEE-001-D1@D1", "FEE-001-D1@D2", "FEE-001-D2@D2"]
 
 
 def test_amb_035_a_reversed_refund_puts_its_fee_back_in_force() -> None:
@@ -61,4 +61,4 @@ def test_amb_035_a_reversed_refund_puts_its_fee_back_in_force() -> None:
 
     log = unwrap_ok(process_stream(stream, week)).find_log(Day(7))
 
-    assert list_refund_markers(log) == ["REFUND-001-D2@D6", "REFUND-001-D4@D6", "REFUND-001-D5@D6", "REFUND-001-D2@D7"]
+    assert list_refund_ids(log) == ["REFUND-001-D2@D6", "REFUND-001-D4@D6", "REFUND-001-D5@D6", "REFUND-001-D2@D7"]

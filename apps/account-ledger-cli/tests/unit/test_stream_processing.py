@@ -37,7 +37,7 @@ def test_amb_001_a_day_without_events_still_closes() -> None:
     included, so each still accrues its interest; the event is processed on its own booked day."""
     result = unwrap_ok(process_stream((make_credit("E1", 1, "1000.00"), make_credit("E2", 4, "10.00")), CHALLENGE))
 
-    assert [marker for marker, _ in list_interest_amounts(result.find_log(Day(3)))] == [
+    assert [event_id for event_id, _ in list_interest_amounts(result.find_log(Day(3)))] == [
         "INT-001-D1@D1",
         "INT-001-D2@D2",
         "INT-001-D3@D3",

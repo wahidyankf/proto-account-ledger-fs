@@ -25,7 +25,7 @@ from account_ledger.domain.model.money import Aed, Amount
 from account_ledger.domain.stream_processing import process_stream
 from support.results import unwrap_ok
 from support.states import list_settlements, list_states
-from support.streams import ACC_001, list_fee_markers, make_authorization, make_credit, make_settlement
+from support.streams import ACC_001, list_fee_ids, make_authorization, make_credit, make_settlement
 from support.values import make_aed
 
 
@@ -205,5 +205,5 @@ def test_amb_030_a_settlement_above_its_hold_debits_in_full() -> None:
 
     assert list_states(log, "Auth-A") == [Settled(Amount(make_aed("120.00")))]
     assert unwrap_ok(sum_holds(log, ACC_001, Day(2))) == make_aed("0.00")
-    assert list_fee_markers(log) == ["FEE-001-D2@D2"]
+    assert list_fee_ids(log) == ["FEE-001-D2@D2"]
     assert unwrap_ok(compute_closing(log, ACC_001, Day(2))) == make_aed("-45.00")

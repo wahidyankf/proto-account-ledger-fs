@@ -12,7 +12,7 @@ from support.values import make_aed
 
 
 def test_amb_005_interest_accrues_on_a_positive_closing() -> None:
-    """AMB-005: each day's accrual is an event fired at that day's close, on the closing ledger balance as known
+    """AMB-005: each day's accrual is an event generated at that day's close, on the closing ledger balance as known
     then."""
     log = unwrap_ok(process_stream((make_credit("E1", 1, "1000.00"),), CHALLENGE)).find_log(Day(1))
 
@@ -20,8 +20,8 @@ def test_amb_005_interest_accrues_on_a_positive_closing() -> None:
 
 
 def test_amb_005_a_changed_closing_adjusts_its_interest() -> None:
-    """AMB-005: a late event that changes a past day's closing fires an adjustment for that day, value-dated the day it
-    is recognised and naming the day it is for."""
+    """AMB-005: a late event that changes a past day's closing generates an adjustment for that day, value-dated the
+    day it is recognised and naming the day it is for."""
     stream = (make_credit("E1", 1, "1000.00"), make_debit("E2", 2, "500.00", value=1))
 
     log = unwrap_ok(process_stream(stream, CHALLENGE)).find_log(Day(2))
@@ -43,9 +43,9 @@ def test_amb_023_a_days_interest_never_counts_its_own_capitalization() -> None:
     assert list_interest_amounts(log) == [("INT-001-D1@D1", make_aed("20.00")), ("INT-001-D2@D2", make_aed("20.01"))]
 
 
-def test_amb_035_a_reversed_interest_event_is_fired_again() -> None:
-    """AMB-035: a reversed interest event drops out of what was fired for its day, so the next close fires the day's
-    interest again, as an adjustment under a marker for that close (tech-docs 002)."""
+def test_amb_035_a_reversed_interest_event_is_generated_again() -> None:
+    """AMB-035: a reversed interest event drops out of what was generated for its day, so the next close generates the
+    day's interest again, as an adjustment under a generated ID for that close (tech-docs 002)."""
     stream = (make_credit("E1", 1, "1000.00"), make_reversal("E2", 2, "INT-001-D1@D1"))
 
     log = unwrap_ok(process_stream(stream, CHALLENGE)).find_log(Day(2))

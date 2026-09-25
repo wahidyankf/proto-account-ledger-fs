@@ -16,7 +16,7 @@ from support.streams import ACC_001, build_unsettled_auth_a
 # available balance, for as long as the ledger runs. Visa's longest authorization-to-clearing time frame is 30
 # calendar days (Visa Business News AI13522, effective 13 April 2024), so by Day 32 no network would still honour
 # Auth-A, yet this ledger still reserves its AED 200.00.
-# The fix: a hold lifetime after which the end of day fires a hold-expiry event that releases the hold.
+# The fix: a hold lifetime after which the end of day generates a hold-expiry event that releases the hold.
 @pytest.mark.xfail(strict=True, reason="AMB-018: holds never expire, so an unsettled hold is never released")
 def test_known_weakness_an_unsettled_hold_never_lapses() -> None:
     """AMB-018: Auth-A, never settled, should lapse by Day 32, but its hold still reduces the available balance."""

@@ -105,7 +105,7 @@ class AccountId:
 
     @property
     def number(self) -> str:
-        """The three digits a marker carries."""
+        """The three digits a generated ID carries."""
         return self.value.removeprefix("ACC-")
 
 
@@ -143,7 +143,7 @@ class IncomingId:
 
 @dataclass(frozen=True, slots=True)
 class InstalmentId:
-    """An instalment a credit fired, such as E10-1."""
+    """An instalment a credit generated, such as E10-1."""
 
     parent: IncomingId
     number: int
@@ -155,11 +155,11 @@ class InstalmentId:
 
 @dataclass(frozen=True, slots=True)
 class FeeId:
-    """FEE-001-D2@D5: an account's fee for a day, fired at the close of another."""
+    """FEE-001-D2@D5: an account's fee for a day, generated at the close of another."""
 
     account: AccountId
-    covered_day: Day
-    fired_day: Day
+    for_day: Day
+    generated_day: Day
 
 
 @dataclass(frozen=True, slots=True)
@@ -167,8 +167,8 @@ class RefundId:
     """REFUND-001-D2@D6: the refund of an account's fee for a day."""
 
     account: AccountId
-    covered_day: Day
-    fired_day: Day
+    for_day: Day
+    generated_day: Day
 
 
 @dataclass(frozen=True, slots=True)
@@ -176,8 +176,8 @@ class InterestId:
     """INT-001-D2@D5: an account's interest event for a day."""
 
     account: AccountId
-    covered_day: Day
-    fired_day: Day
+    for_day: Day
+    generated_day: Day
 
 
 @dataclass(frozen=True, slots=True)
@@ -185,7 +185,7 @@ class CapitalizationId:
     """CAP-001@D6: an account's capitalization at the close of a day."""
 
     account: AccountId
-    fired_day: Day
+    generated_day: Day
 
 
 type EventId = IncomingId | InstalmentId | FeeId | RefundId | InterestId | CapitalizationId
@@ -193,13 +193,13 @@ type EventId = IncomingId | InstalmentId | FeeId | RefundId | InterestId | Capit
 
 _EVENT = re.compile(
     r"(?P<incoming>E[0-9]+)(?:-(?P<part>[1-9][0-9]*))?"
-    r"|(?P<kind>FEE|REFUND|INT)-(?P<account>[0-9]{3})-D(?P<for_day>[0-9]+)@D(?P<fired>[0-9]+)"
-    r"|CAP-(?P<cap_account>[0-9]{3})@D(?P<cap_fired>[0-9]+)"
+    r"|(?P<kind>FEE|REFUND|INT)-(?P<account>[0-9]{3})-D(?P<for_day>[0-9]+)@D(?P<generated>[0-9]+)"
+    r"|CAP-(?P<cap_account>[0-9]{3})@D(?P<cap_generated>[0-9]+)"
 )
 
 
 def parse_event_id(text: str) -> Result[EventId, IdFault]:
-    """An incoming ID, an instalment, or a fired marker, as a reversal names its target (AMB-035)."""
+    """An incoming ID, an instalment, or a generated ID, as a reversal names its target (AMB-035)."""
     event_match = _EVENT.fullmatch(text)
     return Err(IdFault("event ID", text)) if event_match is None else Ok(_build_event_id(event_match))
 
@@ -211,35 +211,35 @@ def _build_event_id(event_match: re.Match[str]) -> EventId:
         incoming_id = IncomingId(group("incoming"))
         return InstalmentId(incoming_id, int(group("part"))) if group("part") else incoming_id
     if group("kind"):
-        account, covered_day, fired_day = (
+        account, for_day, generated_day = (
             AccountId(f"ACC-{group('account')}"),
             Day(int(group("for_day"))),
-            Day(int(group("fired"))),
+            Day(int(group("generated"))),
         )
         match group("kind"):
             case "FEE":
-                return FeeId(account, covered_day, fired_day)
+                return FeeId(account, for_day, generated_day)
             case "REFUND":
-                return RefundId(account, covered_day, fired_day)
+                return RefundId(account, for_day, generated_day)
             case _:
-                return InterestId(account, covered_day, fired_day)
-    return CapitalizationId(AccountId(f"ACC-{group('cap_account')}"), Day(int(group("cap_fired"))))
+                return InterestId(account, for_day, generated_day)
+    return CapitalizationId(AccountId(f"ACC-{group('cap_account')}"), Day(int(group("cap_generated"))))
 
 
 def format_id(event_id: EventId) -> str:
-    """The ID as the report prints it; a marker is built from its parts, never stored as a string."""
+    """The ID as the report prints it; a generated ID is built from its parts, never stored as a string."""
     match event_id:
         case IncomingId(value):
             return value
         case InstalmentId(parent, number):
             return f"{parent.value}-{number}"
-        case FeeId(account, covered_day, fired_day):
-            return f"FEE-{account.number}-D{covered_day.number}@D{fired_day.number}"
-        case RefundId(account, covered_day, fired_day):
-            return f"REFUND-{account.number}-D{covered_day.number}@D{fired_day.number}"
-        case InterestId(account, covered_day, fired_day):
-            return f"INT-{account.number}-D{covered_day.number}@D{fired_day.number}"
-        case CapitalizationId(account, fired_day):
-            return f"CAP-{account.number}@D{fired_day.number}"
+        case FeeId(account, for_day, generated_day):
+            return f"FEE-{account.number}-D{for_day.number}@D{generated_day.number}"
+        case RefundId(account, for_day, generated_day):
+            return f"REFUND-{account.number}-D{for_day.number}@D{generated_day.number}"
+        case InterestId(account, for_day, generated_day):
+            return f"INT-{account.number}-D{for_day.number}@D{generated_day.number}"
+        case CapitalizationId(account, generated_day):
+            return f"CAP-{account.number}@D{generated_day.number}"
         case _:
             assert_never(event_id)

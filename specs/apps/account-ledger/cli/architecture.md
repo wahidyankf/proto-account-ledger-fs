@@ -114,8 +114,8 @@ refuses any import of the other three.
                                            v
           +----------+  +----------+  +----------+  +----------+
           | events   |  | config   |  | money    |  | ids      |
-          | incoming |  | accounts,|  | Aed, Bhd,|  | days,    |
-          | and fired|  | window   |  | Amount   |  | IDs      |
+          | incoming,|  | accounts,|  | Aed, Bhd,|  | days,    |
+          | generated|  | window   |  | Amount   |  | IDs      |
           +----------+  +----------+  +----------+  +----------+
   ---------------------------------------------------------------------------------------------------
   common                                          every layer above may import it; it imports none
@@ -140,10 +140,10 @@ refuses any import of the other three.
 | `authorizations`    | states, `decide_authorization`, `apply_trigger`, holds, and records rebuilt from the log       |
 | `reversals`         | why a reversal is refused, in tech-docs 002's order, and which events the accepted ones undid  |
 | `event_log`         | the append-only tuple of entries, each kind holding only its outcome, and every `Rejection`    |
-| `events`            | the incoming event kinds, joined in `IncomingEvent`, and the fired kinds, in `FiredEvent`      |
+| `events`            | incoming event kinds, joined in `IncomingEvent`, and generated kinds, in `GeneratedEvent`      |
 | `config`            | the accounts, each typed by its currency, the window of days, and the capitalization days      |
 | `money`             | `Aed` and `Bhd`, one type per currency; `Amount` above zero; split, fee, and daily interest    |
-| `ids`               | days, account and hold IDs, incoming IDs, fired-event markers, and instalment counts           |
+| `ids`               | days, account and hold IDs, incoming IDs, generated-event IDs, and instalment counts           |
 | `result`            | `Ok` and `Err`, so every failure a caller can meet comes back as a value; it knows no ledger   |
 
 `event_log` imports `AuthorizationState` for annotations only, so the log and the state machine do not import each other
@@ -160,7 +160,7 @@ money     Aed | Bhd = Money             Amount[M: (Aed, Bhd)], above zero      D
 ids       Day   AccountId   AuthorizationId   IncomingId   InstalmentCount
           EventId = IncomingId | InstalmentId | FeeId | RefundId | InterestId | CapitalizationId
 events    IncomingEvent = Credit | Debit | Authorization | Settlement | Reversal     each holds an Amount
-          FiredEvent = Instalment | Fee | FeeRefund | InterestAccrual | InterestAdjustment | Capitalization
+          GeneratedEvent = Instalment | Fee | FeeRefund | InterestAccrual | InterestAdjustment | Capitalization
 config    Account[M] = id + opening M     LedgerConfig = accounts, first_day, last_day, capitalization_days
 event_log LogEntry = Accepted | AuthorizationDecided | SettlementAccepted | Rejected | Duplicate
           SettlementAccepted.effect = Captured(state_before, state_after) | ForcePosted
@@ -174,7 +174,7 @@ auth      AuthorizationState = Approved(hold) | PartiallySettled(captured_amount
           AuthorizationRecord = the Authorization + its state now
 report    DayReport = day, processed_events: Processed..., closing_balances, available_balances,
                       restatements: Restatement..., authorizations: AuthorizationRecord..., errors,
-                      end_of_day: (Fired | Capitalized | NothingFired)...
+                      end_of_day: (Generated | Capitalized | NothingGenerated)...
 stream_processing
           ProcessedStream = reports: DayReport..., logs: Log...     find_report(day), find_log(day)
           process_stream(stream, config) -> Result[ProcessedStream, CurrencyMismatch]
@@ -182,8 +182,8 @@ stream    parse_stream(text, config) -> Result[tuple[IncomingEvent, ...], Stream
 ```
 
 `authorizations` is a hand-written state machine: `apply_trigger` is one `match` over the state and its trigger, ending
-in `assert_never`. A settlement whose `final` cell is `no` fires `SettlePartial`; any other fires `SettleFinal`. As
-built:
+in `assert_never`. A settlement whose `final` cell is `no` generates `SettlePartial`; any other generates `SettleFinal`.
+As built:
 
 ```text
              available >= 0 after the hold              SettleFinal, or SettlePartial reaching the hold
@@ -207,7 +207,7 @@ an authorization the log does not know, is accepted as a force-post: it debits i
 process_stream, for each event in listed order, D the current day
   1. the event is booked after D: close D (a and b), open D + 1, and look again; a day with no events closes too;
      no day closes after the window's last, so an event booked after the window reaches no day's log or report
-  2. otherwise: processing.process_event(log, event, D) ---> log + one entry (+ the instalments a credit fires)
+  2. otherwise: processing.process_event(log, event, D) ---> log + one entry (+ the instalments a credit generates)
        idempotency first; then by kind; a reversal checked against its target in order
        an event booked before D is late and is processed on D (AMB-015)
 process_stream, once every event is processed: close every day left in the window
@@ -215,10 +215,10 @@ process_stream, once every event is processed: close every day left in the windo
 closing day D
   a. end_of_day.close_day(log, D): step 1 in fees, steps 2 and 3 in interest
        step 1  fees:     each day first..D: negative with no fee in force -> Fee; non-negative with one -> FeeRefund
-       step 2  interest: each day first..D: daily interest of its base, less what was fired for it
+       step 2  interest: each day first..D: daily interest of its base, less what was generated for it
                          -> InterestAccrual for D, InterestAdjustment for an earlier day
        step 3  capitalization, on a capitalization day: accrued interest above zero -> Capitalization
-  b. report.build_report(log, D, reported_closings) ---> DayReport: what D processed and fired, its closings,
+  b. report.build_report(log, D, reported_closings) ---> DayReport: what D processed and generated, its closings,
        and each earlier closing that changed since last reported
 cli, after the last day
   render.render_reports(reports) ---> the whole text, then one write and one flush to standard output

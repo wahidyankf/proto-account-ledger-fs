@@ -108,7 +108,7 @@ For each, what it represents and what the bank should mandate:
 - **Partial captures.** A split shipment. Mandate: keep the rest on hold, as the model does, but give the remainder the
   same lifetime as any hold, so an order never finished does not hold money forever.
 - **Never settled.** A cancelled order or an abandoned rental whose merchant never clears. Mandate: a hold-expiry event
-  fired at the close after the network's time frame for the merchant category; Visa's longest is 30 calendar days
+  generated at the close after the network's time frame for the merchant category; Visa's longest is 30 calendar days
   ([NUMBERS](../../NUMBERS.md)). The failing test records this gap, and a clearing that arrives after expiry is a
   force-post.
 - **Voided by the merchant.** A merchant cancels before clearing. Mandate: an authorization-reversal event that releases

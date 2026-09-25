@@ -1,4 +1,4 @@
-"""Processing one incoming event: exactly one log entry for it, plus the instalments a credit fires."""
+"""Processing one incoming event: exactly one log entry for it, plus the instalments a credit generates."""
 
 from typing import assert_never
 
@@ -50,7 +50,7 @@ def process_event(log: Log, event: IncomingEvent, today: Day, config: LedgerConf
         return Ok(append_entry(log, Rejected(event, today, IdReused())))
     match event:
         case Credit(posting=Instalments(count=count)):
-            return Ok(append_entry(log, Accepted(event, today)) + _fire_instalments(event, count, today))
+            return Ok(append_entry(log, Accepted(event, today)) + _generate_instalments(event, count, today))
         case Credit() | Debit():
             return Ok(append_entry(log, Accepted(event, today)))
         case Reversal():
@@ -97,8 +97,8 @@ def _decide_effect(
             return Ok(ForcePosted()) if isinstance(fault, NoTransition) else Err(fault)
 
 
-def _fire_instalments(credit: Credit, count: InstalmentCount, today: Day) -> tuple[Accepted, ...]:
-    """The instalments a credit fires, in order, each accepted with the credit's value day (AMB-017, AMB-020)."""
+def _generate_instalments(credit: Credit, count: InstalmentCount, today: Day) -> tuple[Accepted, ...]:
+    """The instalments a credit generates, in order, each accepted with the credit's value day (AMB-017, AMB-020)."""
     parts = split_amount_of(credit.amount, count)
     assert isinstance(parts, Ok)  # the stream reader refuses a credit it cannot split
     return tuple(

@@ -9,7 +9,7 @@ from account_ledger.domain.model.events import (
     Authorization,
     Credit,
     Debit,
-    FiredEvent,
+    GeneratedEvent,
     IncomingEvent,
     Instalment,
     Reversal,
@@ -23,9 +23,9 @@ if TYPE_CHECKING:  # authorizations reads the log, so the states are imported fo
 
 @dataclass(frozen=True, slots=True)
 class Accepted:
-    """An event the ledger accepted; it counts in every aggregation. A fired event is always accepted."""
+    """An event the ledger accepted; it counts in every aggregation. A generated event is always accepted."""
 
-    event: Credit | Debit | Reversal | FiredEvent
+    event: Credit | Debit | Reversal | GeneratedEvent
     processed_day: Day
 
 
@@ -131,7 +131,7 @@ class Duplicate:
 
 type LogEntry = Accepted | AuthorizationDecided | SettlementAccepted | Rejected | Duplicate
 type Log = tuple[LogEntry, ...]
-type LoggedEvent = Credit | Debit | Reversal | FiredEvent | Authorization | Settlement  # any entry's event
+type LoggedEvent = Credit | Debit | Reversal | GeneratedEvent | Authorization | Settlement  # any entry's event
 
 
 def append_entry(log: Log, entry: LogEntry) -> Log:
@@ -145,7 +145,7 @@ def find_first_entry(log: Log, event_id: EventId) -> LogEntry | None:
 
 
 def list_instalments(log: Log, credit: IncomingId) -> tuple[Instalment, ...]:
-    """The instalments a credit fired, in order (AMB-017)."""
+    """The instalments a credit generated, in order (AMB-017)."""
     return tuple(
         entry.event
         for entry in log

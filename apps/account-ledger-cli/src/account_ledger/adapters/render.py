@@ -42,9 +42,9 @@ from account_ledger.domain.report import (
     Capitalized,
     DayReport,
     EndOfDayEvent,
-    Fired,
+    Generated,
     Note,
-    NothingFired,
+    NothingGenerated,
     Processed,
     Step,
 )
@@ -74,7 +74,7 @@ def _format_day(report: DayReport) -> str:
 
 
 def _build_event_rows(report: DayReport) -> list[Row]:
-    """A row per event the day processed, each followed by the rows of the instalments it fired."""
+    """A row per event the day processed, each followed by the rows of the instalments it generated."""
     rows: list[Row] = []
     for processed_event in report.processed_events:
         rows.extend(_build_processed_rows(processed_event))
@@ -101,7 +101,7 @@ def _format_table(header: Row, rows: Sequence[Row]) -> list[str]:
 
 
 def _build_processed_rows(processed_event: Processed) -> list[Row]:
-    """The event's row, then a row per instalment it fired, each printing as a credit."""
+    """The event's row, then a row per instalment it generated, each printing as a credit."""
     event, booked = processed_event.event, _format_day_cell(processed_event.event.booked)
     row = (
         format_id(event.id),
@@ -116,7 +116,7 @@ def _build_processed_rows(processed_event: Processed) -> list[Row]:
 
 
 def _build_instalment_row(part: Instalment, booked: str, count: int) -> Row:
-    """An instalment's row, printed as a credit booked with the credit that fired it."""
+    """An instalment's row, printed as a credit booked with the credit that generated it."""
     detail = f"{_format_money(part.amount)}, instalment {part.id.number} of {count}"
     return (format_id(part.id), booked, "Credit", part.account.value, detail, _format_day_cell(part.value_day))
 
@@ -196,11 +196,11 @@ def _format_kept_hold(entry: LogEntry) -> str:
             return ""
 
 
-def _build_applied_row(row: Fired | Capitalized | NothingFired) -> Row:
-    """An end-of-day row: the step, the event it fired or `-`, and its detail or the note for nothing fired."""
+def _build_applied_row(row: Generated | Capitalized | NothingGenerated) -> Row:
+    """An end-of-day row: the step, the event it generated or `-`, and its detail or the note for nothing generated."""
     match row:
-        case Fired(step=step, event=event):
-            kind, detail = _format_fired_event(event)
+        case Generated(step=step, event=event):
+            kind, detail = _format_generated_event(event)
             return (
                 str(step.value),
                 format_id(event.id),
@@ -220,7 +220,7 @@ def _build_applied_row(row: Fired | Capitalized | NothingFired) -> Row:
                 detail,
                 _format_day_cell(event.value_day),
             )
-        case NothingFired(step=step, accounts=accounts, note=note):
+        case NothingGenerated(step=step, accounts=accounts, note=note):
             return (
                 str(step.value),
                 "-",
@@ -233,20 +233,20 @@ def _build_applied_row(row: Fired | Capitalized | NothingFired) -> Row:
             assert_never(row)
 
 
-def _format_fired_event(event: EndOfDayEvent) -> tuple[str, str]:
+def _format_generated_event(event: EndOfDayEvent) -> tuple[str, str]:
     """An end-of-day event's Type and Detail texts (tech-docs 003)."""
     match event:
         case Fee(id=fee, amount=amount):
-            return "Overdraft fee", f"{_format_money(amount)}, for {_format_day_cell(fee.covered_day)}"
+            return "Overdraft fee", f"{_format_money(amount)}, for {_format_day_cell(fee.for_day)}"
         case FeeRefund(fee=fee, amount=amount):
-            return "Fee refund", f"{_format_money(amount)}, for {_format_day_cell(fee.covered_day)}"
+            return "Fee refund", f"{_format_money(amount)}, for {_format_day_cell(fee.for_day)}"
         case InterestAccrual(id=interest, amount=amount):
-            return "Interest accrual", f"{_format_amount(amount.money)}, for {_format_day_cell(interest.covered_day)}"
+            return "Interest accrual", f"{_format_amount(amount.money)}, for {_format_day_cell(interest.for_day)}"
         case InterestAdjustment(id=interest, direction=direction, amount=amount):
             sign = MINUS if direction is Direction.DOWN else ""
             return (
                 "Interest adjustment",
-                f"{sign}{_format_amount(amount.money)}, for {_format_day_cell(interest.covered_day)}",
+                f"{sign}{_format_amount(amount.money)}, for {_format_day_cell(interest.for_day)}",
             )
         case _:
             assert_never(event)
@@ -265,7 +265,7 @@ def _format_days(days: Sequence[Day]) -> str:
 
 
 def _format_step(step: Step) -> str:
-    """The Type a step's row prints when the step fired nothing of its kind."""
+    """The Type a step's row prints when the step generated nothing of its kind."""
     match step:
         case Step.FEES:
             return "Fee re-evaluation"
@@ -278,7 +278,7 @@ def _format_step(step: Step) -> str:
 
 
 def _format_note(note: Note) -> str:
-    """The row a step prints when it fires nothing of its kind (tech-docs 002)."""
+    """The row a step prints when it generates nothing of its kind (tech-docs 002)."""
     match note:
         case Note.NO_FEE:
             return "no fee assessed or refunded"
