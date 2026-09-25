@@ -1,8 +1,7 @@
 """Reversals: when one is refused, and which events the posted ones undid (AMB-028, AMB-035)."""
 
 from account_ledger.common.result import Err, Ok, Result
-from account_ledger.domain.model.event_log import (
-    AccountHistory,
+from account_ledger.domain.account.domain_events import (
     AlreadyReversed,
     AlreadyUndone,
     AuthorizationApproved,
@@ -15,6 +14,9 @@ from account_ledger.domain.model.event_log import (
     ReversalPosted,
     ReversesAReversal,
     UnknownTarget,
+)
+from account_ledger.domain.account.history import (
+    AccountHistory,
     find_first_entry,
     list_counted_events,
     list_instalments,

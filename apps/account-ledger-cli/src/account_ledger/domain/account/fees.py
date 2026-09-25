@@ -2,14 +2,18 @@
 AMB-004, AMB-011, AMB-027)."""
 
 from account_ledger.common.result import Err, Ok, Result
-from account_ledger.domain.balances import compute_closing
-from account_ledger.domain.model.event_log import (
-    AccountHistory,
-    AnyHistory,
+from account_ledger.domain.account.balances import (
+    compute_closing,
+)
+from account_ledger.domain.account.domain_events import (
     FeeCharged,
     FeeRefunded,
     LogEntry,
     ReversalPosted,
+)
+from account_ledger.domain.account.history import (
+    AccountHistory,
+    AnyHistory,
     is_aed_history,
 )
 from account_ledger.domain.model.events import Fee, FeeRefund, Reversal

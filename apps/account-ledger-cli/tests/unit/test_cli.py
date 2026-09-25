@@ -10,7 +10,9 @@ from account_ledger.cli import run_cli
 from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.money import CurrencyMismatch
-from account_ledger.domain.stream_processing import process_stream
+from account_ledger.domain.stream_processing import (
+    process_stream,
+)
 from support.brief_stream import BRIEF_CSV, build_brief_stream
 from support.results import unwrap_ok
 

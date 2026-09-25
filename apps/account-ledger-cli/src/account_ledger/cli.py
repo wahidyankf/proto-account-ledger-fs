@@ -11,7 +11,9 @@ from account_ledger.adapters.render import render_reports
 from account_ledger.adapters.stream_csv import parse_stream
 from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.model.config import CHALLENGE
-from account_ledger.domain.stream_processing import process_stream
+from account_ledger.domain.stream_processing import (
+    process_stream,
+)
 
 USAGE = "usage: account-ledger-cli <stream.csv>"
 CLOSED_PIPE = 141  # the reader has gone, as a shell reports SIGPIPE: 128 + 13

@@ -9,7 +9,9 @@ import pytest
 from account_ledger.adapters.render import render_reports
 from account_ledger.cli import main
 from account_ledger.domain.model.config import CHALLENGE
-from account_ledger.domain.stream_processing import process_stream
+from account_ledger.domain.stream_processing import (
+    process_stream,
+)
 from support.brief_stream import build_brief_stream
 from support.results import unwrap_ok
 

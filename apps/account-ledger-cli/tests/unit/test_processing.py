@@ -2,18 +2,26 @@
 
 import pytest
 
-from account_ledger.domain.authorizations import sum_holds
-from account_ledger.domain.balances import compute_closing
-from account_ledger.domain.model.config import CHALLENGE
-from account_ledger.domain.model.event_log import (
+from account_ledger.domain.account.authorizations import (
+    sum_holds,
+)
+from account_ledger.domain.account.balances import (
+    compute_closing,
+)
+from account_ledger.domain.account.domain_events import (
     CreditPosted,
     DuplicateIgnored,
     EventRejected,
     IdReused,
+)
+from account_ledger.domain.ledger.event_log import (
     find_history,
 )
+from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.ids import Day
-from account_ledger.domain.stream_processing import process_stream
+from account_ledger.domain.stream_processing import (
+    process_stream,
+)
 from support.results import unwrap_ok
 from support.states import list_entries
 from support.streams import (

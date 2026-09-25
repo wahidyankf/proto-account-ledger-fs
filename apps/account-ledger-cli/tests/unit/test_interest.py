@@ -5,7 +5,9 @@ from dataclasses import replace
 from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.ids import Day
 from account_ledger.domain.report import Capitalized
-from account_ledger.domain.stream_processing import process_stream
+from account_ledger.domain.stream_processing import (
+    process_stream,
+)
 from support.results import unwrap_ok
 from support.streams import list_capitalization_amounts, list_interest_amounts, make_credit, make_debit, make_reversal
 from support.values import make_aed

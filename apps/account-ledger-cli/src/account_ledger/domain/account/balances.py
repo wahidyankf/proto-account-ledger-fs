@@ -3,11 +3,15 @@
 from typing import assert_never
 
 from account_ledger.common.result import Err, Result
-from account_ledger.domain.authorizations import sum_holds
-from account_ledger.domain.model.event_log import (
+from account_ledger.domain.account.authorizations import (
+    sum_holds,
+)
+from account_ledger.domain.account.domain_events import (
+    LoggedEvent,
+)
+from account_ledger.domain.account.history import (
     AccountHistory,
     AnyHistory,
-    LoggedEvent,
     find_first_entry,
     is_aed_history,
     list_counted_events,

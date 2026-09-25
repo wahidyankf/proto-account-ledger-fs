@@ -2,7 +2,9 @@
 
 from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.ids import AccountId, Day, IncomingId
-from account_ledger.domain.stream_processing import process_stream
+from account_ledger.domain.stream_processing import (
+    process_stream,
+)
 from support.brief_stream import build_brief_stream
 from support.results import unwrap_ok
 from support.states import list_entries

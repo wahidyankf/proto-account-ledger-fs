@@ -4,16 +4,23 @@
 from typing import assert_never
 
 from account_ledger.common.result import Err, Ok, Result
-from account_ledger.domain.balances import compute_closing
-from account_ledger.domain.model.event_log import (
-    AccountHistory,
-    AnyHistory,
+from account_ledger.domain.account.balances import (
+    compute_closing,
+)
+from account_ledger.domain.account.domain_events import (
     InterestAccrued,
     InterestAdjusted,
     InterestCapitalized,
     LogEntry,
+)
+from account_ledger.domain.account.history import (
+    AccountHistory,
+    AnyHistory,
     is_aed_history,
     list_counted_events,
+)
+from account_ledger.domain.account.reversals import (
+    list_reversed_targets,
 )
 from account_ledger.domain.model.events import Capitalization, InterestAccrual, InterestAdjustment
 from account_ledger.domain.model.ids import AccountId, CapitalizationId, Day, InterestId
@@ -27,7 +34,6 @@ from account_ledger.domain.model.money import (
     make_amount_of,
     sum_money,
 )
-from account_ledger.domain.reversals import list_reversed_targets
 
 
 def accrue_interest[M: (Aed, Bhd)](

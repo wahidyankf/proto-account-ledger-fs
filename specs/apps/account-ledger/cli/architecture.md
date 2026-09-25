@@ -55,13 +55,15 @@ standard streams, in UTF-8 whatever the locale, since the report prints the minu
 ## L3 — Components
 
 The shell holds every effect and every raw value; the adapters translate between text and the domain's types; the domain
-holds every business rule. The adapters and the domain are pure. Every dependency points inward, from the shell to the
-adapters and the domain, from the adapters to the domain's types, and, inside the domain, from stream processing down to
-the types. Each layer is a place in the package: the shell is `cli.py` at its root, the adapters are `adapters/`, and
-the domain is `domain/`, its values in `domain/model/`, under its own `ruff.toml` that refuses any import of
-`account_ledger.adapters` or `account_ledger.cli` (TID251). The values are everything below the model line: they decide
-nothing. Below them sits `common/`, the tools with no ledger meaning: every layer may import it, and its own `ruff.toml`
-refuses any import of the other three.
+holds every business rule. The adapters and the domain are pure. Every dependency points inward: from the shell to the
+adapters and the domain, from the adapters to the domain's types, and, inside the domain, from stream processing to the
+ledger service and the report, from those to the Account aggregate, and from the aggregate to the values. Each layer is
+a place in the package: the shell is `cli.py` at its root, the adapters are `adapters/`, and the domain is `domain/`,
+with `stream_processing.py` and `report.py` at its root, the ledger service in `domain/ledger/`, the aggregate in
+`domain/account/`, and the values in `domain/model/`. Each domain package has its own `ruff.toml` that refuses any
+import of the layers above it, and every one refuses `account_ledger.adapters` and `account_ledger.cli` (TID251). The
+values decide nothing. Below them sits `common/`, the tools with no ledger meaning: every layer may import it, and its
+own `ruff.toml` refuses any import of the other three.
 
 ```text
   shell      +--------------------------------------------------------------------------------+
@@ -74,7 +76,7 @@ refuses any import of the other three.
              | text -> the events, or   |  |  | DayReport -> text, as    |
              | a StreamError            |  |  | OUTPUT_TARGET prints it  |
              +--------------------------+  |  +--------------------------+
-                  | builds the types       |        | reads report, event_log, and the types
+                  | builds the values      |        | reads the report, the domain events, and the values
   ---------------------------------------------------------------------------------------------------
   domain                                   v
   domain/                     +--------------------------+
@@ -83,40 +85,35 @@ refuses any import of the other three.
                               | order, each day closed   |
                               | on time                  |
                               +--------------------------+
-                              | each event     | each close       | each day
-                              v                v                  v
-                        +------------+   +------------+     +------------+
-                        | processing |   | end_of_day |     | report     |
-                        | one entry  |   | fees, then |     | a day as   |
-                        | per event  |   | interest,  |     | data       |
-                        |            |   | capitalize |     |            |
-                        +------------+   +------------+     +------------+
-                              |                |                  |
-                              v                v                  v
-            +-------------------------------------------------------------------------+
-            | the rules; each uses only those listed below it                         |
-            |   interest        accruals, adjustments, capitalization, accrued days   |
-            |   fees            a fee for each day closing negative, refunded after   |
-            |   balances        closing and available                                 |
-            |   authorizations  the states, decide, transition, holds, and records    |
-            |   reversals       which reversal is refused, and which events one undid |
-            +-------------------------------------------------------------------------+
-                                           |      each rule reads one account's history;
-                                           |      only processing and end_of_day append
+                                | each event, each close       | each day
+                                v                              v
+  ledger service   +----------------------------------+   +----------------------------+
+  domain/ledger/   | processing: IDs across accounts, |   | report, the read model:    |
+                   |   the cross-account check        |   | a day as data, read from   |
+                   | end_of_day: each step on every   |   | the log and each account's |
+                   |   account, in account order      |   | history                    |
+                   | event_log: the log               |   | domain/report.py           |
+                   +----------------------------------+   +----------------------------+
+                                | one account's history at a time      |
+  ---------------------------------------------------------------------------------------------------
+  aggregate                     v
+  domain/account/  +-------------------------------------------------------------------------+
+                   | the Account aggregate; every rule reads one AccountHistory, never the log |
+                   |   decisions       one incoming event on the account -> its entries      |
+                   |   interest        accruals, adjustments, capitalization, accrued days   |
+                   |   fees            a fee for each day closing negative, refunded after   |
+                   |   balances        closing and available                                 |
+                   |   authorizations  decide, transition, holds, and records                |
+                   |   reversals       which reversal is refused, and which events one undid |
+                   |   history, domain_events, states: what the rules read and record        |
+                   +-------------------------------------------------------------------------+
   ---------------------------------------------------------------------------------------------------
   model                                    v
-  domain/model/                    +----------------+
-                                   | event_log      |
-                                   | entries and    |
-                                   | rejections     |
-                                   +----------------+
-                                           |
-                                           v
-          +----------+  +----------+  +----------+  +----------+
-          | events   |  | config   |  | money    |  | ids      |
-          | incoming,|  | accounts,|  | Aed, Bhd,|  | days,    |
-          | generated|  | window   |  | Amount   |  | IDs      |
-          +----------+  +----------+  +----------+  +----------+
+  domain/model/   +----------+  +----------+  +----------+  +----------+
+                  | events   |  | config   |  | money    |  | ids      |
+                  | incoming,|  | accounts,|  | Aed, Bhd,|  | days,    |
+                  | generated|  | window   |  | Amount   |  | IDs      |
+                  +----------+  +----------+  +----------+  +----------+
   ---------------------------------------------------------------------------------------------------
   common                                          every layer above may import it; it imports none
   common/                          +----------------+
@@ -125,29 +122,33 @@ refuses any import of the other three.
                                    +----------------+
 ```
 
-| Component           | Responsibility                                                                                 |
-| ------------------- | ---------------------------------------------------------------------------------------------- |
-| `cli`               | `run_cli` checks arguments, reads, parses, processes, renders, and maps each failure to a code |
-| `stream_csv`        | parsing the stream file into incoming events, or the first fault with its line                 |
-| `render`            | the report as text: banners, box tables, amounts with `−` and separators, notes, and errors    |
-| `stream_processing` | the stream in listed order, closing each day on time, with each day's log and report           |
-| `processing`        | idempotency and the cross-account check on the log, then the account decides from its history  |
-| `end_of_day`        | a day's close, one step at a time on every account: `fees`, `interest`, then capitalization    |
-| `report`            | a day as data: processed events, end-of-day rows, closings, restated ones, holds, and errors   |
-| `fees`              | a fee for each day closing negative with none in force, refunded once the day recovers         |
-| `interest`          | a day's interest on a positive closing, adjusted when a closing changes, and capitalized       |
-| `balances`          | closing and available, each recomputed over one account's history                              |
-| `authorizations`    | states, `decide_authorization`, `apply_settlement`, holds, and records rebuilt from a history  |
-| `reversals`         | why a reversal is refused, in tech-docs 002's order, and which events the accepted ones undid  |
-| `event_log`         | the log of domain events, one kind per fact, each `Rejection`, and one account's history       |
-| `events`            | incoming event kinds, joined in `IncomingEvent`, and generated kinds, in `GeneratedEvent`      |
-| `config`            | the accounts, each typed by its currency, the window of days, and the capitalization days      |
-| `money`             | `Aed` and `Bhd`, one type per currency; `Amount` above zero; split, fee, and daily interest    |
-| `ids`               | days, account and authorization IDs, incoming IDs, generated-event IDs, and instalment counts  |
-| `result`            | `Ok` and `Err`, so every failure a caller can meet comes back as a value; it knows no ledger   |
+| Component                | Responsibility                                                                            |
+| ------------------------ | ----------------------------------------------------------------------------------------- |
+| `cli`                    | `run_cli` checks arguments, reads, parses, processes, renders, and codes each failure     |
+| `stream_csv`             | the stream file parsed into incoming events, or the first fault with its line             |
+| `render`                 | the report as text: banners, box tables, amounts with `−`, notes, and errors              |
+| `stream_processing`      | the stream in listed order, each day closed on time, with each day's log and report       |
+| `report`                 | the read model: a day's events, end-of-day rows, closings, restatements, holds, errors    |
+| `ledger/processing`      | idempotency and the cross-account check on the log; then the account decides              |
+| `ledger/end_of_day`      | a day's close, each step on every account: fees, interest, then capitalization            |
+| `ledger/event_log`       | the append-only log of every account's domain events, and each account's history in it    |
+| `account/decisions`      | one incoming event on one account, decided from its history, as the entries it records    |
+| `account/fees`           | a fee for each day closing negative with none in force, refunded once the day recovers    |
+| `account/interest`       | a day's interest on a positive closing, adjusted when a closing changes, capitalized      |
+| `account/balances`       | closing and available, each recomputed over the account's history                         |
+| `account/authorizations` | `decide_authorization`, `apply_settlement`, holds, and records rebuilt from the history   |
+| `account/reversals`      | why a reversal is refused, in tech-docs 002's order, and which events one undid           |
+| `account/history`        | `AccountHistory`: one account and its own entries, all that an account rule may read      |
+| `account/domain_events`  | the domain events, one kind per fact the ledger records, and every `Rejection`            |
+| `account/states`         | the authorization states, one frozen dataclass each                                       |
+| `model/events`           | incoming event kinds, in `IncomingEvent`, and generated kinds, in `GeneratedEvent`        |
+| `model/config`           | the accounts, each typed by its currency, the window of days, and the capitalization days |
+| `model/money`            | `Aed` and `Bhd`, one type per currency; `Amount` above zero; split, fee, daily interest   |
+| `model/ids`              | days, account and authorization IDs, incoming and generated IDs, instalment counts        |
+| `result`                 | `Ok` and `Err`, so every failure a caller can meet is a value; it knows no ledger         |
 
-`event_log` imports `AuthorizationState` for annotations only, so the log and the state machine do not import each other
-at run time.
+`states` sits apart from `authorizations` so that `domain_events` can hold the states a settlement moved its
+authorization between, and the state machine can read the domain events, without either importing the other.
 
 ## L4 — Code
 
@@ -162,7 +163,8 @@ ids       Day   AccountId   AuthorizationId   IncomingId   InstalmentCount
 events    IncomingEvent = Credit | Debit | Authorization | Settlement | Reversal     each holds an Amount
           GeneratedEvent = Instalment | Fee | FeeRefund | InterestAccrual | InterestAdjustment | Capitalization
 config    Account[M] = id + opening M     LedgerConfig = accounts, first_day, last_day, capitalization_days
-event_log LogEntry = the domain events, one kind per fact, each holding its event and processed_day:
+account/domain_events
+          LogEntry = the domain events, one kind per fact, each holding its event and processed_day:
             CreditPosted | DebitPosted | ReversalPosted | InstalmentPosted | FeeCharged | FeeRefunded
             | InterestAccrued | InterestAdjusted | InterestCapitalized
             | AuthorizationApproved | AuthorizationDeclined
@@ -170,8 +172,13 @@ event_log LogEntry = the domain events, one kind per fact, each holding its even
             | EventRejected(+ reason) | DuplicateIgnored
           EventRejected.reason: Rejection = IdReused | AlreadyReversed | ReversesAReversal | UnknownTarget
                                             | TargetOnAnotherAccount | MovedNoMoney | AlreadyUndone
-          Log = tuple[LogEntry, ...]
-auth      AuthorizationState = Approved(hold) | PartiallySettled(settled_amount, hold)
+account/history
+          AccountHistory[M: (Aed, Bhd)] = account: Account[M] + entries: LogEntry...   one account's own entries
+          every account rule takes one; a rule generic over M is reached through one dispatch, AnyHistory
+ledger/event_log
+          Log = tuple[LogEntry, ...]     find_history(log, account) -> AccountHistory[M]
+account/states, account/authorizations
+          AuthorizationState = Approved(hold) | PartiallySettled(settled_amount, hold)
                                  | Declined(requested_amount) | Settled(settled_amount)
           apply_settlement(state, FinalSettlement | PartialSettlement)
             -> Result[AuthorizationState, CannotSettle | CurrencyMismatch]
@@ -211,13 +218,15 @@ against an authorization the log does not know, is force-posted: it debits its a
 process_stream, for each event in listed order, D the current day
   1. the event is booked after D: close D (a and b), open D + 1, and look again; a day with no events closes too;
      no day closes after the window's last, so an event booked after the window reaches no day's log or report
-  2. otherwise: processing.process_event(log, event, D) ---> log + one entry (+ the instalments a credit generates)
-       idempotency first; then by kind; a reversal checked against its target in order
+  2. otherwise: ledger.processing.process_event(log, event, D) ---> log + one entry, and a credit's instalments
+       idempotency first, across every account; then a reversal whose target is on another account;
+       then the account decides from its own history, by kind; a reversal checked against its target in order
        an event booked before D is late and is processed on D (AMB-015)
 process_stream, once every event is processed: close every day left in the window
 
 closing day D
-  a. end_of_day.close_day(log, D): step 1 in fees, steps 2 and 3 in interest
+  a. ledger.end_of_day.close_day(log, D): each step on every account in turn; step 1 in account.fees,
+     steps 2 and 3 in account.interest, each reading one account's history
        step 1  fees:     each day first..D: negative with no fee in force -> Fee; non-negative with one -> FeeRefund
        step 2  interest: each day first..D: daily interest of its base, less what was generated for it
                          -> InterestAccrual for D, InterestAdjustment for an earlier day
@@ -240,24 +249,27 @@ To read the code for the first time, follow one day through it, in this order:
 1. `cli.py`, `run_cli`: where the program starts, and how every failure becomes an exit status.
 2. `domain/stream_processing.py`: the loop over events, where a later day's event closes the current day first, as the
    dynamic view above draws.
-3. `domain/processing.py`, `process_event`: what one incoming event adds to the log, duplicates caught first.
-4. `domain/end_of_day.py`, `close_day`: the three steps of a day's close, each in its own module.
-5. `domain/fees.py`: when a day is charged an overdraft fee, and when that fee is refunded.
-6. `domain/interest.py`: each day's interest, its adjustment when a closing changes, and its capitalization.
-7. `domain/balances.py`: the closing and available balances, worked out from one account's history.
-8. `domain/authorizations.py`: how an authorization is decided, holds money, and moves from state to state.
-9. `domain/reversals.py`: when a reversal is refused, and which events the accepted ones undid.
-10. `domain/model/event_log.py`: every kind of entry the rules add, and every reason an event is rejected.
-11. `domain/report.py`, then `adapters/render.py`: a day as data, then as the text OUTPUT_TARGET shows.
+3. `domain/ledger/processing.py`, `process_event`: duplicates and cross-account reversals caught on the whole log.
+4. `domain/account/decisions.py`, `decide_event_of`: what one incoming event adds to its account's history.
+5. `domain/ledger/end_of_day.py`, `close_day`: the three steps of a day's close, each run on every account.
+6. `domain/account/fees.py`: when a day is charged an overdraft fee, and when that fee is refunded.
+7. `domain/account/interest.py`: each day's interest, its adjustment when a closing changes, and its capitalization.
+8. `domain/account/balances.py`: the closing and available balances, worked out from one account's history.
+9. `domain/account/authorizations.py`: how an authorization is decided, holds money, and moves from state to state.
+10. `domain/account/reversals.py`: when a reversal is refused, and which events the posted ones undid.
+11. `domain/account/domain_events.py` and `history.py`: every domain event the rules record, every reason an event is
+    rejected, and the one account's history each rule reads.
+12. `domain/report.py`, then `adapters/render.py`: a day as data, then as the text OUTPUT_TARGET shows.
 
-`adapters/stream_csv.py` turns the file into events and holds no ledger rule. The rest of `domain/model/`, `events.py`,
-`config.py`, `money.py`, and `ids.py`, defines the values the rules pass around; look them up when a name is unfamiliar
-rather than reading them first.
+`adapters/stream_csv.py` turns the file into events and holds no ledger rule. `domain/model/`, `events.py`, `config.py`,
+`money.py`, and `ids.py`, defines the values the rules pass around; look them up when a name is unfamiliar rather than
+reading them first.
 
 ## Constraints
 
 - No web layer, persistence, UI, or database.
 - Every effect sits in the shell; the domain stays pure and deterministic.
-- Balances are recomputed from the append-only log, never stored (D7); nothing in the log is changed or removed.
+- Balances are recomputed from the append-only log, one account's history at a time, never stored (D7); nothing in the
+  log is changed or removed.
 - Holds never expire (AMB-018), the ledger's known weakness.
 - Every diagram is plain-text ASCII.

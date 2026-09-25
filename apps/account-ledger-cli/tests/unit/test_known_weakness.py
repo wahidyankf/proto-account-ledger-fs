@@ -6,7 +6,9 @@ import pytest
 
 from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.ids import Day
-from account_ledger.domain.stream_processing import process_stream
+from account_ledger.domain.stream_processing import (
+    process_stream,
+)
 from support.results import unwrap_ok
 from support.streams import ACC_001, build_unsettled_auth_a
 

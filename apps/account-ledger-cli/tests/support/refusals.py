@@ -1,6 +1,6 @@
 """One stream for each reason a reversal or a reused ID is refused, with the reason and the error text it prints."""
 
-from account_ledger.domain.model.event_log import (
+from account_ledger.domain.account.domain_events import (
     AlreadyReversed,
     AlreadyUndone,
     IdReused,

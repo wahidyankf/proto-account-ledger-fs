@@ -6,20 +6,32 @@ from enum import Enum, auto
 from types import MappingProxyType
 
 from account_ledger.common.result import Err, Ok, Result
-from account_ledger.domain.authorizations import AuthorizationRecord, list_records_of
-from account_ledger.domain.balances import compute_available_of, compute_closing_of
-from account_ledger.domain.interest import list_accrued_days_of
-from account_ledger.domain.model.config import LedgerConfig
-from account_ledger.domain.model.event_log import (
-    AnyHistory,
+from account_ledger.domain.account.authorizations import (
+    AuthorizationRecord,
+    list_records_of,
+)
+from account_ledger.domain.account.balances import (
+    compute_available_of,
+    compute_closing_of,
+)
+from account_ledger.domain.account.domain_events import (
     CreditPosted,
     EventRejected,
-    Log,
     LogEntry,
     LoggedEvent,
-    find_history_of,
+)
+from account_ledger.domain.account.history import (
+    AnyHistory,
     list_instalments_of,
 )
+from account_ledger.domain.account.interest import (
+    list_accrued_days_of,
+)
+from account_ledger.domain.ledger.event_log import (
+    Log,
+    find_history_of,
+)
+from account_ledger.domain.model.config import LedgerConfig
 from account_ledger.domain.model.events import (
     Authorization,
     Capitalization,

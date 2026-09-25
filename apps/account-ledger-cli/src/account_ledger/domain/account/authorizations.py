@@ -1,12 +1,10 @@
-"""The authorization state machine (D8, D17): one frozen dataclass per state, and the table as one ``match``."""
+"""The authorization state machine (D8, D17): the table as one ``match``, the decision on arrival, and the holds."""
 
 from dataclasses import dataclass
 from typing import assert_never
 
 from account_ledger.common.result import Err, Ok, Result
-from account_ledger.domain.model.event_log import (
-    AccountHistory,
-    AnyHistory,
+from account_ledger.domain.account.domain_events import (
     AuthorizationApproved,
     AuthorizationDeclined,
     CreditPosted,
@@ -22,8 +20,13 @@ from account_ledger.domain.model.event_log import (
     ReversalPosted,
     SettlementApplied,
     SettlementForcePosted,
+)
+from account_ledger.domain.account.history import (
+    AccountHistory,
+    AnyHistory,
     is_aed_history,
 )
+from account_ledger.domain.account.states import Approved, AuthorizationState, Declined, PartiallySettled, Settled
 from account_ledger.domain.model.events import AnyAmount, Authorization, Settlement, SettlementKind
 from account_ledger.domain.model.ids import Day
 from account_ledger.domain.model.money import (
@@ -37,38 +40,6 @@ from account_ledger.domain.model.money import (
     sum_amounts,
     sum_money,
 )
-
-
-@dataclass(frozen=True, slots=True)
-class Approved:
-    """Approved, holding its whole amount."""
-
-    hold: AnyAmount
-
-
-@dataclass(frozen=True, slots=True)
-class Declined:
-    """Declined on arrival; it holds nothing."""
-
-    requested_amount: AnyAmount
-
-
-@dataclass(frozen=True, slots=True)
-class PartiallySettled:
-    """Settled in part, still holding the rest."""
-
-    settled_amount: AnyAmount
-    hold: AnyAmount
-
-
-@dataclass(frozen=True, slots=True)
-class Settled:
-    """Settled; it holds nothing more."""
-
-    settled_amount: AnyAmount
-
-
-type AuthorizationState = Approved | PartiallySettled | Declined | Settled
 
 
 @dataclass(frozen=True, slots=True)
@@ -165,7 +136,7 @@ def derive_settlement_input(settlement: Settlement) -> SettlementInput:
 
 @dataclass(frozen=True, slots=True)
 class AuthorizationRecord:
-    """An authorization as the log leaves it: the event that opened it and its state now."""
+    """An authorization as the account's history leaves it: the event that opened it and its state now."""
 
     authorization: Authorization
     state: AuthorizationState

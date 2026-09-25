@@ -1,0 +1,11 @@
+# The ledger service works on the log and the accounts' histories; the report and the stream processing build on it.
+extend = "../../../../pyproject.toml"
+
+[lint]
+extend-select = ["TID251"]
+
+[lint.flake8-tidy-imports.banned-api]
+"account_ledger.domain.report".msg = "the ledger service never imports the report, which reads the log it keeps"
+"account_ledger.domain.stream_processing".msg = "the ledger service never imports the stream processing"
+"account_ledger.adapters".msg = "the domain never imports an adapter; the shell composes them"
+"account_ledger.cli".msg = "the domain never imports the shell"

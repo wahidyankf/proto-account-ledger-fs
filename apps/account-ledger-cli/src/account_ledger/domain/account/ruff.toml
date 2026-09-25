@@ -1,0 +1,12 @@
+# The Account aggregate sees one account's history and the values, never the log of every account or what reads it.
+extend = "../../../../pyproject.toml"
+
+[lint]
+extend-select = ["TID251"]
+
+[lint.flake8-tidy-imports.banned-api]
+"account_ledger.domain.ledger".msg = "the account aggregate never imports the ledger service, which sees every account"
+"account_ledger.domain.report".msg = "the account aggregate never imports the report"
+"account_ledger.domain.stream_processing".msg = "the account aggregate never imports the stream processing"
+"account_ledger.adapters".msg = "the domain never imports an adapter; the shell composes them"
+"account_ledger.cli".msg = "the domain never imports the shell"

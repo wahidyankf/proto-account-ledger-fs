@@ -1,39 +1,40 @@
-"""Processing one incoming event: exactly one log entry for it, plus the instalments a credit generates."""
+"""What one account records for an incoming event, decided from its history alone."""
 
 from typing import assert_never
 
 from account_ledger.common.result import Err, Ok, Result
-from account_ledger.domain.authorizations import (
-    AuthorizationState,
+from account_ledger.domain.account.authorizations import (
     CannotSettle,
     apply_settlement,
     decide_authorization,
     derive_settlement_input,
     find_record,
 )
-from account_ledger.domain.balances import compute_available
-from account_ledger.domain.model.config import LedgerConfig
-from account_ledger.domain.model.event_log import (
-    AccountHistory,
-    AnyHistory,
+from account_ledger.domain.account.balances import (
+    compute_available,
+)
+from account_ledger.domain.account.domain_events import (
     AuthorizationApproved,
     AuthorizationDeclined,
     CreditPosted,
     DebitPosted,
-    DuplicateIgnored,
     EventRejected,
-    IdReused,
     InstalmentPosted,
-    Log,
     LogEntry,
     ReversalPosted,
     SettlementApplied,
     SettlementForcePosted,
-    TargetOnAnotherAccount,
-    append_entry,
-    find_first_entry,
-    find_history_of,
+)
+from account_ledger.domain.account.history import (
+    AccountHistory,
+    AnyHistory,
     is_aed_history,
+)
+from account_ledger.domain.account.reversals import (
+    check_reversal,
+)
+from account_ledger.domain.account.states import (
+    AuthorizationState,
 )
 from account_ledger.domain.model.events import (
     Authorization,
@@ -47,36 +48,9 @@ from account_ledger.domain.model.events import (
 )
 from account_ledger.domain.model.ids import Day, InstalmentCount, InstalmentId
 from account_ledger.domain.model.money import Aed, Bhd, CurrencyMismatch, split_amount_of
-from account_ledger.domain.reversals import check_reversal
 
 
-def process_event(log: Log, event: IncomingEvent, today: Day, config: LedgerConfig) -> Result[Log, CurrencyMismatch]:
-    """The log with the event's entries appended; ``today`` is the day it is processed on (AMB-015). What spans
-    accounts is checked here, against the whole log: a repeated event ID (AMB-034) and a reversal whose target is on
-    another account (AMB-036). Everything else the event's own account decides, from its history alone."""
-    known_entry = find_first_entry(log, event.id)  # the event ID is the idempotency key (AMB-034)
-    if known_entry is not None:
-        if known_entry.event == event:
-            return Ok(append_entry(log, DuplicateIgnored(event, today)))
-        return Ok(append_entry(log, EventRejected(event, today, IdReused())))
-    if isinstance(event, Reversal) and isinstance(target_check := _check_target_account(log, event), Err):
-        return Ok(append_entry(log, EventRejected(event, today, target_check.error)))
-    account = config.find_account(event.account)
-    assert account is not None  # the stream reader refuses an account the ledger does not hold
-    if isinstance(entries := _decide_event_of(find_history_of(log, account), event, today), Err):
-        return entries
-    return Ok((*log, *entries.value))
-
-
-def _check_target_account(log: Log, reversal: Reversal) -> Result[None, TargetOnAnotherAccount]:
-    """Nothing when the reversal's target is on its own account or nowhere, else the account that holds it."""
-    target = find_first_entry(log, reversal.target)
-    if target is None or target.event.account == reversal.account:
-        return Ok(None)
-    return Err(TargetOnAnotherAccount(reversal.target, target.event.account))
-
-
-def _decide_event_of(
+def decide_event_of(
     history: AnyHistory, event: IncomingEvent, today: Day
 ) -> Result[tuple[LogEntry, ...], CurrencyMismatch]:
     """``_decide_event`` for an account whose currency is known only at run time."""

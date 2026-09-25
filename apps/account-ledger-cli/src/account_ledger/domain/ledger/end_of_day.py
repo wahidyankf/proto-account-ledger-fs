@@ -3,10 +3,24 @@
 from collections.abc import Callable
 
 from account_ledger.common.result import Err, Ok, Result
-from account_ledger.domain.fees import assess_fees_of
-from account_ledger.domain.interest import accrue_interest_of, capitalize_interest_of
+from account_ledger.domain.account.domain_events import (
+    LogEntry,
+)
+from account_ledger.domain.account.fees import (
+    assess_fees_of,
+)
+from account_ledger.domain.account.history import (
+    AnyHistory,
+)
+from account_ledger.domain.account.interest import (
+    accrue_interest_of,
+    capitalize_interest_of,
+)
+from account_ledger.domain.ledger.event_log import (
+    Log,
+    find_history_of,
+)
 from account_ledger.domain.model.config import LedgerConfig
-from account_ledger.domain.model.event_log import AnyHistory, Log, LogEntry, find_history_of
 from account_ledger.domain.model.ids import Day
 from account_ledger.domain.model.money import CurrencyMismatch
 

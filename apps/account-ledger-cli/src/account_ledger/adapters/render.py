@@ -3,8 +3,10 @@
 from collections.abc import Sequence
 from typing import assert_never
 
-from account_ledger.domain.authorizations import Approved, AuthorizationRecord, Declined, PartiallySettled, Settled
-from account_ledger.domain.model.event_log import (
+from account_ledger.domain.account.authorizations import (
+    AuthorizationRecord,
+)
+from account_ledger.domain.account.domain_events import (
     AlreadyReversed,
     AlreadyUndone,
     DuplicateIgnored,
@@ -18,6 +20,12 @@ from account_ledger.domain.model.event_log import (
     SettlementForcePosted,
     TargetOnAnotherAccount,
     UnknownTarget,
+)
+from account_ledger.domain.account.states import (
+    Approved,
+    Declined,
+    PartiallySettled,
+    Settled,
 )
 from account_ledger.domain.model.events import (
     AnyAmount,
