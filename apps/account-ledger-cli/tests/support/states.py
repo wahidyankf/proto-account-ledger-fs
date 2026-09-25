@@ -1,12 +1,10 @@
 """Reading entries and authorization states out of a log, for the tests."""
 
+from account_ledger.domain.account.authorizations import AuthorizationState
 from account_ledger.domain.account.domain_events import (
     LogEntry,
     SettlementApplied,
     SettlementForcePosted,
-)
-from account_ledger.domain.account.states import (
-    AuthorizationState,
 )
 from account_ledger.domain.ledger.event_log import (
     Log,

@@ -85,7 +85,7 @@ def test_a_sum_or_comparison_across_currencies_returns_the_mismatch() -> None:
     assert make_aed("1.00").add_all([make_aed("2.00"), make_aed("0.50")]) == Ok(make_aed("3.50"))
     assert make_aed("1.00").add_all([make_aed("2.00"), make_bhd("1.000")]) == aed_to_bhd
     assert aed_amount.add(bhd_amount) == aed_to_bhd
-    assert aed_amount.compute_rest(bhd_amount) == aed_to_bhd
+    assert aed_amount.take(bhd_amount) == aed_to_bhd
     assert make_aed("1.00").is_below(bhd_amount) == aed_to_bhd
     assert (aed_amount.add(aed_amount), make_aed("1.00").is_below(aed_amount)) == (
         Ok(AmountIn(make_aed("10.00"))),

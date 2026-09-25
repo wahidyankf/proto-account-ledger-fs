@@ -6,7 +6,7 @@ from enum import Enum, auto
 from types import MappingProxyType
 
 from account_ledger.common.result import Err, Ok, Result
-from account_ledger.domain.account.aggregate import AccountAggregate
+from account_ledger.domain.account.account import Account
 from account_ledger.domain.account.authorizations import AuthorizationRecord
 from account_ledger.domain.account.domain_events import (
     CreditPosted,
@@ -147,25 +147,25 @@ def build_report(
     )
 
 
-def _map_histories(log: Log, config: LedgerConfig) -> Mapping[AccountId, AccountAggregate]:
+def _map_histories(log: Log, config: LedgerConfig) -> Mapping[AccountId, Account]:
     """Each account's history, by its ID, in the configured order."""
     return MappingProxyType({account.id: find_history_of(log, account) for account in config.accounts})
 
 
-def _compute_closing(history: AccountAggregate, day: Day) -> Result[Money, CurrencyMismatch]:
+def _compute_closing(history: Account, day: Day) -> Result[Money, CurrencyMismatch]:
     """The account's closing balance on the day, whatever its currency."""
     return history.compute_closing(day)
 
 
-def _compute_available(history: AccountAggregate, day: Day) -> Result[Money, CurrencyMismatch]:
+def _compute_available(history: Account, day: Day) -> Result[Money, CurrencyMismatch]:
     """The account's available balance on the day, whatever its currency."""
     return history.compute_available(day)
 
 
 def _map_balances(
-    histories: Mapping[AccountId, AccountAggregate],
+    histories: Mapping[AccountId, Account],
     day: Day,
-    compute_balance: Callable[[AccountAggregate, Day], Result[Money, CurrencyMismatch]],
+    compute_balance: Callable[[Account, Day], Result[Money, CurrencyMismatch]],
 ) -> Result[Mapping[AccountId, Money], CurrencyMismatch]:
     """Each account's balance on the day, by its ID, in the configured order."""
     balances: dict[AccountId, Money] = {}
@@ -176,9 +176,7 @@ def _map_balances(
     return Ok(MappingProxyType(balances))
 
 
-def _list_processed_events(
-    log: Log, histories: Mapping[AccountId, AccountAggregate], day: Day
-) -> tuple[Processed, ...]:
+def _list_processed_events(log: Log, histories: Mapping[AccountId, Account], day: Day) -> tuple[Processed, ...]:
     """Every incoming event processed that day, in log order, with the instalments it generated (tech-docs 002)."""
     processed_events: list[Processed] = []
     for entry in log:
@@ -199,7 +197,7 @@ def _select_incoming_event(entry: LogEntry) -> IncomingEvent | None:
 
 
 def _build_end_of_day_rows(
-    log: Log, histories: Mapping[AccountId, AccountAggregate], day: Day, config: LedgerConfig
+    log: Log, histories: Mapping[AccountId, Account], day: Day, config: LedgerConfig
 ) -> Result[tuple[Generated | Capitalized | NothingGenerated, ...], CurrencyMismatch]:
     """Each step's events in the order generated, with a row for a step that generated nothing of its kind
     (tech-docs 002)."""
@@ -247,7 +245,7 @@ def _build_interest_rows(
 
 
 def _build_capitalization_rows(
-    histories: Mapping[AccountId, AccountAggregate], generated_events: Sequence[LoggedEvent]
+    histories: Mapping[AccountId, Account], generated_events: Sequence[LoggedEvent]
 ) -> Result[list[Generated | Capitalized | NothingGenerated], CurrencyMismatch]:
     """Step 3: each account's capitalization with the days it gathers, or a note when none was paid."""
     rows: list[Generated | Capitalized | NothingGenerated] = []
@@ -274,7 +272,7 @@ def _list_errors(log: Log, day: Day, account_id: AccountId) -> tuple[EventReject
 
 
 def _list_restatements(
-    histories: Mapping[AccountId, AccountAggregate], day: Day, reported_closings: ReportedClosings
+    histories: Mapping[AccountId, Account], day: Day, reported_closings: ReportedClosings
 ) -> Result[tuple[Restatement, ...], CurrencyMismatch]:
     """Each earlier closing that now differs from the one last reported, oldest first (AMB-022)."""
     restatements: list[Restatement] = []

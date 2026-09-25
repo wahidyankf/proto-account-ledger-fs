@@ -3,12 +3,8 @@
 import pytest
 
 from account_ledger.challenge import CHALLENGE
-from account_ledger.domain.account.domain_events import (
-    CreditPosted,
-    DuplicateIgnored,
-    EventRejected,
-    IdReused,
-)
+from account_ledger.domain.account.domain_events import CreditPosted, DuplicateIgnored, EventRejected
+from account_ledger.domain.account.rejections import IdReused
 from account_ledger.domain.ledger.event_log import (
     find_history,
 )

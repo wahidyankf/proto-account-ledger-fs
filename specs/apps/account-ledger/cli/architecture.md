@@ -93,22 +93,20 @@ it, and its own `ruff.toml` refuses any import of the other three.
   domain/ledger/   | processing: IDs across accounts, |   | report, the read model:    |
                    |   the cross-account check        |   | a day as data, read from   |
                    | end_of_day: each step on every   |   | the log and each account's |
-                   |   account, in account order      |   | history                    |
+                   |   account, in account order      |   | entries                    |
                    | event_log: the log               |   | domain/report.py           |
                    +----------------------------------+   +----------------------------+
-                                | one account's history at a time      |
+                                | one account at a time                |
   ---------------------------------------------------------------------------------------------------
   aggregate                     v
   domain/account/  +-------------------------------------------------------------------------+
-                   | the Account aggregate, asked by method; every rule reads one history    |
-                   |   aggregate       AccountAggregateIn: each rule as a method, passed on  |
-                   |   decisions       one incoming event on the account -> its entries      |
-                   |   interest        accruals, adjustments, capitalization, accrued days   |
-                   |   fees            a fee for each day closing negative, refunded after   |
-                   |   balances        closing and available                                 |
-                   |   authorizations  decide, transition, holds, and records                |
-                   |   reversals       which reversal is refused, and which events one undid |
-                   |   history, domain_events, states: what the rules read and record        |
+                   | the Account aggregate: every rule about one account, in one class       |
+                   |   account         AccountIn, asked by method, topic by topic: entries,  |
+                   |                   balances, authorizations, decisions, reversals, fees, |
+                   |                   and interest                                          |
+                   |   authorizations  the states, the D8 table over take, and each record   |
+                   |   event_log       EventLog: an account's entries, or the whole log's    |
+                   |   domain_events, rejections: what the rules record, and why one refuses |
                    +-------------------------------------------------------------------------+
   ---------------------------------------------------------------------------------------------------
   model                                    v
@@ -135,30 +133,22 @@ it, and its own `ruff.toml` refuses any import of the other three.
 | `report`                 | the read model: a day's events, end-of-day rows, closings, restatements, holds, errors    |
 | `ledger/processing`      | idempotency and the cross-account check on the log; then the account decides              |
 | `ledger/end_of_day`      | a day's close, each step on every account: fees, interest, then capitalization            |
-| `ledger/event_log`       | the append-only log of every account's domain events, and each account's history in it    |
-| `account/decisions`      | one incoming event on one account, decided from its history, as the entries it records    |
-| `account/fees`           | a fee for each day closing negative with none in force, refunded once the day recovers    |
-| `account/interest`       | a day's interest on a positive closing, adjusted when a closing changes, capitalized      |
-| `account/balances`       | closing and available, each recomputed over the account's history                         |
-| `account/authorizations` | `decide_authorization`, `apply_settlement`, holds, and records rebuilt from the history   |
-| `account/reversals`      | why a reversal is refused, in tech-docs 002's order, and which events one undid           |
-| `account/aggregate`      | `AccountAggregateIn[M]`: the history, with each rule a caller outside uses as a method    |
-| `account/history`        | `AccountHistoryIn[M]`: one account and its own entries, and the queries about them        |
-| `account/domain_events`  | the domain events, one kind per fact the ledger records, and every `Rejection`            |
-| `account/states`         | the authorization states, one frozen dataclass each                                       |
+| `ledger/event_log`       | the append-only log of every account's domain events, and each account's `AccountIn`      |
+| `account/account`        | `AccountIn[M]`: the Account aggregate, one account's entries and every rule about them    |
+| `account/authorizations` | the four states, `apply_settlement` as the D8 table, and each authorization's record      |
+| `account/event_log`      | `EventLog`: entries in log order, appended to, searched, and selected by account          |
+| `account/domain_events`  | the domain events, one kind per fact the ledger records                                   |
+| `account/rejections`     | every `Rejection`: why the account, or the ledger, refuses an event                       |
 | `model/events`           | incoming kinds, in `IncomingEvent`, generated kinds, in `GeneratedEvent`; instalments     |
 | `model/config`           | the accounts as opened, each typed by its currency, the window, and the capitalization    |
 | `model/money`            | `Aed` and `Bhd`, one type per currency; `AmountIn` above zero; split, take, fee, interest |
 | `model/ids`              | days, account and authorization IDs, incoming and generated IDs, instalment counts        |
 | `result`                 | `Ok` and `Err`, so every failure a caller can meet is a value; it knows no ledger         |
 
-`states` sits apart from `authorizations` so that `domain_events` can hold the states a settlement moved its
-authorization between, and the state machine can read the domain events, without either importing the other.
-
 ## L4 — Code
 
 The types each component exposes and how they refer to one another. Every type is a frozen dataclass, a union of them,
-or an enum, and each constructor refuses an illegal value, so none can be built.
+or an enum, none derives from another, and each constructor refuses an illegal value, so none can be built.
 
 ```text
 result    Result[T, E] = Ok[T] | Err[E]      every parse, make, check, or sum that can fail returns one
@@ -178,28 +168,28 @@ events    IncomingEvent = Credit | Debit | Authorization | Settlement | Reversal
 config    AccountOpeningIn[M] = id + balance M, the account as opened; AccountOpening, the union of both
           LedgerConfig = accounts, first_day, last_day, capitalization_days
 account/domain_events
-          LogEntry = the domain events, one kind per fact, each a _DomainEventBase[E]: event: E + processed_day:
+          LogEntry = the domain events, one kind per fact, each event: its own kind + processed_day:
             CreditPosted | DebitPosted | ReversalPosted | InstalmentPosted | FeeCharged | FeeRefunded
             | InterestAccrued | InterestAdjusted | InterestCapitalized
             | AuthorizationApproved | AuthorizationDeclined
             | SettlementApplied(+ state_before, state_after) | SettlementForcePosted
             | EventRejected(+ reason) | DuplicateIgnored
+account/rejections
           EventRejected.reason: Rejection = IdReused | AlreadyReversed | ReversesAReversal | UnknownTarget
                                             | TargetOnAnotherAccount | MovedNoMoney | AlreadyUndone
-account/history
-          AccountHistoryIn[M: (Aed, Bhd)] = account: AccountOpeningIn[M] + entries: LogEntry...   its own entries
-          every account rule takes one; find_entry, list_instalments, list_counted_events ask it
-account/aggregate
-          AccountAggregateIn[M] = AccountHistoryIn[M] + a method per rule a caller outside the aggregate uses
-          type AccountAggregate = AccountAggregateIn[Aed] | AccountAggregateIn[Bhd]; a method works on either
+account/event_log
+          EventLog = entries: LogEntry...   append(*entries), find_first_entry(event_id), select(account_id)
+account/account
+          AccountIn[M: (Aed, Bhd)] = id + opening M + log: EventLog, its own entries; every rule a method
+          type Account = AccountIn[Aed] | AccountIn[Bhd]; a method works on either
 ledger/event_log
-          Log = tuple[LogEntry, ...]     find_history(log, account) -> AccountAggregateIn[M]
-account/states, account/authorizations
+          Log = tuple[LogEntry, ...]     find_history(log, opening) -> AccountIn[M]
+account/authorizations
           AuthorizationState = Approved(hold) | PartiallySettled(settled_amount, hold)
                                  | Declined(requested_amount) | Settled(settled_amount)
-          apply_settlement(state, FinalSettlement | PartialSettlement)   each a _SettlementInputBase (amount)
+          apply_settlement(state, kind: SettlementKind, amount)   the rest the hold keeps comes from take
             -> Result[AuthorizationState, CannotSettle | CurrencyMismatch]
-          AuthorizationRecord = the Authorization + its state now
+          AuthorizationRecord = the Authorization + its state now; is_referenced_by(settlement)
 report    DayReport = day, processed_events: Processed..., closing_balances, available_balances,
                       restatements: Restatement..., authorizations: AuthorizationRecord..., errors,
                       end_of_day: (Generated | Capitalized | NothingGenerated)...
@@ -209,20 +199,20 @@ stream_processing
 stream    parse_stream(text, config) -> Result[tuple[IncomingEvent, ...], StreamError(line, message)]
 ```
 
-`authorizations` is a hand-written state machine: `apply_settlement` is one `match` over the state and the settlement,
-ending in `assert_never`. A settlement whose `final` cell is `no` becomes `PartialSettlement`; any other becomes
-`FinalSettlement`. As built:
+`authorizations` is a hand-written state machine: `apply_settlement` is one `match` over the state, the settlement's
+kind, and what the settlement leaves of the hold, which `AmountIn.take` gives, ending in `assert_never`. A settlement
+whose `final` cell is `no` is `SettlementKind.PARTIAL`; any other is `SettlementKind.FINAL`. As built:
 
 ```text
-             available >= 0 after the hold              FinalSettlement, or PartialSettlement reaching the hold
+             available >= 0 after the hold              FINAL, or PARTIAL reaching the hold (take: None)
   (arrives) ------------------------------> Approved -------------------------------------------> Settled
       |                                        |                                                     ^
-      | available < 0 after the hold           | PartialSettlement below the hold                    |
+      | available < 0 after the hold           | PARTIAL below the hold (take: the rest)             |
       v                                        v                                                     |
    Declined                             PartiallySettled --------------------------------------------+
-                                          |          ^     FinalSettlement, or PartialSettlement reaching the hold
+                                          |          ^     FINAL, or PARTIAL reaching the hold (take: None)
                                           +----------+
-                                   PartialSettlement below the hold
+                                   PARTIAL below the hold (take: the rest)
 ```
 
 A final settlement releases the whole remaining hold and settles for the settlements' sum; a partial one below the hold
@@ -266,27 +256,29 @@ type in `domain/` belongs to it, and none outside `domain/` holds a ledger rule.
 
 | The brief says                     | The code has                                                                  |
 | ---------------------------------- | ----------------------------------------------------------------------------- |
-| an account, in its currency        | `AccountOpeningIn[M]`, with `M` either `Aed` or `Bhd`, and its `AccountId`    |
+| an account, in its currency        | `AccountIn[M]`, the Account aggregate, with `M` either `Aed` or `Bhd`         |
+| an account as the brief opens it   | `AccountOpeningIn[M]`: its `AccountId` and opening balance, in the config     |
 | an event in the stream             | `IncomingEvent`: `Credit`, `Debit`, `Authorization`, `Settlement`, `Reversal` |
 | the ledger, append-only            | `Log`, the one tuple of every account's domain events                         |
 | a hold                             | the `hold` of an `Approved` or a `PartiallySettled` authorization             |
-| the closing and available balances | `compute_closing` and `compute_available`, over one account's history         |
+| the closing and available balances | `compute_closing` and `compute_available`, methods of `AccountIn`             |
 | an overdraft fee, and its refund   | `Fee` and `FeeRefund`, recorded as `FeeCharged` and `FeeRefunded`             |
 | interest, and its capitalization   | `InterestAccrual`, `InterestAdjustment`, and `Capitalization`                 |
 | a credit paid in instalments       | `Instalment`, one per `InstalmentCount`, recorded as `InstalmentPosted`       |
 
 A type generic over the currency ends in `In`, and the union over its currencies takes the plain noun, per the Python
-[naming](../../../../repo-governance/development/quality/stacks/python-standards/001-naming.md) rule:
-`AccountOpeningIn[Aed]` is an account opened in AED, and `AccountOpening` is either. A caller outside the aggregate asks
-it by method, such as `history.compute_closing(day)`; a method call works on the `AccountAggregate` union, so no caller
-needs to know the currency. Each method passes the history to the generic rule in its topic's module; a rule the modules
-share stays a function there, and one only its own module uses is private. Where an operation lives, and when kinds of
+[naming](../../../../repo-governance/development/quality/stacks/python-standards/001-naming.md) rule: `AccountIn[Aed]`
+is an account in AED, and `Account` is either; `AccountOpeningIn[Aed]` is one as the configuration opens it. A caller
+outside the aggregate asks it by method, such as `account.compute_closing(day)`; a method call works on the `Account`
+union, so no caller needs to know the currency. Every rule about one account is a method of `AccountIn`, in
+`account.py`, grouped by topic; one only the class itself calls is private. Where an operation lives, and when kinds of
 one concept share a base, follows the Python
 [operations](../../../../repo-governance/development/quality/stacks/python-standards/003-operations.md) rule.
 
-**The Account aggregate** is one account and its own entries in the log, `AccountAggregateIn[M]`: its history, with a
-method for each rule a caller outside it uses. Every rule in `domain/account/` takes one history and never the log, so
-pyright refuses a rule that reads another account. The aggregate guards the invariants that concern one account:
+**The Account aggregate** is one account and its own entries in the log, `AccountIn[M]`: its ID, its opening balance,
+and its `EventLog`, with every rule about the account as one of its methods. A rule reads only the account's own entries
+and never the whole log, so no rule can read another account. The aggregate guards the invariants that concern one
+account:
 
 - an authorization is decided once, on arrival, and approved only while the available balance after its hold stays at or
   above zero (AMB-008, AMB-009);
@@ -305,7 +297,7 @@ recomputed from its domain events whenever it is asked for (D7).
 (AMB-014, AMB-024), refuses what spans accounts before any account decides, an event ID seen before (AMB-034) and a
 reversal whose target is on another account (AMB-036), and runs a day's close as each step on every account in turn.
 
-**The report** is a read model: `domain/report.py` reads the log and each account's history and writes nothing back.
+**The report** is a read model: `domain/report.py` reads the log and each account and writes nothing back.
 `stream_processing` drives the service and the report over the stream, day by day.
 
 ## Reading the Code
@@ -316,15 +308,17 @@ To read the code for the first time, follow one day through it, in this order:
 2. `domain/stream_processing.py`: the loop over events, where a later day's event closes the current day first, as the
    dynamic view above draws.
 3. `domain/ledger/processing.py`, `process_event`: duplicates and cross-account reversals caught on the whole log.
-4. `domain/account/aggregate.py`, then `decisions.py`, `decide_event`: what one incoming event adds to its account.
+4. `domain/account/account.py`, `AccountIn.decide_event`: what one incoming event adds to its account.
 5. `domain/ledger/end_of_day.py`, `close_day`: the three steps of a day's close, each run on every account.
-6. `domain/account/fees.py`: when a day is charged an overdraft fee, and when that fee is refunded.
-7. `domain/account/interest.py`: each day's interest, its adjustment when a closing changes, and its capitalization.
-8. `domain/account/balances.py`: the closing and available balances, worked out from one account's history.
-9. `domain/account/authorizations.py`: how an authorization is decided, holds money, and moves from state to state.
-10. `domain/account/reversals.py`: when a reversal is refused, and which events the posted ones undid.
-11. `domain/account/domain_events.py` and `history.py`: every domain event the rules record, every reason an event is
-    rejected, and the one account's history each rule reads.
+6. `AccountIn.assess_fees`: when a day is charged an overdraft fee, and when that fee is refunded.
+7. `AccountIn.accrue_interest` and `.capitalize_interest`: each day's interest, its adjustment when a closing changes,
+   and its capitalization.
+8. `AccountIn.compute_closing` and `.compute_available`: the balances, worked out from one account's entries.
+9. `domain/account/authorizations.py`: the states and the table a settlement moves them by; then the aggregate's
+   authorizations topic, where one is decided and holds money.
+10. The aggregate's reversals topic: when a reversal is refused, and which events the posted ones undid.
+11. `domain/account/domain_events.py`, `rejections.py`, and `event_log.py`: every domain event the rules record, every
+    reason an event is rejected, and the entries each account reads.
 12. `domain/report.py`, then `adapters/render.py`: a day as data, then as the text OUTPUT_TARGET shows.
 
 `adapters/stream_csv.py` turns the file into events and holds no ledger rule. `domain/model/`, `events.py`, `config.py`,
@@ -335,7 +329,7 @@ reading them first.
 
 - No web layer, persistence, UI, or database.
 - Every effect sits in the shell; the domain stays pure and deterministic.
-- Balances are recomputed from the append-only log, one account's history at a time, never stored (D7); nothing in the
+- Balances are recomputed from the append-only log, one account's entries at a time, never stored (D7); nothing in the
   log is changed or removed.
 - Holds never expire (AMB-018), the ledger's known weakness.
 - Every diagram is plain-text ASCII.

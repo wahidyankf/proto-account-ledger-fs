@@ -346,12 +346,6 @@ class AmountIn[M: (Aed, Bhd)]:
         rest = self.money - taken_money.value
         return Ok(AmountIn(rest) if _is_positive(rest) else None)
 
-    def compute_rest(self, taken_amount: Amount) -> Result[M, CurrencyMismatch]:
-        """What this hold keeps once an amount of its own currency is taken, or the mismatch a bug would bring."""
-        if isinstance(taken_money := self.money.require_same(taken_amount.money), Err):
-            return taken_money
-        return Ok(self.money - taken_money.value)
-
 
 type Amount = AmountIn[Aed] | AmountIn[Bhd]
 

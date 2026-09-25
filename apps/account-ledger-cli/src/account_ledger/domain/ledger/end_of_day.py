@@ -3,7 +3,7 @@
 from collections.abc import Callable
 
 from account_ledger.common.result import Err, Ok, Result
-from account_ledger.domain.account.aggregate import AccountAggregate
+from account_ledger.domain.account.account import Account
 from account_ledger.domain.account.domain_events import (
     LogEntry,
 )
@@ -15,7 +15,7 @@ from account_ledger.domain.model.config import LedgerConfig
 from account_ledger.domain.model.ids import Day
 from account_ledger.domain.model.money import CurrencyMismatch
 
-type _Step = Callable[[AccountAggregate], Result[tuple[LogEntry, ...], CurrencyMismatch]]
+type _Step = Callable[[Account], Result[tuple[LogEntry, ...], CurrencyMismatch]]
 
 
 def close_day(log: Log, today: Day, config: LedgerConfig) -> Result[Log, CurrencyMismatch]:

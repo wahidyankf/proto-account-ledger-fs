@@ -1,4 +1,4 @@
-# The Account aggregate sees one account's history and the values, never the log of every account or what reads it.
+# The Account aggregate sees one account's entries and the values, never the log of every account or what reads it.
 extend = "../../../../pyproject.toml"
 
 [lint]

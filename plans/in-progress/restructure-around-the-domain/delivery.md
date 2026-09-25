@@ -26,6 +26,13 @@ first, above all [the target layout](tech-docs/001-target-layout.md) and
   xfailed, the corpus and literals equal, three names added. Last gate passed: Phase 1. Next item: Phase 2, the first.
   No budget partly spent.
 
+- **2026-09-25 19:58, Phase 2.** Phase 1 is f4d325d, pushed as 0569ea2..f4d325d. The Account aggregate is one class,
+  `AccountIn` in `account.py`, every rule a method grouped by topic; the six topic modules, `history.py`,
+  `aggregate.py`, and `states.py` are gone, each with its mutation proof; the D8 table matches the state, the kind, and
+  what `take` leaves, and narrows to `Never`. The gate passed: 159 passed and 1 xfailed, the corpus and literals equal.
+  Open until Phase 5: `003-operations.md` still gives `sum_money` as its example. Last gate passed: Phase 2. Next item:
+  Phase 3, the first. No budget partly spent.
+
 ## Execution Checkout
 
 - **Working copy.** The main checkout at the repository root, on `main`, with no worktree and no task branch, per the
@@ -311,16 +318,21 @@ Pause safety: the values are reshaped on `origin/main`. Re-verify with `sh local
 Builds `AccountIn` in `domain/account/account.py` and moves every rule about one account into it, topic by topic (R1,
 R6, R7, R8, R17).
 
-- [ ] [AI] Move the seven rejection reasons and `Rejection` from `domain_events.py` to the new `rejections.py`, and
+- [x] [AI] Move the seven rejection reasons and `Rejection` from `domain_events.py` to the new `rejections.py`, and
       every importer. Paths: `$SRC/domain/account/{domain_events,rejections}.py`, `$APP/tests/support/refusals.py`, and
       every module under `$SRC` and `$APP/tests` that imports a reason. Command: `pytest tests`. Proof: passes.
-      Acceptance: AC-13.
-- [ ] [AI] Flatten the domain events: each declares `event` and `processed_day`; `_DomainEventBase` deleted. Paths:
-      `$SRC/domain/account/domain_events.py`. Command: `pytest tests`. Proof: passes. Acceptance: AC-07.
-- [ ] [AI] Write `EventLog` in the new `$SRC/domain/account/event_log.py` with `append`, `find_first_entry`, and
+      Acceptance: AC-13. - Result: 159 passed, 1 xfailed; pyright 0 errors; eight modules import the reasons from
+      `rejections.py` now, `IdReused` first, as the union lists it.
+- [x] [AI] Flatten the domain events: each declares `event` and `processed_day`; `_DomainEventBase` deleted. Paths:
+      `$SRC/domain/account/domain_events.py`. Command: `pytest tests`. Proof: passes. Acceptance: AC-07. - Result: 159
+      passed, 1 xfailed; pyright 0 errors; the fifteen kinds each declare `event`, typed by the event it records, and
+      `processed_day`.
+- [x] [AI] Write `EventLog` in the new `$SRC/domain/account/event_log.py` with `append`, `find_first_entry`, and
       `select`; `list_processed_on` arrives in Phase 4 with its first caller, so vulture finds nothing unused. The
-      ledger's `Log` alias stays until Phase 3. Command: `pytest tests`. Proof: passes. Acceptance: AC-10.
-- [ ] [AI] Replace `AccountHistoryIn` and `AccountAggregateIn` with `AccountIn(id, opening, log)` in the new
+      ledger's `Log` alias stays until Phase 3. Command: `pytest tests`. Proof: passes. Acceptance: AC-10. - Result: 159
+      passed, 1 xfailed; pyright 0 errors. Nothing calls the three methods until the next item, so vulture reports them
+      in between; the Phase 2 gate runs it.
+- [x] [AI] Replace `AccountHistoryIn` and `AccountAggregateIn` with `AccountIn(id, opening, log)` in the new
       `$SRC/domain/account/account.py`, its public methods forwarding to the topic modules as `AccountAggregateIn`'s do
       today, and the entry queries (`list_instalments`, `_find_entry`, `_list_counted_events`, `_append_entry`,
       `_make_zero`) as methods. Each topic module takes an `AccountIn`, imported under `if TYPE_CHECKING:` only until
@@ -335,16 +347,27 @@ R6, R7, R8, R17).
       `$SRC/domain/ledger/{processing,event_log,end_of_day}.py`, `$SRC/domain/report.py`, and
       `$APP/tests/support/states.py`. Delete `history.py` and `aggregate.py` with proof: break `_find_entry` to return
       `None`, see a reversal test fail, restore. Command: `pytest tests`. Proof: passes; the mutation's failing test
-      named. Acceptance: AC-09, AC-13.
-- [ ] [AI] Move `$SRC/domain/account/balances.py` into `AccountIn` as `compute_closing`, `compute_available`, and the
+      named. Acceptance: AC-09, AC-13. - Result: 159 passed, 1 xfailed; pyright reports 14 `reportPrivateUsage` errors
+      and no other, the transition's expected state. `history.py` and `aggregate.py` deleted with `/usr/bin/git rm`. -
+      Mutation: `_find_entry` returning `None` fails `test_amb_035_a_reversal_undoes_what_its_target_moved`,
+      `test_amb_028_a_second_reversal_of_the_same_event_is_refused`, and 34 others, 36 in all; restored, 159 passed.
+- [x] [AI] Move `$SRC/domain/account/balances.py` into `AccountIn` as `compute_closing`, `compute_available`, and the
       three private methods; delete the module with proof (break `_list_undone_amounts`, see an AMB-028 test fail,
       restore). Command: `pytest tests`, the corpus compare. Proof: passes; equal; mutation recorded. Acceptance: AC-02,
-      AC-09.
-- [ ] [AI] Move the history rules of `$SRC/domain/account/authorizations.py` (`list_records`, `find_record`,
+      AC-09. - Result: 159 passed, 1 xfailed; the corpus compare prints nothing; pyright reports 12
+      `reportPrivateUsage`, the transition's, and no other. The module deleted; its three callers ask
+      `history.compute_closing` or `.compute_available`. Folded by `local-tmp/restructure/fold.py`, which moves each
+      body unchanged but for `history` read as `self`. - Mutation: `_list_undone_amounts` returning `()` fails
+      `test_amb_028_a_second_reversal_of_the_same_event_is_refused`, `test_amb_028_a_reversal_of_a_reversal_is_refused`,
+      and 17 others, 19 in all; restored, 159 passed.
+- [x] [AI] Move the history rules of `$SRC/domain/account/authorizations.py` (`list_records`, `find_record`,
       `sum_holds`, and `decide_authorization` folded into `_decide_authorization_entry`) into `AccountIn`;
       `_is_referenced_by` becomes `AuthorizationRecord.is_referenced_by`. Command: `pytest tests`, the corpus compare.
-      Proof: passes; equal. Acceptance: AC-02, AC-08, AC-09.
-- [ ] [AI] Rewrite the D8 table as `apply_settlement(state, kind, amount)` over `take`, as
+      Proof: passes; equal. Acceptance: AC-02, AC-08, AC-09. - Result: 159 passed, 1 xfailed; the corpus compare prints
+      nothing; pyright reports only the transition's `reportPrivateUsage`. `decide_authorization` is folded into
+      `_decide_authorization_entry`, which reads the available balance, returns a mismatch first as before, and decides
+      on `is_below`.
+- [x] [AI] Rewrite the D8 table as `apply_settlement(state, kind, amount)` over `take`, as
       [the domain model](tech-docs/002-domain-model.md#authorizationspy) shows; delete `FinalSettlement`,
       `PartialSettlement`, `_SettlementInputBase`, `SettlementInput`, `derive_settlement_input`,
       `_is_settlement_below_hold`, `_make_partial_settlement`, `_compute_rest` and its `assert`, and
@@ -355,44 +378,82 @@ R6, R7, R8, R17).
       `$SRC/domain/model/money.py`, `$APP/tests/unit/test_authorizations.py`,
       `$APP/tests/unit/domain/model/test_money.py`. Proof of the deletion: make `take` return the rest at zero, see a
       table case fail, restore. Command: `pytest tests`, the corpus compare. Proof: passes; equal, every settlement
-      input included. Acceptance: AC-02, AC-03, AC-06.
-- [ ] [AI] Move `$SRC/domain/account/reversals.py` into `AccountIn` as private methods; delete with proof (skip
+      input included. Acceptance: AC-02, AC-03, AC-06. - Result: 159 passed, 1 xfailed; the corpus compare prints
+      nothing, its seven settlement inputs included (below, reaching, and past the hold, final over it, against a
+      declined and an unknown hold, and in BHD). The real types narrow the triple to `Never`, as the probe did, so no
+      fallback was needed: with the `Approved, PARTIAL, None` row removed, pyright reports
+      `tuple[Approved, Literal[SettlementKind.PARTIAL], None]` cannot be assigned to `Never`. The table test builds each
+      case from a kind and an amount; its literals are unchanged. - Mutation: `take` giving the rest at zero fails two
+      table cases, `[state2-…]` and `[state5-…]`, and 7 other tests, 9 in all; restored, 159 passed.
+- [x] [AI] Move `$SRC/domain/account/reversals.py` into `AccountIn` as private methods; delete with proof (skip
       `_check_undoing`, see an AMB-035 test fail, restore). Command: `pytest tests`. Proof: passes; mutation recorded.
-      Acceptance: AC-09.
-- [ ] [AI] Move `$SRC/domain/account/decisions.py` into `AccountIn` as `decide_event` and private methods;
+      Acceptance: AC-09. - Result: 159 passed, 1 xfailed; pyright reports only the transition's `reportPrivateUsage`.
+      `check_reversal` and `list_reversed_targets` lose their public names, as the domain model states; one docstring
+      rewrapped to 120 columns at its new indent, its words unchanged. - Mutation: `_check_reversal` returning
+      `Ok(None)` instead of calling `_check_undoing` fails the three
+      `test_amb_035_money_already_undone_cannot_be_undone_again` cases and two AMB-014 `AlreadyUndone` cases, 5 in all;
+      restored, 159 passed.
+- [x] [AI] Move `$SRC/domain/account/decisions.py` into `AccountIn` as `decide_event` and private methods;
       `_decide_effect` and `_record_interest_change`-style steps stay module functions of `account.py`; delete with
       proof (force-post every settlement, see an AMB-012 test fail, restore). Command: `pytest tests`. Proof: passes.
-      Acceptance: AC-09.
-- [ ] [AI] Move `$SRC/domain/account/fees.py` into `AccountIn`; delete with proof (charge on a zero closing, see an
-      AMB-002 test fail, restore). Command: `pytest tests`. Proof: passes. Acceptance: AC-09.
-- [ ] [AI] Move `$SRC/domain/account/interest.py` into `AccountIn`; delete with proof (drop the adjustment for an
+      Acceptance: AC-09. - Result: 159 passed, 1 xfailed; pyright reports only the transition's `reportPrivateUsage`.
+      `_decide_effect` and `_generate_instalments`, which read nothing of the account, are module functions of
+      `account.py`. - Mutation: force-posting every settlement fails `test_c4_e6_is_force_posted_for_180` (AMB-012,
+      AMB-029), `test_c3_auth_a_settlement_is_accepted_and_releases_the_hold`, the AMB-013 tests, and others, 16 in all;
+      restored, 159 passed.
+- [x] [AI] Move `$SRC/domain/account/fees.py` into `AccountIn`; delete with proof (charge on a zero closing, see an
+      AMB-002 test fail, restore). Command: `pytest tests`. Proof: passes. Acceptance: AC-09. - Result: 159 passed, 1
+      xfailed; pyright reports only the transition's `reportPrivateUsage`. The fold read
+      `history = history.append(entry)` as a reassignment of `self`; `assess_fees` now grows a local `account` instead,
+      and the docstrings the fold touched read "the account" again. - Mutation: charging on a zero closing
+      (`closing <= zero`) fails `test_c2_e7_causes_three_fees_all_value_dated_day_5` (AMB-002), the AMB-011 and AMB-027
+      fee tests, and others, 17 in all; restored, 159 passed.
+- [x] [AI] Move `$SRC/domain/account/interest.py` into `AccountIn`; delete with proof (drop the adjustment for an
       earlier day, see an AMB-005 test fail, restore). Command: `pytest tests`, the corpus compare. Proof: passes;
-      equal. Acceptance: AC-02, AC-09.
-- [ ] [AI] Move the four states from `$SRC/domain/account/states.py` into `$SRC/domain/account/authorizations.py`, which
+      equal. Acceptance: AC-02, AC-09. - Result: 159 passed, 1 xfailed; the corpus compare prints nothing; pyright
+      reports 0 errors, the transition over: no `TYPE_CHECKING` guard remains. `_record_interest_change` is a module
+      function of `account.py`. - Mutation: dropping every earlier day's adjustment fails
+      `test_amb_005_a_changed_closing_adjusts_its_interest`, `test_c6_day_6_closes_at_285_76_not_285_79`,
+      `test_c8_capitalization_equals_the_sum_of_interest_events`, the golden end-to-end run, and others, 8 in all;
+      restored, 159 passed.
+- [x] [AI] Move the four states from `$SRC/domain/account/states.py` into `$SRC/domain/account/authorizations.py`, which
       now imports no domain event; delete `states.py`, and every importer under `$SRC` and `$APP/tests` follows. It
       holds four frozen types and no rule, so no mutation can make a test miss it; pyright proves every importer moved.
       Command: `pytest tests && (cd $APP && uv run --no-sync ruff check . && uv run --no-sync pyright)`. Proof: all
-      pass. Acceptance: AC-13.
-- [ ] [AI] Remove `derive` from both verb lists in `$APP/pyproject.toml`. Command:
-      `(cd $APP && uv run --no-sync pylint src tests)`. Proof: exit 0. Acceptance: AC-15.
-- [ ] [AI] Merge `test_fees.py`, `test_interest.py`, `test_reversals.py`, and `test_authorizations.py` from
+      pass. Acceptance: AC-13. - Result: ruff, pyright, and 159 tests pass; `authorizations.py` imports only `common`
+      and the model, so `domain_events.py` imports it without a cycle; eight importers follow.
+- [x] [AI] Remove `derive` from both verb lists in `$APP/pyproject.toml`. Command:
+      `(cd $APP && uv run --no-sync pylint src tests)`. Proof: exit 0. Acceptance: AC-15. - Result: pylint exit 0;
+      vulture exit 0; `derive` appears nowhere in `pyproject.toml`.
+- [x] [AI] Merge `test_fees.py`, `test_interest.py`, `test_reversals.py`, and `test_authorizations.py` from
       `$APP/tests/unit/` into `$APP/tests/unit/domain/account/test_account.py`, grouped by topic in the source's order,
       and move the two table tests to `$APP/tests/unit/domain/account/test_authorizations.py`; the AMB-036 test waits in
       `test_account.py` for Phase 3. Command: `pytest tests` and `inventory.py --compare`. Proof: passes; no name lost.
-      Acceptance: AC-03, AC-13.
-- [ ] [AI] Update the architecture as built: L3's `account/` rows, the L3 diagram's aggregate box, L4's account blocks
+      Acceptance: AC-03, AC-13. - Result: 159 passed, 1 xfailed; the inventory keeps every baseline name with its count
+      and the literals compare equal. `test_account.py` holds 29 tests in the class's topic order, authorizations,
+      reversals, fees, then interest, the AMB-036 test among the reversals; `test_authorizations.py` the two table tests
+      with the table.
+- [x] [AI] Update the architecture as built: L3's `account/` rows, the L3 diagram's aggregate box, L4's account blocks
       and state-machine paragraph and diagram, the Domain Model's aggregate paragraph; and the docstring of
       `$SRC/domain/account/__init__.py`, which says "one account's history". Paths:
       `specs/apps/account-ledger/cli/architecture.md`, `$SRC/domain/account/__init__.py`. Proof: every name there
-      exists. Acceptance: AC-14.
+      exists. Acceptance: AC-14. - Result: every name those sections give exists under `$SRC`, and the doc sweep reports
+      nothing. Reading the Code and the app README's domain paragraph named deleted files, so they follow in this phase
+      too, not Phase 7; the account package's `ruff.toml` comment says "entries" as well. - Open until Phase 5:
+      `003-operations.md` still gives `sum_money` as its example of a generic function, which Phase 1 made a method; its
+      rewrite is Phase 5's, through rules-propagation.
 
 ### Phase 2 Gate
 
-- [ ] [AI] Run `sh local-tmp/restructure/gate.sh`; `grep -rn --include='*.py' "assert " $SRC | grep -v assert_never`
+- [x] [AI] Run `sh local-tmp/restructure/gate.sh`; `grep -rn --include='*.py' "assert " $SRC | grep -v assert_never`
       lists only the ledger's; `grep -rn --include='*.py' TYPE_CHECKING $SRC` prints nothing. Proof: exit 0; one
-      `assert` left; no guard survives. Acceptance: AC-02, AC-03, AC-04, AC-06.
-- [ ] [AI] Commit as `refactor(cli): gather every account rule into the Account aggregate`, with the WORKLOG entry and
-      the Execution Record line, and push. Proof: the hash and range. Acceptance: AC-16.
+      `assert` left; no guard survives. Acceptance: AC-02, AC-03, AC-04, AC-06. - Result: every step exit 0: test:quick,
+      integration, e2e, the corpus equal, every baseline name with its count and literals, 60 cited names found,
+      Markdown, and hygiene; the first run stopped at Prettier on this file, fixed, then `check-md.sh` and
+      `check:hygiene` exit 0. One `assert` is left, in `ledger/processing.py`; no `TYPE_CHECKING` guard.
+- [x] [AI] Commit as `refactor(cli): gather every account rule into the Account aggregate`, with the WORKLOG entry and
+      the Execution Record line, and push. Proof: the hash and range. Acceptance: AC-16. - Result: committed with the
+      WORKLOG entry and this Execution Record line, and pushed; the hash is in the Phase 3 line.
 
 Pause safety: the aggregate is one class on `origin/main`. Re-verify with `sh local-tmp/restructure/gate.sh`.
 

@@ -25,11 +25,11 @@ Specification: [specs/apps/account-ledger/cli/](../../specs/apps/account-ledger/
 | `project.json`                 | Nx targets                                                                      |
 
 The domain is laid out in DDD terms. `domain/model/` holds the values: money, IDs, the brief's events, and the accounts.
-`domain/account/` is the Account aggregate: one account's history, the domain events it records, and every rule about
-one account, each asked as a method of `aggregate.py`'s `AccountAggregateIn`. `domain/ledger/` is the ledger service:
-the log of every account, idempotency, the cross-account check, and the day's close. `domain/report.py` is the report
-read model, and `domain/stream_processing.py` drives the stream day by day. Each package's `ruff.toml` refuses an import
-from the layers above it (TID251).
+`domain/account/` is the Account aggregate: one account's entries, the domain events it records, and every rule about
+one account, each a method of `account.py`'s `AccountIn`. `domain/ledger/` is the ledger service: the log of every
+account, idempotency, the cross-account check, and the day's close. `domain/report.py` is the report read model, and
+`domain/stream_processing.py` drives the stream day by day. Each package's `ruff.toml` refuses an import from the layers
+above it (TID251).
 
 Every level is plain pytest, written test-first; there is no Gherkin corpus and no step binding.
 

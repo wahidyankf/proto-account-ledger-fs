@@ -4,16 +4,12 @@ A refused criterion is proven by a test of what the ledger does instead (REJECTE
 """
 
 from account_ledger.challenge import CHALLENGE
+from account_ledger.domain.account.authorizations import Approved, Declined, Settled
 from account_ledger.domain.account.domain_events import (
     FeeCharged,
     InstalmentPosted,
     SettlementApplied,
     SettlementForcePosted,
-)
-from account_ledger.domain.account.states import (
-    Approved,
-    Declined,
-    Settled,
 )
 from account_ledger.domain.ledger.event_log import (
     find_history,
