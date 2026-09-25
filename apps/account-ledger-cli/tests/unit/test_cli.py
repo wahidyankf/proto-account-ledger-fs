@@ -10,20 +10,20 @@ from account_ledger.cli import run_cli
 from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.money import CurrencyMismatch
-from account_ledger.domain.replay import replay_stream
+from account_ledger.domain.stream_processing import process_stream
 from support.brief_stream import BRIEF_CSV, build_brief_stream
 from support.results import unwrap_ok
 
 
 def test_a_stream_file_prints_its_report_and_exits_0() -> None:
-    """AC-01: `run_cli` reads the named stream, replays it, and writes the report to standard output, exiting 0; the
+    """AC-01: `run_cli` reads the named stream, processes it, and writes the report to standard output, exiting 0; the
     end-to-end golden run compares that report with OUTPUT_TARGET."""
     out, err = io.StringIO(), io.StringIO()
 
     exit_code = run_cli(["streams/challenge.csv"], {"streams/challenge.csv": Ok(BRIEF_CSV)}.__getitem__, out, err)
 
     assert (out.getvalue(), err.getvalue(), exit_code) == (
-        render_reports(unwrap_ok(replay_stream(build_brief_stream(), CHALLENGE)).reports),
+        render_reports(unwrap_ok(process_stream(build_brief_stream(), CHALLENGE)).reports),
         "",
         0,
     )
@@ -85,15 +85,15 @@ def test_a_malformed_stream_exits_2_naming_the_line() -> None:
 
 
 def test_a_currency_mismatch_exits_2_naming_both_currencies(monkeypatch: pytest.MonkeyPatch) -> None:
-    """AC-36: a replay that returns a currency mismatch, which only a bug brings, prints `error: internal: ` with the
+    """AC-36: processing that returns a currency mismatch, which only a bug brings, prints `error: internal: ` with the
     currency met and the one required, prints no report, and exits 2."""
     out, err = io.StringIO(), io.StringIO()
 
-    def replay_with_mismatch(*_: object) -> Err[CurrencyMismatch]:
-        """A replay that meets BHD money on an AED account."""
+    def process_with_mismatch(*_: object) -> Err[CurrencyMismatch]:
+        """Processing that meets BHD money on an AED account."""
         return Err(CurrencyMismatch(expected_currency="AED", found_currency="BHD"))
 
-    monkeypatch.setattr(cli, "replay_stream", replay_with_mismatch)
+    monkeypatch.setattr(cli, "process_stream", process_with_mismatch)
 
     exit_code = run_cli(["streams/challenge.csv"], read_brief, out, err)
 
@@ -104,11 +104,11 @@ def test_an_internal_failure_exits_2_without_a_traceback(monkeypatch: pytest.Mon
     """AC-36: any other exception prints `error: internal failure: ` and its type, prints no report, and exits 2."""
     out, err = io.StringIO(), io.StringIO()
 
-    def fail_replay(*_: object) -> object:
-        """A replay that fails with a bug."""
+    def fail_processing(*_: object) -> object:
+        """Processing that fails with a bug."""
         raise ZeroDivisionError("a bug in the domain")
 
-    monkeypatch.setattr(cli, "replay_stream", fail_replay)
+    monkeypatch.setattr(cli, "process_stream", fail_processing)
 
     exit_code = run_cli(["streams/challenge.csv"], read_brief, out, err)
 

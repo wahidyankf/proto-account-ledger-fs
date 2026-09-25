@@ -18,7 +18,7 @@ from account_ledger.domain.model.event_log import (
 from account_ledger.domain.model.events import IncomingEvent
 from account_ledger.domain.model.ids import Day, FeeId, IncomingId, InstalmentId, RefundId
 from account_ledger.domain.model.money import Amount
-from account_ledger.domain.replay import replay_stream
+from account_ledger.domain.stream_processing import process_stream
 from support.brief_stream import build_brief_stream
 from support.results import unwrap_ok
 from support.states import list_entries, list_states
@@ -38,7 +38,7 @@ from support.values import make_aed, make_bhd
 def test_amb_035_a_reversal_undoes_what_its_target_moved() -> None:
     """AMB-035: E9 reverses E7's 620.00 debit from E9's own value day, Day 2, so Days 2 to 4 restate to 250.00,
     650.00, and 285.00."""
-    log = unwrap_ok(replay_stream(take_through(build_brief_stream(), "E9"), CHALLENGE)).find_log(Day(6))
+    log = unwrap_ok(process_stream(take_through(build_brief_stream(), "E9"), CHALLENGE)).find_log(Day(6))
 
     assert [unwrap_ok(compute_closing(log, ACC_001, Day(day))) for day in (2, 3, 4)] == [
         make_aed("250.00"),
@@ -57,7 +57,7 @@ def test_amb_028_a_second_reversal_of_the_same_event_is_refused() -> None:
         second_reversal,
     )
 
-    log = unwrap_ok(replay_stream(stream, CHALLENGE)).find_log(Day(3))
+    log = unwrap_ok(process_stream(stream, CHALLENGE)).find_log(Day(3))
 
     assert list_entries(log, "E12") == [
         Rejected(second_reversal, Day(3), AlreadyReversed(IncomingId("E7"), IncomingId("E9")))
@@ -75,7 +75,7 @@ def test_amb_028_a_reversal_of_a_reversal_is_refused() -> None:
         undoing_reversal,
     )
 
-    log = unwrap_ok(replay_stream(stream, CHALLENGE)).find_log(Day(3))
+    log = unwrap_ok(process_stream(stream, CHALLENGE)).find_log(Day(3))
 
     assert list_entries(log, "E12") == [Rejected(undoing_reversal, Day(3), ReversesAReversal(IncomingId("E9")))]
     assert unwrap_ok(compute_closing(log, ACC_001, Day(3))) == make_aed("1000.00")
@@ -86,7 +86,7 @@ def test_amb_035_a_reversal_of_an_unknown_event_is_refused() -> None:
     stray_reversal = make_reversal("E12", 2, "E99")
     stream = (make_credit("E1", 1, "100.00"), stray_reversal)
 
-    log = unwrap_ok(replay_stream(stream, CHALLENGE)).find_log(Day(2))
+    log = unwrap_ok(process_stream(stream, CHALLENGE)).find_log(Day(2))
 
     assert list_entries(log, "E12") == [Rejected(stray_reversal, Day(2), UnknownTarget(IncomingId("E99")))]
     assert unwrap_ok(compute_closing(log, ACC_001, Day(2))) == make_aed("100.00")
@@ -104,7 +104,7 @@ def test_amb_035_a_reversal_of_an_event_that_moved_no_money_is_refused(target: s
         undoing_reversal,
     )
 
-    log = unwrap_ok(replay_stream(stream, CHALLENGE)).find_log(Day(2))
+    log = unwrap_ok(process_stream(stream, CHALLENGE)).find_log(Day(2))
 
     assert list_entries(log, "E12") == [Rejected(undoing_reversal, Day(2), MovedNoMoney(IncomingId(target)))]
     assert unwrap_ok(compute_closing(log, ACC_001, Day(2))) == make_aed("100.00")
@@ -117,7 +117,7 @@ def test_amb_035_reversing_a_credit_in_instalments_undoes_every_instalment() -> 
         make_reversal("E11", 5, "E10", account="ACC-002"),
     )
 
-    log = unwrap_ok(replay_stream(stream, CHALLENGE)).find_log(Day(5))
+    log = unwrap_ok(process_stream(stream, CHALLENGE)).find_log(Day(5))
 
     assert unwrap_ok(compute_closing(log, ACC_002, Day(5))) == make_bhd("0.000")
 
@@ -163,8 +163,8 @@ def test_amb_035_money_already_undone_cannot_be_undone_again(
 ) -> None:
     """AMB-035: each event's money is undone at most once, whichever event undoes it: an instalment of a reversed
     credit, a credit one of whose instalments is reversed, or a fee already refunded."""
-    log = unwrap_ok(replay_stream(stream, WEEK)).find_log(day)
-    baseline_log = unwrap_ok(replay_stream(stream[:-1], WEEK)).find_log(day)
+    log = unwrap_ok(process_stream(stream, WEEK)).find_log(day)
+    baseline_log = unwrap_ok(process_stream(stream[:-1], WEEK)).find_log(day)
 
     assert list_entries(log, "E12") == [Rejected(stream[-1], day, reason)]
     assert compute_closing_of(log, account, day) == compute_closing_of(baseline_log, account, day)
@@ -180,7 +180,7 @@ def test_amb_035_a_reversed_settlement_leaves_its_authorization_settled() -> Non
         make_reversal("E4", 3, "E3", value=2),
     )
 
-    log = unwrap_ok(replay_stream(stream, CHALLENGE)).find_log(Day(3))
+    log = unwrap_ok(process_stream(stream, CHALLENGE)).find_log(Day(3))
 
     assert list_states(log, "Auth-A") == [Settled(Amount(make_aed("30.00")))]
     assert unwrap_ok(sum_holds(log, ACC_001, Day(3))) == make_aed("0.00")
@@ -195,7 +195,7 @@ def test_amb_035_a_reversed_instalment_stays_reversed() -> None:
         make_reversal("E2", 2, "E1-2", account="ACC-002", value=1),
     )
 
-    result = unwrap_ok(replay_stream(stream, CHALLENGE))
+    result = unwrap_ok(process_stream(stream, CHALLENGE))
 
     assert [unwrap_ok(compute_closing(result.find_log(Day(day)), ACC_002, Day(1))) for day in (1, 2, 6)] == [
         make_bhd("10.000"),

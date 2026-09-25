@@ -14,7 +14,7 @@ Each entry has the same six parts:
 Entries are settled one at a time, each by an explicit decision; a recommendation is not a resolution. Entries were
 numbered, when [MOVEMENT](MOVEMENT.md) was drafted, in the order they first bore on its days, from Day 0 onwards, then
 on its other sections; an entry keeps its number when a later change cites it elsewhere, and entries added later, such
-as AMB-034, come last. Figures were first taken from a scratch replay of the event stream; the ledger's test suite under
+as AMB-034, come last. Figures were first taken from a scratch run of the event stream; the ledger's test suite under
 `apps/account-ledger-cli/tests/` now re-derives every one, and each entry's resolution names the tests that prove it.
 
 Every entry is resolved, and every figure follows the resolutions. Those that move figures most: fees re-evaluated for
@@ -267,7 +267,7 @@ no rounded accrual in this stream (ACC-001 still totals 0.76), but it would in a
 **Resolution.** No compounding. Accrual events build up in a separate accrued-interest total, apart from the ledger
 balance, and join it only when the capitalization event fires at the end of Day 6; each day's interest is on that day's
 closing ledger balance alone. _Tests:_ `test_c6_day_6_closes_at_285_76_not_285_79` and
-`test_the_brief_replay_prints_output_target`.
+`test_the_brief_stream_prints_output_target`.
 
 **Rationale.** The brief puts interest on "the closing ledger balance" and has accruals "capitalize as a single credit
 at end of Day 6", so until then they are not part of the balance interest is computed on. It is also how banking usually
@@ -457,20 +457,20 @@ the report's errors have anything to point at, and whether "append-only" covers 
 rejected, or duplicate (AMB-034), and the aggregations count only the events that were accepted or approved. E8 is in
 the log as declined and moves no balance and holds nothing. A row that cannot be an event at all, such as one naming an
 account that is not configured, an amount that is not positive, has more places than its currency (AMB-006), or is not
-below the limit in [NUMBERS](NUMBERS.md), a day outside the replay, or more instalments than its amount has minor units
-(AMB-020) or than the limit in NUMBERS, is a fault in the input, not a refusal: it never reaches the log, and the replay
+below the limit in [NUMBERS](NUMBERS.md), a day outside the window, or more instalments than its amount has minor units
+(AMB-020) or than the limit in NUMBERS, is a fault in the input, not a refusal: it never reaches the log, and processing
 stops with an error naming its line. _Tests:_ `test_c5_auth_b_is_declined`,
 `test_amb_014_a_rejected_event_is_that_days_error`, and `test_amb_014_a_rejected_event_prints_its_refusal`.
 
 **Rationale.** Discarding a refused event deletes an event record in all but name, which "No event record is ever
 mutated or deleted" forbids. With the outcome in the log, a report line such as "Auth-B declined" points at the event
-behind it, replaying the log rebuilds every report exactly, and an auditor can see what was refused, when, and why. A
-second log for refusals would keep the ledger's log to money-moving events, at the cost of two sources that must agree.
-A refusal is the ledger's decision against what it already holds, so it belongs in the log; a row naming an account the
-ledger does not have, or an amount no event can carry, is refused by nothing the ledger holds, and logging it would put
-a record in the log that no account, balance, or rule can read.
+behind it, processing the log again rebuilds every report exactly, and an auditor can see what was refused, when, and
+why. A second log for refusals would keep the ledger's log to money-moving events, at the cost of two sources that must
+agree. A refusal is the ledger's decision against what it already holds, so it belongs in the log; a row naming an
+account the ledger does not have, or an amount no event can carry, is refused by nothing the ledger holds, and logging
+it would put a record in the log that no account, balance, or rule can read.
 
-## AMB-015 — Replay order when booked days are out of sequence
+## AMB-015 — Processing order when booked days are out of sequence
 
 **Where.** "Event stream, replayed in this order", but E10 (booked Day 5) is listed after E9 (booked Day 6).
 
@@ -497,11 +497,11 @@ backdating machinery E7 and E9 already need.
 
 **Status.** Resolved.
 
-**Resolution.** The stream is replayed in the order it is listed. E10, booked Day 5, arrives after E9 and after Day 5
+**Resolution.** The stream is processed in the order it is listed. E10, booked Day 5, arrives after E9 and after Day 5
 has closed, so it is processed on Day 6 as a late event value-dated Day 5: Day 5's report shows ACC-002 at 0.000, and
 Day 6's restates its Day 5 to the instalments value-dated Day 5 and fires Day 5's interest as an adjustment. A day
 closes on time and never waits for an event that may still come. _Test:_
-`test_amb_015_a_late_event_is_processed_on_the_open_day`.
+`test_amb_015_a_late_event_is_processed_on_the_current_day`.
 
 **Rationale.** The listed order is the order the ledger receives events, and in production that order is guaranteed only
 within a partition, typically per account: E9 on ACC-001 and E10 on ACC-002 can arrive in either order, and a lagging
@@ -575,8 +575,8 @@ open: Auth-B is declined, and Auth-A is settled finally, so AMB-013 keeps none o
 **Status.** Resolved.
 
 **Resolution.** No hold expires: an approved hold stays active until a settlement releases it. This is the design
-limitation the deliberately failing test exposes: it replays a hold left unsettled past a card network's usual lifetime
-and asserts that the hold has lapsed, which it never does. The fix, a lifetime after which the ledger fires a
+limitation the deliberately failing test exposes: it processes a hold left unsettled past a card network's usual
+lifetime and asserts that the hold has lapsed, which it never does. The fix, a lifetime after which the ledger fires a
 hold-expiry event, is described in the architecture document. _Test:_
 `test_known_weakness_an_unsettled_hold_never_lapses`.
 
@@ -644,7 +644,7 @@ cannot hold, and [REJECTED](REJECTED.md) refuses it.
 **Where.** "Auth-B is never settled inside the window"; criterion 5: "If Auth-B is approved, its hold reduces available
 balance but not ledger balance."
 
-**Why it is problematic.** The wording suggests Auth-B was approved, but the replay declines it: E7 lands earlier on Day
+**Why it is problematic.** The wording suggests Auth-B was approved, but the ledger declines it: E7 lands earlier on Day
 5 than E8, so available balance at E8 is −335.00 − 90.00 = −425.00. Without E7 it would have been 195.00 and approved.
 Criterion 5 is a conditional whose premise is false here, and this entry decides it.
 
@@ -664,7 +664,7 @@ Auth-A instead: on Day 2 Auth-A's hold of 200.00 leaves the ledger balance at 25
 The refusal and its reason are recorded in [REJECTED](REJECTED.md). _Tests:_ `test_c5_auth_b_is_declined` and
 `test_c5_a_hold_reduces_available_balance_but_not_ledger_balance`.
 
-**Rationale.** The criterion describes Auth-B approved, and the replay declines it, since E7 lands before E8 on Day 5
+**Rationale.** The criterion describes Auth-B approved, and the ledger declines it, since E7 lands before E8 on Day 5
 and leaves an available balance of −425.00; a criterion about an event that never happens cannot be checked against this
 stream, and accepting it as vacuously true would pass over what the brief is testing. The rule it states, that a hold
 reduces available balance and not ledger balance, is still the ledger's rule, so a test pins it with the one hold that
@@ -763,7 +763,7 @@ new event. An event the ledger fires is named by kind, account, the day it is fo
 `test_a_marker_prints_its_kind_account_and_days`.
 
 **Rationale.** "No event record is ever mutated or deleted" then holds in spirit as well as in letter, because nothing
-the ledger holds is edited in place, and any day's view can be rebuilt by replaying the log. A backdated event, a
+the ledger holds is edited in place, and any day's view can be rebuilt by processing the log again. A backdated event, a
 refund, or an interest correction is a new event that every aggregation picks up. The marker keeps the ledger's own
 events apart from E1 to E10 and stays stable when a late event adds or removes a fired event, where a running number
 would shift; firing nothing when nothing moves keeps the log to events that change a balance, as interest accrues on
@@ -789,7 +789,7 @@ no activity, and whether an authorization appears only on the day it changes or 
 authorization known by the end of that day, with its state then; the fees and refunds fired that day, each naming the
 day it is for; and that day's errors, or none. Day 3 therefore shows Auth-A approved with its hold of 200.00, and
 ACC-002 prints 0.000 on Days 1 to 4. _Tests:_ `test_amb_019_every_known_authorization_is_listed_with_its_state` and
-`test_the_brief_replay_prints_output_target`.
+`test_the_brief_stream_prints_output_target`.
 
 **Rationale.** Each day's report then stands on its own: Day 3's available balance of 450.00 is explained by the hold
 printed beside it, and no figure needs an earlier report to be checked. ACC-001 and ACC-002 hold different currencies,
@@ -805,20 +805,20 @@ assertion with presentation.
 
 **Options.**
 
-- Both: the command-line program replays the stream and prints the daily report, and the test suite replays the same
+- Both: the command-line program processes the stream and prints the daily report, and the test suite processes the same
   stream and asserts every figure. **Recommended**: each does one job.
 - A test suite that prints.
 - A script only.
 
 **Status.** Resolved.
 
-**Resolution.** Both. The command-line program, `account-ledger-cli`, replays the stream and prints the daily report
-exactly as [OUTPUT_TARGET](OUTPUT_TARGET.md) shows it. The test suite replays the same stream and asserts every figure:
-plain pytest unit and integration tests assert each criterion and each resolved rule, each by at least one named test,
-and an end-to-end test runs the program through its process boundary and compares its output with OUTPUT_TARGET. _Test:_
-`test_the_brief_replay_prints_output_target`.
+**Resolution.** Both. The command-line program, `account-ledger-cli`, processes the stream and prints the daily report
+exactly as [OUTPUT_TARGET](OUTPUT_TARGET.md) shows it. The test suite processes the same stream and asserts every
+figure: plain pytest unit and integration tests assert each criterion and each resolved rule, each by at least one named
+test, and an end-to-end test runs the program through its process boundary and compares its output with OUTPUT_TARGET.
+_Test:_ `test_the_brief_stream_prints_output_target`.
 
-**Rationale.** Each does one job: the program shows the replay, and the tests prove it. A script alone asserts nothing,
+**Rationale.** Each does one job: the program shows the report, and the tests prove it. A script alone asserts nothing,
 so a Day 6 closing of 285.73 instead of 285.76 would fail nothing; a test suite that prints buries the report in test
 output and leaves nothing a reader can run to see it. The repository already holds both, a runnable app and three test
 levels, and the failing test the brief asks for needs a suite to live in. The tests are plain pytest, not Gherkin: each
@@ -1023,7 +1023,7 @@ capitalization; and a closing summary with the closing ledger balance, the avail
 closings (AMB-022), authorization states, and errors, for both accounts (AMB-025). Each day opens with a banner, its
 name between two full-width lines of `=`, and every table is drawn as a plain-text box, with `+`, `-`, and `|` borders,
 as [OUTPUT_TARGET](OUTPUT_TARGET.md) shows; a block with nothing in it prints none. _Tests:_
-`test_amb_033_a_step_that_fires_nothing_reports_its_row` and `test_the_brief_replay_prints_output_target`.
+`test_amb_033_a_step_that_fires_nothing_reports_its_row` and `test_the_brief_stream_prints_output_target`.
 
 **Rationale.** The brief's "prints, per day" names what the report must hold, not everything it may. With only the four
 items, Auth-B's decline could not be checked without the available balance, and Day 5's −410.00 and its fee for Day 2
@@ -1065,9 +1065,9 @@ and content and must not move a balance twice, and an alarm for it would be fals
 cannot be a retry, so dropping it silently could lose a real transaction; it is a clash someone must see. The ledger's
 own markers, such as `FEE-001-D2@D5`, are built from kind, account, and days (AMB-024), so re-running a day's close
 fires the same IDs and cannot charge a fee twice. Appending the retry as a duplicate keeps every delivery in the log, so
-an auditor sees that a retry arrived and when, and a replay shows it moved nothing. The rule relies on the sender
-keeping IDs unique, which the brief does not state; a sender that reuses an ID for a new event sees it refused, not
-applied.
+an auditor sees that a retry arrived and when, and processing the log again shows it moved nothing. The rule relies on
+the sender keeping IDs unique, which the brief does not state; a sender that reuses an ID for a new event sees it
+refused, not applied.
 
 ## AMB-035 — What a reversal may target
 

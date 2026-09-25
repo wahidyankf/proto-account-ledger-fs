@@ -58,7 +58,7 @@ def _is_day_number(number: int) -> bool:
 
 @dataclass(frozen=True, slots=True, order=True)
 class Day:
-    """A day of the replay, counted from 0, the opening."""
+    """A day of the ledger, counted from 0, the opening."""
 
     number: int
 

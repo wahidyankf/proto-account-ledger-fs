@@ -22,7 +22,7 @@ from account_ledger.domain.model.event_log import ForcePosted, SettlementAccepte
 from account_ledger.domain.model.events import Capture
 from account_ledger.domain.model.ids import Day
 from account_ledger.domain.model.money import Aed, Amount
-from account_ledger.domain.replay import replay_stream
+from account_ledger.domain.stream_processing import process_stream
 from support.results import unwrap_ok
 from support.states import list_settlements, list_states
 from support.streams import ACC_001, list_fee_markers, make_authorization, make_credit, make_settlement
@@ -33,7 +33,7 @@ def test_amb_008_a_future_dated_credit_does_not_count_for_an_authorization() -> 
     """AMB-008: an event value-dated in the future counts from its value date only."""
     stream = (make_credit("E1", 2, "100.00", value=3), make_authorization("E2", 2, "Auth-A", "50.00"))
 
-    log = unwrap_ok(replay_stream(stream, CHALLENGE)).find_log(Day(2))
+    log = unwrap_ok(process_stream(stream, CHALLENGE)).find_log(Day(2))
 
     assert list_states(log, "Auth-A") == [Declined(Amount(make_aed("50.00")))]
 
@@ -42,7 +42,7 @@ def test_amb_009_a_later_credit_the_same_day_does_not_rescue_a_decline() -> None
     """AMB-009: an authorization is decided when it arrives, and the decision is final."""
     stream = (make_authorization("E1", 2, "Auth-A", "50.00"), make_credit("E2", 2, "100.00"))
 
-    log = unwrap_ok(replay_stream(stream, CHALLENGE)).find_log(Day(2))
+    log = unwrap_ok(process_stream(stream, CHALLENGE)).find_log(Day(2))
 
     assert list_states(log, "Auth-A") == [Declined(Amount(make_aed("50.00")))]
 
@@ -51,7 +51,7 @@ def test_amb_010_a_hold_counts_from_its_value_date() -> None:
     """AMB-010: a hold reduces the available balance from its authorization's value date."""
     stream = (make_credit("E1", 1, "100.00"), make_authorization("E2", 2, "Auth-A", "40.00", value=3))
 
-    result = unwrap_ok(replay_stream(stream, CHALLENGE))
+    result = unwrap_ok(process_stream(stream, CHALLENGE))
 
     assert result.find_report(Day(2)).available_balances[ACC_001.id] == make_aed("100.00")
     assert result.find_report(Day(3)).available_balances[ACC_001.id] == make_aed("60.00")
@@ -68,7 +68,7 @@ def test_amb_029_a_settlement_against_a_declined_authorization_is_force_posted()
     later_settlement = make_settlement("E3", 3, "Auth-A", "10.00")
     stream = (make_credit("E1", 1, "20.00"), make_authorization("E2", 2, "Auth-A", "50.00"), later_settlement)
 
-    log = unwrap_ok(replay_stream(stream, CHALLENGE)).find_log(Day(3))
+    log = unwrap_ok(process_stream(stream, CHALLENGE)).find_log(Day(3))
 
     assert list_settlements(log, "E3") == [SettlementAccepted(later_settlement, Day(3), ForcePosted())]
     assert list_states(log, "Auth-A") == [Declined(Amount(make_aed("50.00")))]
@@ -86,7 +86,7 @@ def test_amb_029_a_settlement_after_a_final_one_is_force_posted() -> None:
         second_settlement,
     )
 
-    log = unwrap_ok(replay_stream(stream, CHALLENGE)).find_log(Day(4))
+    log = unwrap_ok(process_stream(stream, CHALLENGE)).find_log(Day(4))
 
     assert list_settlements(log, "E4") == [SettlementAccepted(second_settlement, Day(4), ForcePosted())]
     assert list_states(log, "Auth-A") == [Settled(Amount(make_aed("40.00")))]
@@ -103,7 +103,7 @@ def test_amb_013_a_non_final_settlement_keeps_the_rest_of_the_hold() -> None:
         make_settlement("E4", 3, "Auth-A", "40.00"),
     )
 
-    result = unwrap_ok(replay_stream(stream, CHALLENGE))
+    result = unwrap_ok(process_stream(stream, CHALLENGE))
 
     assert list_states(result.find_log(Day(2)), "Auth-A") == [
         PartiallySettled(Amount(make_aed("120.00")), Amount(make_aed("80.00")))
@@ -131,7 +131,7 @@ def test_amb_013_a_partial_capture_reaching_the_hold_settles(captures: tuple[str
     )
     stream = (make_credit("E1", 1, "500.00"), make_authorization("E2", 1, "Auth-A", "200.00"), *parts)
 
-    result = unwrap_ok(replay_stream(stream, CHALLENGE))
+    result = unwrap_ok(process_stream(stream, CHALLENGE))
 
     assert list_states(result.find_log(Day(2)), "Auth-A") == [Settled(Amount(make_aed(settled_amount)))]
     assert (
@@ -201,7 +201,7 @@ def test_amb_030_a_settlement_above_its_hold_debits_in_full() -> None:
         make_settlement("E3", 2, "Auth-A", "120.00"),
     )
 
-    log = unwrap_ok(replay_stream(stream, CHALLENGE)).find_log(Day(2))
+    log = unwrap_ok(process_stream(stream, CHALLENGE)).find_log(Day(2))
 
     assert list_states(log, "Auth-A") == [Settled(Amount(make_aed("120.00")))]
     assert unwrap_ok(sum_holds(log, ACC_001, Day(2))) == make_aed("0.00")

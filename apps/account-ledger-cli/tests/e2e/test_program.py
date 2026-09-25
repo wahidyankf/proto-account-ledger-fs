@@ -27,8 +27,8 @@ def run_program(*args: str) -> subprocess.CompletedProcess[str]:
     )
 
 
-def test_the_brief_replay_prints_output_target() -> None:
-    """AC-01: the program replays the brief's stream and prints OUTPUT_TARGET byte for byte, exiting 0."""
+def test_the_brief_stream_prints_output_target() -> None:
+    """AC-01: the program processes the brief's stream and prints OUTPUT_TARGET byte for byte, exiting 0."""
     completed_process = run_program(str(CHALLENGE_STREAM))
 
     assert completed_process.stdout.split("\n") == read_expected_output().split(

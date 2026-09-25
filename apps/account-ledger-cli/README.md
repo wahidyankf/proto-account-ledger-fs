@@ -1,6 +1,6 @@
 # account-ledger-cli
 
-The in-memory account ledger as a command-line program. It reads a CSV stream of account events, replays it day by day
+The in-memory account ledger as a command-line program. It reads a CSV stream of account events, processes it day by day
 into an append-only log, and prints one report per day: the events processed, the end-of-day steps applied, and the
 closing summary. For the brief's stream it prints [OUTPUT_TARGET](../../OUTPUT_TARGET.md) byte for byte.
 
@@ -40,7 +40,7 @@ npx nx run account-ledger-cli:test:e2e          # end-to-end suite
 npx nx run account-ledger-cli:test:quick        # typecheck, lint, test:unit in order
 ```
 
-To replay another stream, run the module from this directory with the path as its one argument:
+To process another stream, run the module from this directory with the path as its one argument:
 
 ```bash
 PYTHONPATH=src uv run --no-sync python -m account_ledger path/to/stream.csv
@@ -80,7 +80,7 @@ D13 records.
 
 | Status | When                                         | Standard output | Standard error                           |
 | ------ | -------------------------------------------- | --------------- | ---------------------------------------- |
-| `0`    | the replay completed, refusals included      | the report      | nothing                                  |
+| `0`    | the stream was processed, refusals included  | the report      | nothing                                  |
 | `2`    | no argument, or more than one                | nothing         | `usage: account-ledger-cli <stream.csv>` |
 | `2`    | the file cannot be read                      | nothing         | `error: cannot read PATH: REASON`        |
 | `2`    | the stream is malformed                      | nothing         | `error: line N: ...`                     |
@@ -97,7 +97,7 @@ written as UTF-8 whatever the locale, because the report prints `−` (U+2212) f
 
 A hold never expires (AMB-018): an approved authorization that is never settled keeps reducing the available balance for
 as long as the ledger runs. `tests/unit/test_known_weakness.py` holds the brief's one failing test against this design,
-inline-annotated with what it reveals. It replays an authorization left unsettled through Day 32, past the 30 calendar
+inline-annotated with what it reveals. It processes an authorization left unsettled through Day 32, past the 30 calendar
 days Visa allows at most, and asserts the hold has lapsed.
 
 It is marked `xfail(strict=True)`, so the suite reports it as `1 xfailed` and passes. Once holds gain a lifetime, the

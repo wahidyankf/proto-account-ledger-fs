@@ -50,7 +50,7 @@ def _check_config(
 
 @dataclass(frozen=True, slots=True)
 class LedgerConfig:
-    """The accounts in order, the window of days replayed, and the days interest is capitalized."""
+    """The accounts in order, the window of days processed, and the days interest is capitalized."""
 
     accounts: tuple[AnyAccount, ...]
     first_day: Day

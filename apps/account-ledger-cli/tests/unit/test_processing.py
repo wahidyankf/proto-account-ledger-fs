@@ -7,7 +7,7 @@ from account_ledger.domain.balances import compute_closing
 from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.event_log import Accepted, Duplicate, IdReused, Rejected
 from account_ledger.domain.model.ids import Day
-from account_ledger.domain.replay import replay_stream
+from account_ledger.domain.stream_processing import process_stream
 from support.results import unwrap_ok
 from support.states import list_entries
 from support.streams import (
@@ -27,7 +27,7 @@ def test_amb_034_a_repeated_event_is_logged_as_a_duplicate_with_no_effect() -> N
     duplicate and credits once; a duplicate is not an error, so Day 1's errors read none."""
     e1 = make_credit("E1", 1, "100.00")
 
-    result = unwrap_ok(replay_stream((e1, e1), CHALLENGE))
+    result = unwrap_ok(process_stream((e1, e1), CHALLENGE))
     log = result.find_log(Day(1))
 
     assert list_entries(log, "E1") == [Accepted(e1, Day(1)), Duplicate(e1, Day(1))]
@@ -49,8 +49,8 @@ def test_amb_034_a_repeated_reversal_or_settlement_is_a_duplicate(kind: str) -> 
     )
     repeated_event = make_reversal("E4", 1, "E2") if kind == "reversal" else make_settlement("E4", 1, "Auth-A", "20.00")
 
-    result = unwrap_ok(replay_stream((*opening, repeated_event, repeated_event), CHALLENGE))
-    single_log = unwrap_ok(replay_stream((*opening, repeated_event), CHALLENGE)).find_log(Day(1))
+    result = unwrap_ok(process_stream((*opening, repeated_event, repeated_event), CHALLENGE))
+    single_log = unwrap_ok(process_stream((*opening, repeated_event), CHALLENGE)).find_log(Day(1))
     log = result.find_log(Day(1))
 
     assert list_entries(log, "E4")[1:] == [Duplicate(repeated_event, Day(1))]
@@ -66,7 +66,7 @@ def test_amb_034_the_same_event_booked_another_day_is_refused() -> None:
     the same value day and amount reuses its ID and is refused."""
     first_credit, retried_credit = make_credit("E1", 1, "100.00"), make_credit("E1", 2, "100.00", value=1)
 
-    log = unwrap_ok(replay_stream((first_credit, retried_credit), CHALLENGE)).find_log(Day(2))
+    log = unwrap_ok(process_stream((first_credit, retried_credit), CHALLENGE)).find_log(Day(2))
 
     assert list_entries(log, "E1") == [Accepted(first_credit, Day(1)), Rejected(retried_credit, Day(2), IdReused())]
     assert unwrap_ok(compute_closing(log, ACC_001, Day(2))) == make_aed("100.00")
@@ -76,7 +76,7 @@ def test_amb_034_a_reused_id_with_different_content_is_refused() -> None:
     """AMB-034: a second E1 that differs from the first in any field is refused and moves no balance."""
     first_credit, reused_credit = make_credit("E1", 1, "100.00"), make_credit("E1", 1, "90.00")
 
-    log = unwrap_ok(replay_stream((first_credit, reused_credit), CHALLENGE)).find_log(Day(1))
+    log = unwrap_ok(process_stream((first_credit, reused_credit), CHALLENGE)).find_log(Day(1))
 
     assert list_entries(log, "E1") == [Accepted(first_credit, Day(1)), Rejected(reused_credit, Day(1), IdReused())]
     assert unwrap_ok(compute_closing(log, ACC_001, Day(1))) == make_aed("100.00")

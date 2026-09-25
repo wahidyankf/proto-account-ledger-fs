@@ -44,7 +44,7 @@ Both are listed, as AMB-032 resolves.
 | Report rule width           | 120 `=` characters                   | in place           |
 | Spelled instalment counts   | two to ten                           | in place           |
 | Hold time frame             | 30 calendar days                     | test only, AMB-018 |
-| Known-weakness replay       | through Day 32                       | test only, AMB-018 |
+| Known-weakness run          | through Day 32                       | test only, AMB-018 |
 
 ### Rate literal
 
@@ -61,15 +61,15 @@ before the deliberate quantize step.
 
 Every amount the stream gives must be below 10¹² in either direction, AED 999,999,999,999.99 at most; one at or above it
 is a fault in the input (AMB-014). The limit keeps every sum inside the working precision: without it, two amounts of 28
-digits each could sum to 29, which no balance can hold, and the replay would fail; at this limit a sum could reach 28
-digits only after some 10¹³ events, far beyond any replay held in memory. It sits at the 10¹² scale the working
+digits each could sum to 29, which no balance can hold, and processing would fail; at this limit a sum could reach 28
+digits only after some 10¹³ events, far beyond any stream held in memory. It sits at the 10¹² scale the working
 precision is sized for; halving it to 5 × 10¹¹ would refuse more amounts and make no sum safer.
 
 ### Instalment limit
 
 A credit is posted in 2 to 360 instalments; a count outside that range is a fault in the input (AMB-014). Every
 instalment is fired and kept in memory, so without a ceiling one credit at the amount limit could ask for some 10¹⁴
-parts and exhaust memory before the replay ends. 360 is a monthly plan over thirty years, the longest schedule in common
+parts and exhaust memory before processing ends. 360 is a monthly plan over thirty years, the longest schedule in common
 use; halving it to 180 would refuse a thirty-year plan and guard against nothing the ceiling does not already stop.
 
 ### Rounding mode
@@ -136,7 +136,7 @@ Visa Business News AI13522, effective 13 April 2024, makes 30 calendar days its 
 frame, so no network would still honour an older hold. At 15 (half), Visa would still honour a lodging or cruise
 authorization, so a lapse test would claim a weakness no network shows.
 
-### Known-weakness replay
+### Known-weakness run
 
 Through Day 32, the first day after Auth-A's thirty: the test's Auth-A is approved on Day 1, so Day 31 is the thirtieth
 day after it and Day 32 the first on which no network would still honour it. At Day 16 (half), the hold is still

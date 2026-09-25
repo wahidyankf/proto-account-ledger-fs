@@ -1,6 +1,6 @@
 # Output Target
 
-The text the command-line program prints when it replays the stream from the [challenge brief](challenge-raw.md): the
+The text the command-line program prints when it processes the stream from the [challenge brief](challenge-raw.md): the
 clean view of [MOVEMENT](MOVEMENT.md), which holds the full analysis. Every figure below repeats MOVEMENT unchanged,
 because this is the text a test will compare the program's output against; where the two ever disagree, MOVEMENT is
 right and this file is corrected.

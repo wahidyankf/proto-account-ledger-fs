@@ -92,7 +92,7 @@ recorded in [REJECTED](REJECTED.md), and each criterion below states its verdict
 
 ## Events
 
-Listed and replayed in the brief's order, so E10, booked Day 5, arrives after E9 and is processed on Day 6 as a late
+Listed and processed in the brief's order, so E10, booked Day 5, arrives after E9 and is processed on Day 6 as a late
 event (AMB-015); E10 is split as AMB-020 resolves, all on Day 5 (AMB-017).
 
 | Event | Booked | Type          | Account | Detail                                                | Value date |

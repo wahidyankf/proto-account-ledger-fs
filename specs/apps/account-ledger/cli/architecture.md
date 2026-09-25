@@ -5,7 +5,7 @@ container, a component responsibility, a relationship, or a boundary updates thi
 
 ## Scope
 
-`account-ledger-cli` is the in-memory ledger: it reads a CSV stream of account events, replays it day by day into an
+`account-ledger-cli` is the in-memory ledger: it reads a CSV stream of account events, processes it day by day into an
 append-only log, and prints one report per day. It runs locally, reads only the file it is given, keeps nothing after it
 exits, and never reaches the network.
 
@@ -56,9 +56,9 @@ standard streams, in UTF-8 whatever the locale, since the report prints the minu
 
 The shell holds every effect and every raw value; the adapters translate between text and the domain's types; the domain
 holds every business rule. The adapters and the domain are pure. Every dependency points inward, from the shell to the
-adapters and the domain, from the adapters to the domain's types, and, inside the domain, from the driver down to the
-types. Each layer is a place in the package: the shell is `cli.py` at its root, the adapters are `adapters/`, and the
-domain is `domain/`, its values in `domain/model/`, under its own `ruff.toml` that refuses any import of
+adapters and the domain, from the adapters to the domain's types, and, inside the domain, from stream processing down to
+the types. Each layer is a place in the package: the shell is `cli.py` at its root, the adapters are `adapters/`, and
+the domain is `domain/`, its values in `domain/model/`, under its own `ruff.toml` that refuses any import of
 `account_ledger.adapters` or `account_ledger.cli` (TID251). The values are everything below the model line: they decide
 nothing. Below them sits `common/`, the tools with no ledger meaning: every layer may import it, and its own `ruff.toml`
 refuses any import of the other three.
@@ -78,7 +78,7 @@ refuses any import of the other three.
   ---------------------------------------------------------------------------------------------------
   domain                                   v
   domain/                     +--------------------------+
-                              | replay (driver)          |
+                              | stream_processing        |
                               | the stream in listed     |
                               | order, each day closed   |
                               | on time                  |
@@ -125,26 +125,26 @@ refuses any import of the other three.
                                    +----------------+
 ```
 
-| Component        | Responsibility                                                                                    |
-| ---------------- | ------------------------------------------------------------------------------------------------- |
-| `cli`            | `run_cli` checks the arguments, reads, parses, replays, renders, and maps every failure to a code |
-| `stream_csv`     | parsing the stream file into incoming events, or the first fault with its line                    |
-| `render`         | the report as text: banners, box tables, amounts with `−` and separators, every note and error    |
-| `replay`         | the stream in listed order, closing each day on time, with the log and report of every day        |
-| `processing`     | one entry per incoming event: idempotency first, then by kind; `reversals` checks a reversal      |
-| `end_of_day`     | a day's close: `fees`, then `interest`'s accruals and adjustments, then its capitalization        |
-| `report`         | a day as data, no text: processed events, end-of-day rows, closings, restated ones, holds, errors |
-| `fees`           | a fee for each day closing negative with none in force, refunded once the day recovers            |
-| `interest`       | a day's interest on a positive closing, adjusted when a closing changes, and its capitalization   |
-| `balances`       | closing and available, each recomputed over the log                                               |
-| `authorizations` | the states, `decide_authorization`, `apply_trigger`, holds, and the records replayed from the log |
-| `reversals`      | why a reversal is refused, in tech-docs 002's order, and which events the accepted ones undid     |
-| `event_log`      | the append-only tuple of entries, each kind holding only its outcome, and every `Rejection`       |
-| `events`         | the incoming event kinds, joined in `IncomingEvent`, and the fired kinds, in `FiredEvent`         |
-| `config`         | the accounts, each typed by its currency, the window of days, and the capitalization days         |
-| `money`          | `Aed` and `Bhd`, one type per currency; `Amount` above zero; the split, fee, and daily interest   |
-| `ids`            | days, account and hold IDs, incoming IDs, fired-event markers, and instalment counts              |
-| `result`         | `Ok` and `Err`, so every failure a caller can meet comes back as a value; it knows no ledger      |
+| Component           | Responsibility                                                                                 |
+| ------------------- | ---------------------------------------------------------------------------------------------- |
+| `cli`               | `run_cli` checks arguments, reads, parses, processes, renders, and maps each failure to a code |
+| `stream_csv`        | parsing the stream file into incoming events, or the first fault with its line                 |
+| `render`            | the report as text: banners, box tables, amounts with `−` and separators, notes, and errors    |
+| `stream_processing` | the stream in listed order, closing each day on time, with each day's log and report           |
+| `processing`        | one entry per incoming event: idempotency first, then by kind; `reversals` checks a reversal   |
+| `end_of_day`        | a day's close: `fees`, then `interest`'s accruals and adjustments, then its capitalization     |
+| `report`            | a day as data: processed events, end-of-day rows, closings, restated ones, holds, and errors   |
+| `fees`              | a fee for each day closing negative with none in force, refunded once the day recovers         |
+| `interest`          | a day's interest on a positive closing, adjusted when a closing changes, and capitalized       |
+| `balances`          | closing and available, each recomputed over the log                                            |
+| `authorizations`    | states, `decide_authorization`, `apply_trigger`, holds, and records rebuilt from the log       |
+| `reversals`         | why a reversal is refused, in tech-docs 002's order, and which events the accepted ones undid  |
+| `event_log`         | the append-only tuple of entries, each kind holding only its outcome, and every `Rejection`    |
+| `events`            | the incoming event kinds, joined in `IncomingEvent`, and the fired kinds, in `FiredEvent`      |
+| `config`            | the accounts, each typed by its currency, the window of days, and the capitalization days      |
+| `money`             | `Aed` and `Bhd`, one type per currency; `Amount` above zero; split, fee, and daily interest    |
+| `ids`               | days, account and hold IDs, incoming IDs, fired-event markers, and instalment counts           |
+| `result`            | `Ok` and `Err`, so every failure a caller can meet comes back as a value; it knows no ledger   |
 
 `event_log` imports `AuthorizationState` for annotations only, so the log and the state machine do not import each other
 at run time.
@@ -175,8 +175,9 @@ auth      AuthorizationState = Approved(hold) | PartiallySettled(captured_amount
 report    DayReport = day, processed_events: Processed..., closing_balances, available_balances,
                       restatements: Restatement..., authorizations: AuthorizationRecord..., errors,
                       end_of_day: (Fired | Capitalized | NothingFired)...
-replay    Replay = reports: DayReport..., logs: Log...     find_report(day), find_log(day)
-          replay_stream(stream, config) -> Result[Replay, CurrencyMismatch]
+stream_processing
+          ProcessedStream = reports: DayReport..., logs: Log...     find_report(day), find_log(day)
+          process_stream(stream, config) -> Result[ProcessedStream, CurrencyMismatch]
 stream    parse_stream(text, config) -> Result[tuple[IncomingEvent, ...], StreamError(line, message)]
 ```
 
@@ -203,13 +204,13 @@ an authorization the log does not know, is accepted as a force-post: it debits i
 ## Dynamic View — One Day
 
 ```text
-replay, for each event in listed order, D the day open
+process_stream, for each event in listed order, D the current day
   1. the event is booked after D: close D (a and b), open D + 1, and look again; a day with no events closes too;
      no day closes after the window's last, so an event booked after the window reaches no day's log or report
   2. otherwise: processing.process_event(log, event, D) ---> log + one entry (+ the instalments a credit fires)
        idempotency first; then by kind; a reversal checked against its target in order
        an event booked before D is late and is processed on D (AMB-015)
-replay, once the stream is spent: close every day left in the window
+process_stream, once every event is processed: close every day left in the window
 
 closing day D
   a. end_of_day.close_day(log, D): step 1 in fees, steps 2 and 3 in interest
@@ -226,15 +227,15 @@ cli, after the last day
 Every balance is recomputed from the log whenever it is asked for (D7), so a late event value-dated in the past changes
 every later closing without any stored balance being updated. Each sum of money returns a `CurrencyMismatch` rather than
 a wrong total when it meets two currencies. The reader keeps every effect in its account's currency, so only a bug
-brings one; it ends the replay, and `run_cli` prints `error: internal: ` and exits 2.
+brings one; it ends the processing, and `run_cli` prints `error: internal: ` and exits 2.
 
 ## Reading the Code
 
 To read the code for the first time, follow one day through it, in this order:
 
 1. `cli.py`, `run_cli`: where the program starts, and how every failure becomes an exit status.
-2. `domain/replay.py`: the loop over events, where a later day's event closes the open day first, as the dynamic view
-   above draws.
+2. `domain/stream_processing.py`: the loop over events, where a later day's event closes the current day first, as the
+   dynamic view above draws.
 3. `domain/processing.py`, `process_event`: what one incoming event adds to the log, duplicates caught first.
 4. `domain/end_of_day.py`, `close_day`: the three steps of a day's close, each in its own module.
 5. `domain/fees.py`: when a day is charged an overdraft fee, and when that fee is refunded.

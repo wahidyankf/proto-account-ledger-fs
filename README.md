@@ -1,7 +1,7 @@
 # proto-account-ledger-py
 
 An in-memory account ledger core written in Python. There is no web layer, persistence, UI, or database: a command-line
-program replays an event stream and prints one report a day, and a test suite at three levels proves every figure.
+program processes an event stream and prints one report a day, and a test suite at three levels proves every figure.
 
 The repository is an Nx monorepo. Rhino and husky gate every commit and push, and governance is adopted from
 `ose-rules`.
@@ -27,10 +27,10 @@ npm install    # installs Nx, Prettier, commitlint, and the git hooks
 ### Run It
 
 ```bash
-npx nx run account-ledger-cli:run               # replay streams/challenge.csv and print the report
+npx nx run account-ledger-cli:run               # process streams/challenge.csv and print the report
 ```
 
-The program prints the fenced text in [OUTPUT_TARGET.md](OUTPUT_TARGET.md), byte for byte. How to replay another stream
+The program prints the fenced text in [OUTPUT_TARGET.md](OUTPUT_TARGET.md), byte for byte. How to process another stream
 file, its columns, the exit statuses, and the ledger's known weakness are in the
 [application README](apps/account-ledger-cli/README.md).
 

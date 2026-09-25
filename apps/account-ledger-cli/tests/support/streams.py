@@ -1,4 +1,4 @@
-"""Builders for the short streams the rule tests replay, and readers that turn log entries into plain values."""
+"""Builders for the short streams the rule tests process, and readers that turn log entries into plain values."""
 
 from account_ledger.domain.model.config import Account
 from account_ledger.domain.model.event_log import Accepted, Log

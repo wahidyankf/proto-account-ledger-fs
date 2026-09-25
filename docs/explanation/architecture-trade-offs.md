@@ -13,30 +13,30 @@ get right: nothing stored has to be found and corrected, because nothing is stor
 
 It is also what breaks first. A day's close re-evaluates fees and interest for every day from the first day of the
 window through today, and each of those days asks for its closing, which scans every entry. One close therefore costs
-days × entries, and a replay of D days costs about D³ once the log grows with the days. The log is also a tuple, so each
+days × entries, and processing D days costs about D³ once the log grows with the days. The log is also a tuple, so each
 append copies it. Measured on 2026-09-25, on a laptop, with a scratch stream of ten alternating credits and debits a day
 on one account, each value-dated on its booking day, and interest capitalized every thirtieth day:
 
-| Window   | Events | Replay time |
-| -------- | ------ | ----------- |
-| 6 days   | 60     | 0.01 s      |
-| 30 days  | 300    | 0.61 s      |
-| 60 days  | 600    | 4.93 s      |
-| 120 days | 1,200  | 38.49 s     |
+| Window   | Events | Processing time |
+| -------- | ------ | --------------- |
+| 6 days   | 60     | 0.01 s          |
+| 30 days  | 300    | 0.61 s          |
+| 60 days  | 600    | 4.93 s          |
+| 120 days | 1,200  | 38.49 s         |
 
 Doubling the window multiplies the time by about eight. Volume alone is not the problem: a hundred times the brief's
-events inside the same six days replays in 0.16 s. A hundred times the days is.
+events inside the same six days is processed in 0.16 s. A hundred times the days is.
 
 The state grows without bound in three places:
 
 - **The log.** It holds every entry since the first day, and every query reads all of it.
 - **The window.** Fees and interest are re-judged for every day since the first, so each close does more work than the
   last, forever.
-- **The snapshots.** The replay keeps the log as it stood at every day's close, so memory grows with days × entries.
+- **The snapshots.** Processing keeps the log as it stood at every day's close, so memory grows with days × entries.
 
 The cheapest structural change that defers this is a projection: a running total of each account's movements by value
 day, updated on every append, with each closing read as a prefix sum over it. It changes no rule and no output; a close
-still re-judges every day, but each judgement becomes a lookup rather than a scan, which takes the replay from about D³
+still re-judges every day, but each judgement becomes a lookup rather than a scan, which takes processing from about D³
 to about D². The log stays the source of truth, and the projection can be rebuilt from it at any time. What it does not
 fix is the ever-growing window. That needs a business decision, not a data structure: a period close after which a day
 is sealed, and a backdated event older than the seal posts its effect into the open period instead of reopening old
@@ -127,11 +127,11 @@ risk.
 | Cut                                    | Production risk deferred                                                  |
 | -------------------------------------- | ------------------------------------------------------------------------- |
 | persistence: the log lives for one run | a crash loses everything; there is no durable record to recover           |
-| a stored balance: every figure scans   | the replay's cost grows with the cube of the window, as shown above       |
+| a stored balance: every figure scans   | processing cost grows with the cube of the window, as shown above         |
 | a hold lifetime (AMB-018)              | money is held forever for a merchant who never clears                     |
 | a merchant's void of an authorization  | a cancelled payment keeps its hold until an operator works around it      |
 | a fee waiver                           | a reversed fee on a day still negative is charged again at the next close |
-| a quarantine for a live stream         | one malformed row stops the whole replay, and a live feed cannot stop     |
+| a quarantine for a live stream         | one malformed row stops all processing, and a live feed cannot stop       |
 | a clock                                | no cut-off or time zone; a day closes when the stream passes it           |
 | a calendar: days are integers          | no weekends, holidays, or day-count convention for interest               |
 | product configuration                  | every fee or rate change is a release, and no rate has an effective date  |

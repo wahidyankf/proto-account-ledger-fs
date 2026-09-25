@@ -9,7 +9,7 @@ from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.event_log import Rejection
 from account_ledger.domain.model.events import Capture, IncomingEvent
 from account_ledger.domain.model.ids import AccountId, Day
-from account_ledger.domain.replay import replay_stream
+from account_ledger.domain.stream_processing import process_stream
 from support.brief_stream import build_brief_stream
 from support.refusals import REFUSALS
 from support.results import unwrap_ok
@@ -22,7 +22,7 @@ TITLES = ("Events processed", "EOD applied", "Closing summary")
 def test_a_day_opens_with_its_banner_and_its_blocks() -> None:
     """tech-docs 003: a day opens with a banner between two lines of 120 `=`, then the three titled blocks, each after
     one blank line, as is each day from the next; the output ends with a newline."""
-    result = unwrap_ok(replay_stream((), CHALLENGE))
+    result = unwrap_ok(process_stream((), CHALLENGE))
 
     text = render_reports((result.find_report(Day(0)), result.find_report(Day(1))))
 
@@ -38,7 +38,7 @@ def test_a_day_opens_with_its_banner_and_its_blocks() -> None:
 
 def test_an_empty_block_prints_none() -> None:
     """AMB-033: a block with nothing in it prints two spaces and `none` instead of a table; Day 0 is such a day."""
-    lines = render_reports((unwrap_ok(replay_stream((), CHALLENGE)).find_report(Day(0)),)).split("\n")
+    lines = render_reports((unwrap_ok(process_stream((), CHALLENGE)).find_report(Day(0)),)).split("\n")
 
     assert lines[4:10] == ["Events processed", "  none", "", "EOD applied", "  none", ""]
 
@@ -58,7 +58,7 @@ DAY_0_SUMMARY = [
 def test_a_table_is_a_box_as_wide_as_its_cells() -> None:
     """tech-docs 003: borders of `+`, `-`, and `|`, one space either side of each cell, every cell left-aligned, and
     every column as wide as its widest cell, header included; Day 0's summary prints as OUTPUT_TARGET's does."""
-    lines = render_reports((unwrap_ok(replay_stream((), CHALLENGE)).find_report(Day(0)),)).split("\n")
+    lines = render_reports((unwrap_ok(process_stream((), CHALLENGE)).find_report(Day(0)),)).split("\n")
 
     assert lines[lines.index("Closing summary") + 1 :] == [*DAY_0_SUMMARY, ""]
 
@@ -67,8 +67,10 @@ def test_amounts_print_in_their_currencys_format() -> None:
     """tech-docs 003: an amount prints its currency's places, a comma every three digits, and `−` (U+2212) for a
     negative, counted as one character when a column is sized."""
     opening = (make_credit("E1", 1, "1200.00"), make_credit("E2", 1, "1000.000", account="ACC-002"))
-    day_1 = render_reports((unwrap_ok(replay_stream(opening, CHALLENGE)).find_report(Day(1)),)).split("\n")
-    day_5 = render_reports((unwrap_ok(replay_stream(build_brief_stream(), CHALLENGE)).find_report(Day(5)),)).split("\n")
+    day_1 = render_reports((unwrap_ok(process_stream(opening, CHALLENGE)).find_report(Day(1)),)).split("\n")
+    day_5 = render_reports((unwrap_ok(process_stream(build_brief_stream(), CHALLENGE)).find_report(Day(5)),)).split(
+        "\n"
+    )
 
     assert "| Closing ledger balance | 1,200.00      | 1,000.000     |" in day_1
     assert any(line.startswith("| Day 2 closing, restated | \u2212370.00 ") for line in day_5)
@@ -99,7 +101,7 @@ def test_each_row_prints_its_type_and_detail() -> None:
     )
     days = [
         _list_types_and_details(_select_blocks(render_reports((day,))))
-        for day in unwrap_ok(replay_stream(stream, CHALLENGE)).reports[1:5]
+        for day in unwrap_ok(process_stream(stream, CHALLENGE)).reports[1:5]
     ]
 
     no_accrual = ("Interest accrual", "no interest accrued")
@@ -148,7 +150,7 @@ def test_instalment_counts_print_as_words() -> None:
         return [
             detail
             for _, detail in _list_types_and_details(
-                _select_blocks(render_reports((unwrap_ok(replay_stream(stream, CHALLENGE)).find_report(Day(1)),)))
+                _select_blocks(render_reports((unwrap_ok(process_stream(stream, CHALLENGE)).find_report(Day(1)),)))
             )
         ]
 
@@ -177,7 +179,7 @@ def test_authorization_states_print_as_output_target_shows() -> None:
 
     def list_cells(day: int) -> list[str]:
         """The Authorizations cells of the day's summary, one per account."""
-        lines = render_reports((unwrap_ok(replay_stream(stream, CHALLENGE)).find_report(Day(day)),)).split("\n")
+        lines = render_reports((unwrap_ok(process_stream(stream, CHALLENGE)).find_report(Day(day)),)).split("\n")
         row = next(line for line in lines if line.startswith("| Authorizations"))
         return [cell.strip() for cell in row.strip("|").split("|")[1:]]
 
@@ -189,7 +191,9 @@ def test_authorization_states_print_as_output_target_shows() -> None:
 def test_capitalization_names_the_days_it_accrued() -> None:
     """tech-docs 003: a capitalization names the days whose interest events do not net to zero: `Days 1 to 6` for three
     or more in a row, `Days 5 and 6` for two, `Day 6` for one, and `Days 1, 2, and 4` otherwise."""
-    brief = render_reports((unwrap_ok(replay_stream(build_brief_stream(), CHALLENGE)).find_report(Day(6)),)).split("\n")
+    brief = render_reports((unwrap_ok(process_stream(build_brief_stream(), CHALLENGE)).find_report(Day(6)),)).split(
+        "\n"
+    )
     gaps = (
         make_credit("E1", 1, "1000.00"),
         make_debit("E2", 3, "1000.00"),
@@ -197,7 +201,7 @@ def test_capitalization_names_the_days_it_accrued() -> None:
         make_debit("E4", 5, "1000.00"),
         make_credit("E5", 6, "10.000", account="ACC-002"),
     )
-    gapped_lines = render_reports((unwrap_ok(replay_stream(gaps, CHALLENGE)).find_report(Day(6)),)).split("\n")
+    gapped_lines = render_reports((unwrap_ok(process_stream(gaps, CHALLENGE)).find_report(Day(6)),)).split("\n")
 
     def list_details(lines: list[str]) -> list[str]:
         """The detail column of each capitalization row."""
@@ -221,7 +225,7 @@ def test_the_texts_beyond_output_target_follow_its_patterns() -> None:
         make_reversal("E6", 2, "E99"),
         make_reversal("E7", 2, "INT-001-D1@D1"),
     )
-    lines = render_reports(unwrap_ok(replay_stream(stream, CHALLENGE)).reports[1:3]).split("\n")
+    lines = render_reports(unwrap_ok(process_stream(stream, CHALLENGE)).reports[1:3]).split("\n")
 
     def list_details(block: list[str]) -> list[str]:
         """The detail column of each incoming event's row."""
@@ -249,7 +253,7 @@ def test_a_partially_settled_authorization_prints_its_remaining_hold() -> None:
         make_settlement("E3", 2, "Auth-A", "120.00", capture=Capture.PARTIAL),
         make_settlement("E4", 3, "Auth-A", "40.00"),
     )
-    lines = render_reports(unwrap_ok(replay_stream(stream, CHALLENGE)).reports[2:4]).split("\n")
+    lines = render_reports(unwrap_ok(process_stream(stream, CHALLENGE)).reports[2:4]).split("\n")
     day_3 = lines.index("Day 3")
 
     def find_cell(block: list[str], start: str, column: int) -> str:
@@ -264,9 +268,9 @@ def test_a_partially_settled_authorization_prints_its_remaining_hold() -> None:
 
 def test_a_step_that_fires_nothing_prints_its_note() -> None:
     """AMB-033, tech-docs 002: a step that fires nothing of its kind prints the note for it in its Detail cell."""
-    brief = render_reports(unwrap_ok(replay_stream(build_brief_stream(), CHALLENGE)).reports)
+    brief = render_reports(unwrap_ok(process_stream(build_brief_stream(), CHALLENGE)).reports)
     aed_only_text = render_reports(
-        (unwrap_ok(replay_stream((make_credit("E1", 1, "100.00"),), CHALLENGE)).find_report(Day(6)),)
+        (unwrap_ok(process_stream((make_credit("E1", 1, "100.00"),), CHALLENGE)).find_report(Day(6)),)
     )
 
     notes = {
@@ -290,7 +294,7 @@ def test_amb_014_a_rejected_event_prints_its_refusal(
 ) -> None:
     """AMB-014, D22: a refused event prints as that day's error in its account's column, in the text tech-docs 001
     fixes; the other account's column reads none."""
-    lines = render_reports((unwrap_ok(replay_stream(stream, CHALLENGE)).find_report(Day(1)),)).split("\n")
+    lines = render_reports((unwrap_ok(process_stream(stream, CHALLENGE)).find_report(Day(1)),)).split("\n")
 
     errors = next(line for line in lines if line.startswith("| Errors")).split(" | ")
     columns = {
