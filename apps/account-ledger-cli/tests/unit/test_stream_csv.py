@@ -14,6 +14,8 @@ from account_ledger.domain.model.events import (
 )
 from account_ledger.domain.model.ids import AccountId, AuthorizationId, Day, FeeId, IncomingId, InstalmentCount
 from account_ledger.domain.model.money import Amount
+from account_ledger.domain.model.result import Err, Ok
+from support.results import unwrap_ok
 from support.streams import HEADER, format_csv
 from support.values import make_aed, make_bhd
 
@@ -78,21 +80,27 @@ def test_a_valid_stream_parses_to_its_events() -> None:
         ]
     )
 
-    assert parse_stream(text, CHALLENGE) == (
-        Credit(IncomingId("E1"), Day(1), ACC_001, Day(1), Amount(make_aed("1200.00")), Whole()),
-        Debit(IncomingId("E2"), Day(1), ACC_001, Day(1), Amount(make_aed("950.00"))),
-        Authorization(IncomingId("E3"), Day(2), ACC_001, Day(2), AuthorizationId("Auth-A"), Amount(make_aed("200.00"))),
-        Settlement(
-            IncomingId("E5"),
-            Day(4),
-            ACC_001,
-            Day(4),
-            AuthorizationId("Auth-A"),
-            Amount(make_aed("185.00")),
-            Capture.FINAL,
-        ),
-        Reversal(IncomingId("E9"), Day(6), ACC_001, Day(2), IncomingId("E7")),
-        Credit(IncomingId("E10"), Day(5), ACC_002, Day(5), Amount(make_bhd("10.000")), Instalments(InstalmentCount(3))),
+    assert parse_stream(text, CHALLENGE) == Ok(
+        (
+            Credit(IncomingId("E1"), Day(1), ACC_001, Day(1), Amount(make_aed("1200.00")), Whole()),
+            Debit(IncomingId("E2"), Day(1), ACC_001, Day(1), Amount(make_aed("950.00"))),
+            Authorization(
+                IncomingId("E3"), Day(2), ACC_001, Day(2), AuthorizationId("Auth-A"), Amount(make_aed("200.00"))
+            ),
+            Settlement(
+                IncomingId("E5"),
+                Day(4),
+                ACC_001,
+                Day(4),
+                AuthorizationId("Auth-A"),
+                Amount(make_aed("185.00")),
+                Capture.FINAL,
+            ),
+            Reversal(IncomingId("E9"), Day(6), ACC_001, Day(2), IncomingId("E7")),
+            Credit(
+                IncomingId("E10"), Day(5), ACC_002, Day(5), Amount(make_bhd("10.000")), Instalments(InstalmentCount(3))
+            ),
+        )
     )
 
 
@@ -101,18 +109,22 @@ E1 = {"event": "E1", "booked": "1", "type": "CREDIT", "account": "ACC-001", "amo
 
 def find_fault(**cells: str) -> StreamError | None:
     """The fault the reader reports for one row, E1 changed by ``cells``."""
-    parsed_stream = parse_stream(format_csv([{**E1, **cells}]), CHALLENGE)
-    return parsed_stream if isinstance(parsed_stream, StreamError) else None
+    match parse_stream(format_csv([{**E1, **cells}]), CHALLENGE):
+        case Err(fault):
+            return fault
+        case Ok():
+            return None
 
 
 def test_a_wrong_header_or_cell_count_is_refused() -> None:
     """A wrong or missing header is refused on line 1, and a row with the wrong cell count on its own line."""
     header = ",".join(HEADER)
-    assert parse_stream("event,booked\nE1,1\n", CHALLENGE) == StreamError(1, f"line 1: expected the header {header}")
-    assert parse_stream(f"{header}\nE1,1,CREDIT,ACC-001,100.00,1,\n", CHALLENGE) == StreamError(
-        2, "line 2: expected 9 cells, found 7"
+    wrong_header = Err(StreamError(1, f"line 1: expected the header {header}"))
+    assert parse_stream("event,booked\nE1,1\n", CHALLENGE) == wrong_header
+    assert parse_stream(f"{header}\nE1,1,CREDIT,ACC-001,100.00,1,\n", CHALLENGE) == Err(
+        StreamError(2, "line 2: expected 9 cells, found 7")
     )
-    assert parse_stream("", CHALLENGE) == StreamError(1, f"line 1: expected the header {header}")
+    assert parse_stream("", CHALLENGE) == wrong_header
 
 
 def test_an_id_of_the_wrong_form_is_refused() -> None:
@@ -171,7 +183,7 @@ def test_a_reversal_reference_must_be_an_event_id() -> None:
     )
     assert parse_stream(
         format_csv([{**E1, "type": "REVERSAL", "amount": "", "reference": "FEE-001-D2@D5"}]), CHALLENGE
-    ) == (Reversal(IncomingId("E1"), Day(1), ACC_001, Day(1), FeeId(ACC_001, Day(2), Day(5))),)
+    ) == Ok((Reversal(IncomingId("E1"), Day(1), ACC_001, Day(1), FeeId(ACC_001, Day(2), Day(5))),))
 
 
 def test_an_instalment_count_below_2_is_refused() -> None:
@@ -195,20 +207,18 @@ def test_a_final_cell_other_than_yes_or_no_is_refused() -> None:
 
     def parse_capture(cell: str) -> Capture:
         """The capture a settlement row parses to when its `final` cell is ``cell``."""
-        events = parse_stream(f"{header}\n{settlement}{cell}\n", CHALLENGE)
-        assert not isinstance(events, StreamError), events
-        (event,) = events
+        (event,) = unwrap_ok(parse_stream(f"{header}\n{settlement}{cell}\n", CHALLENGE))
         assert isinstance(event, Settlement)
         return event.capture
 
-    assert parse_stream(f"{header}\n{settlement}maybe\n", CHALLENGE) == StreamError(
-        2, "line 2: final must be yes or no"
+    assert parse_stream(f"{header}\n{settlement}maybe\n", CHALLENGE) == Err(
+        StreamError(2, "line 2: final must be yes or no")
     )
     assert [parse_capture("yes"), parse_capture(""), parse_capture("no")] == [
         Capture.FINAL,
         Capture.FINAL,
         Capture.PARTIAL,
     ]
-    assert parse_stream(f"{header}\nE1,1,CREDIT,ACC-001,10.00,1,,,no\n", CHALLENGE) == StreamError(
-        2, "line 2: column 'final' does not apply to CREDIT"
+    assert parse_stream(f"{header}\nE1,1,CREDIT,ACC-001,10.00,1,,,no\n", CHALLENGE) == Err(
+        StreamError(2, "line 2: column 'final' does not apply to CREDIT")
     )

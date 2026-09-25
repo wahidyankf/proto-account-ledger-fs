@@ -147,6 +147,7 @@ The types each component exposes and how they refer to one another. Every type i
 or an enum, and each constructor refuses an illegal value, so none can be built.
 
 ```text
+result    Result[T, E] = Ok[T] | Err[E]      every parse, make, or check that can fail returns one
 money     Aed | Bhd = Money             Amount[M: (Aed, Bhd)], above zero      Direction: UP | DOWN
 ids       Day   AccountId   AuthorizationId   IncomingId   InstalmentCount
           EventId = IncomingId | InstalmentId | FeeId | RefundId | InterestId | CapitalizationId
@@ -160,13 +161,13 @@ event_log LogEntry = Accepted | AuthorizationDecided | SettlementAccepted | Reje
           Log = tuple[LogEntry, ...]
 auth      AuthorizationState = Approved(hold) | PartiallySettled(captured_amount, hold)
                                  | Declined(requested_amount) | Settled(captured_amount)
-          apply_trigger(state, SettleFinal | SettlePartial) -> AuthorizationState | NoTransition
+          apply_trigger(state, SettleFinal | SettlePartial) -> Result[AuthorizationState, NoTransition]
           AuthorizationRecord = the Authorization + its state now
 report    DayReport = day, processed_events: Processed..., closing_balances, available_balances,
                       restatements: Restatement..., authorizations: AuthorizationRecord..., errors,
                       end_of_day: (Fired | Capitalized | NothingFired)...
 replay    Replay = reports: DayReport..., logs: Log...     find_report(day), find_log(day)
-stream    parse_stream(text, config) -> tuple[IncomingEvent, ...] | StreamError(line, message)
+stream    parse_stream(text, config) -> Result[tuple[IncomingEvent, ...], StreamError(line, message)]
 ```
 
 `authorizations` is a hand-written state machine: `apply_trigger` is one `match` over the state and its trigger, ending

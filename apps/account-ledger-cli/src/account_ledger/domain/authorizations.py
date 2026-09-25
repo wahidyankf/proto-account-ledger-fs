@@ -20,13 +20,13 @@ from account_ledger.domain.model.money import (
     Aed,
     Bhd,
     Money,
-    NotPositive,
     compute_rest_of,
     is_below,
     make_amount_of,
     narrow_currency,
     sum_amounts,
 )
+from account_ledger.domain.model.result import Err, Ok, Result
 
 
 @dataclass(frozen=True, slots=True)
@@ -83,36 +83,37 @@ class NoTransition:
     """The table has no transition from this state for this trigger, so the state stands."""
 
 
-def apply_trigger(state: AuthorizationState, trigger: Trigger) -> AuthorizationState | NoTransition:
+def apply_trigger(state: AuthorizationState, trigger: Trigger) -> Result[AuthorizationState, NoTransition]:
     """The declared table (tech-docs 001): one case per source, trigger, and guard."""
     pair = state, trigger
     match pair:
         case Approved(), SettleFinal(amount=amount):
-            return Settled(amount)
+            return Ok(Settled(amount))
         case Approved(hold=hold), SettlePartial(amount=amount) if is_below(amount.money, hold):
-            return PartiallySettled(amount, _compute_rest(hold, amount))
+            return Ok(PartiallySettled(amount, _compute_rest(hold, amount)))
         case Approved(), SettlePartial(amount=amount):  # amount >= hold: it reaches the hold, so nothing is left
-            return Settled(amount)
+            return Ok(Settled(amount))
         case PartiallySettled(captured_amount=captured_amount), SettleFinal(amount=amount):
-            return Settled(sum_amounts(captured_amount, amount))
+            return Ok(Settled(sum_amounts(captured_amount, amount)))
         case PartiallySettled(captured_amount=captured_amount, hold=hold), SettlePartial(amount=amount) if is_below(
             amount.money, hold
         ):
-            return PartiallySettled(sum_amounts(captured_amount, amount), _compute_rest(hold, amount))
+            return Ok(PartiallySettled(sum_amounts(captured_amount, amount), _compute_rest(hold, amount)))
         case PartiallySettled(captured_amount=captured_amount), SettlePartial(amount=amount):  # amount >= hold
-            return Settled(sum_amounts(captured_amount, amount))
+            return Ok(Settled(sum_amounts(captured_amount, amount)))
         case Settled() | Declined(), _:
-            return NoTransition()
+            return Err(NoTransition())
         case _:
             assert_never(pair)
 
 
 def _compute_rest(hold: AnyAmount, taken_amount: AnyAmount) -> AnyAmount:
     """The hold left after a partial capture, above zero as every hold is."""
-    rest = make_amount_of(compute_rest_of(hold, taken_amount))
-    if isinstance(rest, NotPositive):
-        raise ValueError(f"a hold is above zero, not {rest.text}")
-    return rest
+    match make_amount_of(compute_rest_of(hold, taken_amount)):
+        case Ok(rest):
+            return rest
+        case Err(fault):
+            raise ValueError(f"a hold is above zero, not {fault.text}")
 
 
 def derive_trigger(settlement: Settlement) -> Trigger:

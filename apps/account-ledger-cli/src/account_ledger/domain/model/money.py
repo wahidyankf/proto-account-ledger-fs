@@ -9,6 +9,7 @@ from decimal import ROUND_DOWN, ROUND_HALF_EVEN, Decimal, InvalidOperation
 from enum import Enum
 
 from account_ledger.domain.model.ids import InstalmentCount
+from account_ledger.domain.model.result import Err, Ok, Result
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,18 +31,23 @@ class TooManyPlaces:
 type MoneyFault = NotADecimal | TooManyPlaces
 
 
-def _read_decimal(text: str, places: int, currency: str) -> Decimal | MoneyFault:
-    """The text as a decimal at the currency's places, or a fault for a non-number or too many places."""
+def _read_decimal(text: str) -> Result[Decimal, NotADecimal]:
+    """The decimal the text holds, or a fault for one that is not a number; ``Decimal`` refuses by raising, so the
+    refusal is caught here and returned."""
     try:
-        value = Decimal(text)
+        return Ok(Decimal(text))
     except InvalidOperation:
-        return NotADecimal(text)
+        return Err(NotADecimal(text))
+
+
+def _make_scaled_value(value: Decimal, places: int, currency: str) -> Result[Decimal, MoneyFault]:
+    """The value at exactly the currency's places, or a fault for a non-finite value or one with more places."""
     if not value.is_finite():
-        return NotADecimal(text)
+        return Err(NotADecimal(str(value)))
     exponent = value.as_tuple().exponent
     if isinstance(exponent, int) and exponent < -places:
-        return TooManyPlaces(text, places=places, currency=currency)
-    return value.quantize(Decimal(1).scaleb(-places))
+        return Err(TooManyPlaces(str(value), places=places, currency=currency))
+    return Ok(value.quantize(Decimal(1).scaleb(-places)))
 
 
 def _check_places(value: Decimal, places: int, currency: str) -> None:
@@ -60,10 +66,14 @@ class Aed:
         _check_places(self.value, 2, "AED")
 
     @staticmethod
-    def parse(text: str) -> Aed | MoneyFault:
+    def make(value: Decimal) -> Result[Aed, MoneyFault]:
+        """The AED amount of a decimal, or a fault for a non-finite one or one with more than 2 places."""
+        return _make_scaled_value(value, 2, "AED").map(Aed)
+
+    @staticmethod
+    def parse(text: str) -> Result[Aed, MoneyFault]:
         """The AED amount the text holds, or a fault saying why it is not one."""
-        parsed_value = _read_decimal(text, 2, "AED")
-        return Aed(parsed_value) if isinstance(parsed_value, Decimal) else parsed_value
+        return _read_decimal(text).flat_map(Aed.make)
 
     @staticmethod
     def make_zero() -> Aed:
@@ -94,10 +104,14 @@ class Bhd:
         _check_places(self.value, 3, "BHD")
 
     @staticmethod
-    def parse(text: str) -> Bhd | MoneyFault:
+    def make(value: Decimal) -> Result[Bhd, MoneyFault]:
+        """The BHD amount of a decimal, or a fault for a non-finite one or one with more than 3 places."""
+        return _make_scaled_value(value, 3, "BHD").map(Bhd)
+
+    @staticmethod
+    def parse(text: str) -> Result[Bhd, MoneyFault]:
         """The BHD amount the text holds, or a fault saying why it is not one."""
-        parsed_value = _read_decimal(text, 3, "BHD")
-        return Bhd(parsed_value) if isinstance(parsed_value, Decimal) else parsed_value
+        return _read_decimal(text).flat_map(Bhd.make)
 
     @staticmethod
     def make_zero() -> Bhd:
@@ -139,9 +153,9 @@ class Amount[M: (Aed, Bhd)]:
             raise ValueError(f"an amount is above zero, not {self.money.value}")
 
     @staticmethod
-    def make[N: (Aed, Bhd)](money: N) -> Amount[N] | NotPositive:
+    def make[N: (Aed, Bhd)](money: N) -> Result[Amount[N], NotPositive]:
         """The money as an amount, or a fault when it is zero or below."""
-        return Amount(money) if money.value > 0 else NotPositive(str(money.value))
+        return Ok(Amount(money)) if money.value > 0 else Err(NotPositive(str(money.value)))
 
 
 class Direction(Enum):
@@ -168,24 +182,25 @@ def get_currency(money: Money) -> str:
             return "BHD"
 
 
-def try_narrow_currency[M: (Aed, Bhd)](sample: M, money: Money) -> M | CurrencyMismatch:
-    """Narrow a value known only as ``Money`` to the currency of ``like``."""
+def try_narrow_currency[M: (Aed, Bhd)](sample: M, money: Money) -> Result[M, CurrencyMismatch]:
+    """Narrow a value known only as ``Money`` to the currency of ``sample``."""
     if isinstance(money, type(sample)):
-        return money
-    return CurrencyMismatch(expected_currency=get_currency(sample), found_currency=get_currency(money))
+        return Ok(money)
+    return Err(CurrencyMismatch(expected_currency=get_currency(sample), found_currency=get_currency(money)))
 
 
 DAILY_RATE = Decimal("0.0004")
 
 
 def narrow_currency[M: (Aed, Bhd)](sample: M, money: Money) -> M:
-    """``like``'s currency's own value of ``money``; a mismatch is a bug the reader prevents."""
-    narrowed_money = try_narrow_currency(sample, money)
-    if isinstance(narrowed_money, CurrencyMismatch):
-        raise ValueError(
-            f"an {narrowed_money.found_currency} effect on an {narrowed_money.expected_currency} account"
-        )  # the reader makes this unreachable
-    return narrowed_money
+    """``sample``'s currency's own value of ``money``; a mismatch is a bug the reader prevents."""
+    match try_narrow_currency(sample, money):
+        case Ok(narrowed_money):
+            return narrowed_money
+        case Err(mismatch):
+            raise ValueError(
+                f"an {mismatch.found_currency} effect on an {mismatch.expected_currency} account"
+            )  # the reader makes this unreachable
 
 
 def _get_minor_unit(money: Money) -> Decimal:
@@ -198,7 +213,7 @@ def _get_minor_unit(money: Money) -> Decimal:
 
 
 def _round_money[M: (Aed, Bhd)](sample: M, value: Decimal) -> M:
-    """A computed value, rounded half-even to the places of ``like``'s currency (AMB-006)."""
+    """A computed value, rounded half-even to the places of ``sample``'s currency (AMB-006)."""
     return type(sample)(value.quantize(_get_minor_unit(sample), rounding=ROUND_HALF_EVEN))
 
 
@@ -217,14 +232,14 @@ class TooManyInstalments:
 
 def split_amount[M: (Aed, Bhd)](
     amount: Amount[M], count: InstalmentCount
-) -> tuple[Amount[M], ...] | TooManyInstalments:
+) -> Result[tuple[Amount[M], ...], TooManyInstalments]:
     """Equal parts rounded down, the remainder on the last (AMB-020); each part at least one minor unit."""
     total = amount.money
     part = type(total)((total.value / count.number).quantize(_get_minor_unit(total), rounding=ROUND_DOWN))
     if part.value <= 0:
-        return TooManyInstalments(str(total.value), count=count.number)
+        return Err(TooManyInstalments(str(total.value), count=count.number))
     last_part = type(total)(total.value - part.value * (count.number - 1))
-    return (*(Amount(part) for _ in range(count.number - 1)), Amount(last_part))
+    return Ok((*(Amount(part) for _ in range(count.number - 1)), Amount(last_part)))
 
 
 AED_FEE = Decimal("25.00")
@@ -232,7 +247,7 @@ AED_TO_BHD = Decimal("0.10238257")
 
 
 def compute_overdraft_fee[M: (Aed, Bhd)](sample: M) -> Amount[M]:
-    """The fee in ``like``'s currency: AED 25.00, and for BHD its conversion, rounded half-even (AMB-027)."""
+    """The fee in ``sample``'s currency: AED 25.00, and for BHD its conversion, rounded half-even (AMB-027)."""
     match sample:
         case Aed():
             return Amount(_round_money(sample, AED_FEE))
@@ -242,7 +257,7 @@ def compute_overdraft_fee[M: (Aed, Bhd)](sample: M) -> Amount[M]:
 
 def split_amount_of(
     amount: Amount[Aed] | Amount[Bhd], count: InstalmentCount
-) -> tuple[Amount[Aed], ...] | tuple[Amount[Bhd], ...] | TooManyInstalments:
+) -> Result[tuple[Amount[Aed], ...] | tuple[Amount[Bhd], ...], TooManyInstalments]:
     """``split_amount`` for an amount whose currency is known only at run time."""
     match amount.money:
         case Aed() as money:
@@ -260,8 +275,8 @@ def compute_overdraft_fee_of(sample: Money) -> Amount[Aed] | Amount[Bhd]:
             return compute_overdraft_fee(sample)
 
 
-def make_amount_of(money: Money) -> Amount[Aed] | Amount[Bhd] | NotPositive:
-    """``Amount.of`` for a currency known only at run time."""
+def make_amount_of(money: Money) -> Result[Amount[Aed] | Amount[Bhd], NotPositive]:
+    """``Amount.make`` for a currency known only at run time."""
     match money:
         case Aed():
             return Amount.make(money)

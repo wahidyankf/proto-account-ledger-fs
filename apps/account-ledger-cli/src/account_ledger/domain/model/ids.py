@@ -5,6 +5,8 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import assert_never
 
+from account_ledger.domain.model.result import Err, Ok, Result
+
 _ACCOUNT = re.compile(r"ACC-[0-9]{3}")
 _HOLD = re.compile(r"Auth-[A-Za-z0-9]+")
 _INCOMING = re.compile(r"E[0-9]+")
@@ -21,11 +23,16 @@ class InstalmentCount:
             raise ValueError(f"an instalment count is at least 2, not {self.number}")
 
     @staticmethod
-    def parse(text: str) -> InstalmentCount | IdFault:
+    def make(number: int) -> Result[InstalmentCount, IdFault]:
+        """The count, or a fault for one below 2."""
+        return Ok(InstalmentCount(number)) if number >= 2 else Err(IdFault("instalment count", str(number)))
+
+    @staticmethod
+    def parse(text: str) -> Result[InstalmentCount, IdFault]:
         """The count the text holds, or a fault for one below 2 or not a whole number."""
-        if re.fullmatch(r"[0-9]+", text) and int(text) >= 2:
-            return InstalmentCount(int(text))
-        return IdFault("instalment count", text)
+        if re.fullmatch(r"[0-9]+", text):
+            return InstalmentCount.make(int(text))
+        return Err(IdFault("instalment count", text))
 
 
 @dataclass(frozen=True, slots=True)
@@ -47,16 +54,21 @@ class Day:
             raise ValueError(f"a day is at least 0, not {self.number}")
 
     @staticmethod
-    def parse(text: str) -> Day | IdFault:
+    def make(number: int) -> Result[Day, IdFault]:
+        """The day, or a fault for one before Day 0."""
+        return Ok(Day(number)) if number >= 0 else Err(IdFault("day", str(number)))
+
+    @staticmethod
+    def parse(text: str) -> Result[Day, IdFault]:
         """The day the text holds, or a fault for one that is not a whole number."""
-        return Day(int(text)) if re.fullmatch(r"[0-9]+", text) else IdFault("day", text)
+        return Day.make(int(text)) if re.fullmatch(r"[0-9]+", text) else Err(IdFault("day", text))
 
     def advance(self) -> Day:
         """The day after this one."""
         return Day(self.number + 1)
 
     def span_to(self, last_day: Day) -> Iterator[Day]:
-        """Each day from this one to ``last``, both included, in order."""
+        """Each day from this one to ``last_day``, both included, in order."""
         day = self
         while day <= last_day:
             yield day
@@ -74,9 +86,9 @@ class AccountId:
             raise ValueError(f"an account ID is ACC- and three digits, not {self.value!r}")
 
     @staticmethod
-    def parse(text: str) -> AccountId | IdFault:
+    def parse(text: str) -> Result[AccountId, IdFault]:
         """The account ID the text holds, or a fault for one not of the form `ACC-001`."""
-        return AccountId(text) if _ACCOUNT.fullmatch(text) else IdFault("account ID", text)
+        return Ok(AccountId(text)) if _ACCOUNT.fullmatch(text) else Err(IdFault("account ID", text))
 
     @property
     def number(self) -> str:
@@ -95,9 +107,9 @@ class AuthorizationId:
             raise ValueError(f"a hold ID is Auth- and letters or digits, not {self.value!r}")
 
     @staticmethod
-    def parse(text: str) -> AuthorizationId | IdFault:
+    def parse(text: str) -> Result[AuthorizationId, IdFault]:
         """The hold ID the text holds, or a fault for one not of the form `Auth-A`."""
-        return AuthorizationId(text) if _HOLD.fullmatch(text) else IdFault("hold ID", text)
+        return Ok(AuthorizationId(text)) if _HOLD.fullmatch(text) else Err(IdFault("hold ID", text))
 
 
 @dataclass(frozen=True, slots=True)
@@ -111,9 +123,9 @@ class IncomingId:
             raise ValueError(f"an incoming event ID is E and digits, not {self.value!r}")
 
     @staticmethod
-    def parse(text: str) -> IncomingId | IdFault:
+    def parse(text: str) -> Result[IncomingId, IdFault]:
         """The event ID the text holds, or a fault for one not of the form `E1`."""
-        return IncomingId(text) if _INCOMING.fullmatch(text) else IdFault("event ID", text)
+        return Ok(IncomingId(text)) if _INCOMING.fullmatch(text) else Err(IdFault("event ID", text))
 
 
 @dataclass(frozen=True, slots=True)
@@ -173,11 +185,14 @@ _EVENT = re.compile(
 )
 
 
-def parse_event_id(text: str) -> EventId | IdFault:
+def parse_event_id(text: str) -> Result[EventId, IdFault]:
     """An incoming ID, an instalment, or a fired marker, as a reversal names its target (AMB-035)."""
     event_match = _EVENT.fullmatch(text)
-    if event_match is None:
-        return IdFault("event ID", text)
+    return Err(IdFault("event ID", text)) if event_match is None else Ok(_build_event_id(event_match))
+
+
+def _build_event_id(event_match: re.Match[str]) -> EventId:
+    """The ID a matched text names; the pattern admits only valid parts, so every constructor here accepts them."""
     group = event_match.group
     if group("incoming"):
         incoming_id = IncomingId(group("incoming"))

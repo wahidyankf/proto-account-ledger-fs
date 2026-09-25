@@ -8,8 +8,9 @@ from pathlib import Path
 from typing import TextIO
 
 from account_ledger.adapters.render import render_reports
-from account_ledger.adapters.stream_csv import StreamError, parse_stream
+from account_ledger.adapters.stream_csv import parse_stream
 from account_ledger.domain.model.config import CHALLENGE
+from account_ledger.domain.model.result import Err
 from account_ledger.domain.replay import replay_stream
 
 USAGE = "usage: account-ledger-cli <stream.csv>"
@@ -42,10 +43,10 @@ def _replay_file(argv: Sequence[str], read_text: Callable[[str], str], out: Text
         err.write(f"error: cannot read {path}: {_describe_fault(fault)}\n")
         return 2
     events = parse_stream(text, CHALLENGE)
-    if isinstance(events, StreamError):
-        err.write(f"error: {events.message}\n")
+    if isinstance(events, Err):
+        err.write(f"error: {events.error.message}\n")
         return 2
-    out.write(render_reports(replay_stream(events, CHALLENGE).reports))
+    out.write(render_reports(replay_stream(events.value, CHALLENGE).reports))
     out.flush()  # a closed pipe surfaces here, inside the handlers, not at the exit-time flush
     return 0
 

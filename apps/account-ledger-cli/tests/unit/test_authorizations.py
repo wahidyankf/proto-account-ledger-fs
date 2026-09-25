@@ -21,6 +21,7 @@ from account_ledger.domain.model.event_log import ForcePosted, SettlementAccepte
 from account_ledger.domain.model.events import Capture
 from account_ledger.domain.model.ids import Day
 from account_ledger.domain.model.money import Aed, Amount
+from account_ledger.domain.model.result import Err, Ok, Result
 from account_ledger.domain.replay import replay_stream
 from support.states import list_settlements, list_states
 from support.streams import ACC_001, list_fee_markers, make_authorization, make_credit, make_settlement
@@ -58,7 +59,7 @@ def test_amb_010_a_hold_counts_from_its_value_date() -> None:
 @pytest.mark.parametrize("state", [Settled(Amount(make_aed("185.00"))), Declined(Amount(make_aed("90.00")))])
 def test_an_unconfigured_transition_leaves_the_state_unchanged(state: AuthorizationState) -> None:
     """A settled or declined authorization has no configured transition for any trigger (tech-docs 001)."""
-    assert apply_trigger(state, SettleFinal(Amount(make_aed("10.00")))) == NoTransition()
+    assert apply_trigger(state, SettleFinal(Amount(make_aed("10.00")))) == Err(NoTransition())
 
 
 def test_amb_029_a_settlement_against_a_declined_authorization_is_force_posted() -> None:
@@ -143,39 +144,47 @@ def make_aed_amount(text: str) -> Amount[Aed]:
     return Amount(make_aed(text))
 
 
-TABLE: list[tuple[AuthorizationState, Trigger, AuthorizationState | NoTransition]] = [
-    (Approved(make_aed_amount("200.00")), SettleFinal(make_aed_amount("185.00")), Settled(make_aed_amount("185.00"))),
+TABLE: list[tuple[AuthorizationState, Trigger, Result[AuthorizationState, NoTransition]]] = [
+    (
+        Approved(make_aed_amount("200.00")),
+        SettleFinal(make_aed_amount("185.00")),
+        Ok(Settled(make_aed_amount("185.00"))),
+    ),
     (
         Approved(make_aed_amount("200.00")),
         SettlePartial(make_aed_amount("120.00")),
-        PartiallySettled(make_aed_amount("120.00"), make_aed_amount("80.00")),
+        Ok(PartiallySettled(make_aed_amount("120.00"), make_aed_amount("80.00"))),
     ),
-    (Approved(make_aed_amount("200.00")), SettlePartial(make_aed_amount("200.00")), Settled(make_aed_amount("200.00"))),
+    (
+        Approved(make_aed_amount("200.00")),
+        SettlePartial(make_aed_amount("200.00")),
+        Ok(Settled(make_aed_amount("200.00"))),
+    ),
     (
         PartiallySettled(make_aed_amount("120.00"), make_aed_amount("80.00")),
         SettleFinal(make_aed_amount("40.00")),
-        Settled(make_aed_amount("160.00")),
+        Ok(Settled(make_aed_amount("160.00"))),
     ),
     (
         PartiallySettled(make_aed_amount("120.00"), make_aed_amount("80.00")),
         SettlePartial(make_aed_amount("30.00")),
-        PartiallySettled(make_aed_amount("150.00"), make_aed_amount("50.00")),
+        Ok(PartiallySettled(make_aed_amount("150.00"), make_aed_amount("50.00"))),
     ),
     (
         PartiallySettled(make_aed_amount("120.00"), make_aed_amount("80.00")),
         SettlePartial(make_aed_amount("80.00")),
-        Settled(make_aed_amount("200.00")),
+        Ok(Settled(make_aed_amount("200.00"))),
     ),
-    (Settled(make_aed_amount("185.00")), SettleFinal(make_aed_amount("10.00")), NoTransition()),
-    (Settled(make_aed_amount("185.00")), SettlePartial(make_aed_amount("10.00")), NoTransition()),
-    (Declined(make_aed_amount("90.00")), SettleFinal(make_aed_amount("10.00")), NoTransition()),
-    (Declined(make_aed_amount("90.00")), SettlePartial(make_aed_amount("10.00")), NoTransition()),
+    (Settled(make_aed_amount("185.00")), SettleFinal(make_aed_amount("10.00")), Err(NoTransition())),
+    (Settled(make_aed_amount("185.00")), SettlePartial(make_aed_amount("10.00")), Err(NoTransition())),
+    (Declined(make_aed_amount("90.00")), SettleFinal(make_aed_amount("10.00")), Err(NoTransition())),
+    (Declined(make_aed_amount("90.00")), SettlePartial(make_aed_amount("10.00")), Err(NoTransition())),
 ]
 
 
 @pytest.mark.parametrize(("state", "trigger", "expected_state"), TABLE)
 def test_every_state_and_trigger_pair_follows_the_table(
-    state: AuthorizationState, trigger: Trigger, expected_state: AuthorizationState | NoTransition
+    state: AuthorizationState, trigger: Trigger, expected_state: Result[AuthorizationState, NoTransition]
 ) -> None:
     """AMB-012, AMB-013, AMB-029, tech-docs 001: every state meets both triggers, each guard on both sides, and each
     pair goes where the declared table says."""

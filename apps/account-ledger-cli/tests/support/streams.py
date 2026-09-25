@@ -23,13 +23,13 @@ from account_ledger.domain.model.ids import (
     AccountId,
     AuthorizationId,
     Day,
-    IdFault,
     IncomingId,
     InstalmentCount,
     format_id,
     parse_event_id,
 )
 from account_ledger.domain.model.money import Aed, Amount, Bhd, Direction, Money
+from support.results import unwrap_ok
 from support.values import make_aed, make_bhd
 
 HEADER = ("event", "booked", "type", "account", "amount", "value_date", "reference", "instalments", "final")
@@ -107,8 +107,7 @@ def make_settlement(
 
 def make_reversal(event: str, day: int, reverses: str, value: int | None = None, account: str = "ACC-001") -> Reversal:
     """A reversal of the event ID, on ACC-001 unless named, value-dated its booked day unless given."""
-    target = parse_event_id(reverses)
-    assert not isinstance(target, IdFault), target
+    target = unwrap_ok(parse_event_id(reverses))
     return Reversal(IncomingId(event), Day(day), AccountId(account), Day(value or day), target)
 
 

@@ -3,12 +3,7 @@
 from typing import assert_never
 
 from account_ledger.domain.authorizations import (
-    Approved,
     AuthorizationState,
-    Declined,
-    NoTransition,
-    PartiallySettled,
-    Settled,
     apply_trigger,
     decide_authorization,
     derive_trigger,
@@ -40,8 +35,9 @@ from account_ledger.domain.model.events import (
     Settlement,
 )
 from account_ledger.domain.model.ids import Day, InstalmentCount, InstalmentId
-from account_ledger.domain.model.money import TooManyInstalments, split_amount_of
-from account_ledger.domain.reversals import find_refusal
+from account_ledger.domain.model.money import split_amount_of
+from account_ledger.domain.model.result import Err, Ok
+from account_ledger.domain.reversals import check_reversal
 
 
 def process_event(log: Log, event: IncomingEvent, today: Day, config: LedgerConfig) -> Log:
@@ -74,27 +70,27 @@ def process_event(log: Log, event: IncomingEvent, today: Day, config: LedgerConf
 
 def _decide_effect(state_before: AuthorizationState, settlement: Settlement) -> Captured | ForcePosted:
     """The capture a settlement completes, or a force-post when the table has no transition for it (AMB-029)."""
-    state_after = apply_trigger(state_before, derive_trigger(settlement))
-    match state_after:
-        case NoTransition():
-            return ForcePosted()
-        case Approved() | PartiallySettled() | Declined() | Settled():
+    match apply_trigger(state_before, derive_trigger(settlement)):
+        case Ok(state_after):
             return Captured(state_before, state_after)
-        case _:
-            assert_never(state_after)
+        case Err():
+            return ForcePosted()
 
 
 def _fire_instalments(credit: Credit, count: InstalmentCount, today: Day) -> tuple[Accepted, ...]:
     """The instalments a credit fires, in order, each accepted with the credit's value day (AMB-017, AMB-020)."""
     parts = split_amount_of(credit.amount, count)
-    assert not isinstance(parts, TooManyInstalments)  # the stream reader refuses a credit it cannot split
+    assert isinstance(parts, Ok)  # the stream reader refuses a credit it cannot split
     return tuple(
         Accepted(Instalment(InstalmentId(credit.id, number), credit.account, credit.value_day, part), today)
-        for number, part in enumerate(parts, start=1)
+        for number, part in enumerate(parts.value, start=1)
     )
 
 
 def _decide_reversal(log: Log, reversal: Reversal, today: Day) -> Accepted | Rejected:
     """A reversal, accepted unless a check refuses it."""
-    refusal = find_refusal(log, reversal.target)
-    return Accepted(reversal, today) if refusal is None else Rejected(reversal, today, refusal)
+    match check_reversal(log, reversal.target):
+        case Ok():
+            return Accepted(reversal, today)
+        case Err(rejection):
+            return Rejected(reversal, today, rejection)

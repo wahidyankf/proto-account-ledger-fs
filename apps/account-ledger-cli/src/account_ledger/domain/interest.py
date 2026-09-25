@@ -14,11 +14,11 @@ from account_ledger.domain.model.money import (
     Bhd,
     Direction,
     Money,
-    NotPositive,
     compute_daily_interest,
     make_amount_of,
     narrow_currency,
 )
+from account_ledger.domain.model.result import Err, Ok
 from account_ledger.domain.reversals import list_reversed_targets
 
 
@@ -54,11 +54,10 @@ def _make_interest_event(
     account: AccountId, day: Day, today: Day, change: Money
 ) -> InterestAccrual | InterestAdjustment:
     """The event that fires a day's interest change: an accrual for today, an adjustment for an earlier day."""
-    if change.value > 0:
-        direction, amount = Direction.UP, make_amount_of(change)
-    else:
-        direction, amount = Direction.DOWN, make_amount_of(-change)
-    assert not isinstance(amount, NotPositive)  # a change is never zero
+    direction = Direction.UP if change.value > 0 else Direction.DOWN
+    made_amount = make_amount_of(change if direction is Direction.UP else -change)
+    assert isinstance(made_amount, Ok)  # a change is never zero
+    amount = made_amount.value
     marker = InterestId(account, day, today)
     if day == today:  # nothing is fired for today before its close, so today's change is its first, positive accrual
         return InterestAccrual(marker, account, today, amount)
@@ -67,11 +66,12 @@ def _make_interest_event(
 
 def capitalize_interest(log: Log, account: AnyAccount, today: Day) -> Log:
     """The account's accrued interest, credited value-dated today when it is above zero (AMB-007, AMB-023)."""
-    amount = make_amount_of(_compute_accrued_of(log, account))
-    if isinstance(amount, NotPositive):
-        return log
-    capitalization = Capitalization(CapitalizationId(account.id, today), account.id, today, amount)
-    return append_entry(log, Accepted(capitalization, today))
+    match make_amount_of(_compute_accrued_of(log, account)):
+        case Ok(amount):
+            capitalization = Capitalization(CapitalizationId(account.id, today), account.id, today, amount)
+            return append_entry(log, Accepted(capitalization, today))
+        case Err():
+            return log
 
 
 def _compute_accrued_of(log: Log, account: AnyAccount) -> Money:

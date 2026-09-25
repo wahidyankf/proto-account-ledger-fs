@@ -18,21 +18,24 @@ from account_ledger.domain.model.event_log import (
 )
 from account_ledger.domain.model.events import Credit, Fee, FeeRefund, Instalment, Instalments, Reversal
 from account_ledger.domain.model.ids import AccountId, Day, EventId, FeeId, IncomingId, RefundId
+from account_ledger.domain.model.result import Err, Ok, Result
 
 
-def find_refusal(log: Log, target_id: EventId) -> Rejection | None:
-    """Why a reversal of the target is refused, checked in tech-docs 002's order (AMB-028, AMB-035), or None."""
+def check_reversal(log: Log, target_id: EventId) -> Result[None, Rejection]:
+    """Nothing when a reversal of the target may proceed, or why it is refused, checked in tech-docs 002's order
+    (AMB-028, AMB-035)."""
     target = find_first_entry(log, target_id)
     if target is None:
-        return UnknownTarget(target_id)
+        return Err(UnknownTarget(target_id))
     if isinstance(target.event, Reversal):
-        return ReversesAReversal(target_id)
+        return Err(ReversesAReversal(target_id))
     if isinstance(target, AuthorizationDecided | Rejected):
-        return MovedNoMoney(target_id)
+        return Err(MovedNoMoney(target_id))
     reverser_id = find_reverser(log, target_id)
     if reverser_id is not None:
-        return AlreadyReversed(target_id, reverser_id)
-    return _find_undoing(log, target.event)
+        return Err(AlreadyReversed(target_id, reverser_id))
+    undoing = _find_undoing(log, target.event)
+    return Ok(None) if undoing is None else Err(undoing)
 
 
 def find_reverser(log: Log, target_id: EventId) -> IncomingId | None:

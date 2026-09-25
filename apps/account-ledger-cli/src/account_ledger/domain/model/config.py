@@ -5,6 +5,7 @@ from typing import TypeIs
 
 from account_ledger.domain.model.ids import AccountId, Day
 from account_ledger.domain.model.money import Aed, Bhd
+from account_ledger.domain.model.result import Err, Ok, Result
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,21 +31,21 @@ class ConfigFault:
     reason: str
 
 
-def _find_fault(
+def _check_config(
     accounts: tuple[AnyAccount, ...], first_day: Day, last_day: Day, capitalization_days: frozenset[Day]
-) -> ConfigFault | None:
-    """The first reason the configuration is invalid, or ``None`` when it is valid."""
+) -> Result[None, ConfigFault]:
+    """Nothing when the configuration is valid, or the first reason it is not."""
     if first_day > last_day:
-        return ConfigFault(f"the first day {first_day.number} is after the last {last_day.number}")
+        return Err(ConfigFault(f"the first day {first_day.number} is after the last {last_day.number}"))
     ids = [account.id for account in accounts]
     for account_id in ids:
         if ids.count(account_id) > 1:
-            return ConfigFault(f"{account_id.value} is configured twice")
+            return Err(ConfigFault(f"{account_id.value} is configured twice"))
     for day in sorted(capitalization_days):
         if not first_day <= day <= last_day:
             window = f"{first_day.number} to {last_day.number}"
-            return ConfigFault(f"capitalization day {day.number} is outside the window {window}")
-    return None
+            return Err(ConfigFault(f"capitalization day {day.number} is outside the window {window}"))
+    return Ok(None)
 
 
 @dataclass(frozen=True, slots=True)
@@ -57,17 +58,18 @@ class LedgerConfig:
     capitalization_days: frozenset[Day]
 
     def __post_init__(self) -> None:
-        fault = _find_fault(self.accounts, self.first_day, self.last_day, self.capitalization_days)
-        if fault is not None:
-            raise ValueError(fault.reason)
+        checked = _check_config(self.accounts, self.first_day, self.last_day, self.capitalization_days)
+        if isinstance(checked, Err):
+            raise ValueError(checked.error.reason)
 
     @staticmethod
     def make(
         accounts: tuple[AnyAccount, ...], first_day: Day, last_day: Day, capitalization_days: frozenset[Day]
-    ) -> LedgerConfig | ConfigFault:
+    ) -> Result[LedgerConfig, ConfigFault]:
         """The configuration, or the fault that makes it invalid."""
-        fault = _find_fault(accounts, first_day, last_day, capitalization_days)
-        return fault if fault is not None else LedgerConfig(accounts, first_day, last_day, capitalization_days)
+        return _check_config(accounts, first_day, last_day, capitalization_days).map(
+            lambda _: LedgerConfig(accounts, first_day, last_day, capitalization_days)
+        )
 
     def find_account(self, account_id: AccountId) -> AnyAccount | None:
         """The configured account with this ID, if the ledger holds it."""

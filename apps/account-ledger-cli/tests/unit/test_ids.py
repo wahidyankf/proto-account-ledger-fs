@@ -17,14 +17,18 @@ from account_ledger.domain.model.ids import (
     format_id,
     parse_event_id,
 )
+from account_ledger.domain.model.result import Err, Ok
+from support.results import unwrap_ok
 
 
 def test_day_refuses_a_malformed_value() -> None:
     """A day is a whole number from 0; any other text is a fault, and a negative day is a bug."""
-    assert Day.parse("-1") == IdFault("day", "-1")
-    assert Day.parse("1.5") == IdFault("day", "1.5")
-    assert Day.parse("x") == IdFault("day", "x")
-    assert Day.parse("6") == Day(6)
+    assert Day.parse("-1") == Err(IdFault("day", "-1"))
+    assert Day.parse("1.5") == Err(IdFault("day", "1.5"))
+    assert Day.parse("x") == Err(IdFault("day", "x"))
+    assert Day.parse("6") == Ok(Day(6))
+    assert Day.make(-1) == Err(IdFault("day", "-1"))
+    assert Day.make(0) == Ok(Day(0))
     assert Day(5).advance() == Day(6)
     assert Day(1) <= Day(2)
     with pytest.raises(ValueError, match="a day is at least 0"):
@@ -33,9 +37,9 @@ def test_day_refuses_a_malformed_value() -> None:
 
 def test_account_id_refuses_a_malformed_value() -> None:
     """An account ID is `ACC-` and three digits; any other text is a fault."""
-    assert AccountId.parse("ACC-1") == IdFault("account ID", "ACC-1")
-    assert AccountId.parse("acc-001") == IdFault("account ID", "acc-001")
-    assert AccountId.parse("ACC-002") == AccountId("ACC-002")
+    assert AccountId.parse("ACC-1") == Err(IdFault("account ID", "ACC-1"))
+    assert AccountId.parse("acc-001") == Err(IdFault("account ID", "acc-001"))
+    assert AccountId.parse("ACC-002") == Ok(AccountId("ACC-002"))
     assert AccountId("ACC-002").number == "002"
     with pytest.raises(ValueError, match="an account ID is ACC- and three digits"):
         AccountId("ACC-1")
@@ -43,9 +47,9 @@ def test_account_id_refuses_a_malformed_value() -> None:
 
 def test_authorization_id_refuses_a_malformed_value() -> None:
     """A hold ID is `Auth-` and letters or digits; any other text is a fault."""
-    assert AuthorizationId.parse("Auth-") == IdFault("hold ID", "Auth-")
-    assert AuthorizationId.parse("Auth-A B") == IdFault("hold ID", "Auth-A B")
-    assert AuthorizationId.parse("Auth-Z") == AuthorizationId("Auth-Z")
+    assert AuthorizationId.parse("Auth-") == Err(IdFault("hold ID", "Auth-"))
+    assert AuthorizationId.parse("Auth-A B") == Err(IdFault("hold ID", "Auth-A B"))
+    assert AuthorizationId.parse("Auth-Z") == Ok(AuthorizationId("Auth-Z"))
     with pytest.raises(ValueError, match="a hold ID is Auth- and letters or digits"):
         AuthorizationId("Auth-")
 
@@ -54,13 +58,13 @@ def test_event_id_refuses_a_malformed_value() -> None:
     """Every event ID form parses, the incoming ones and each marker the ledger fires; any other text is a fault."""
     acc_001 = AccountId("ACC-001")
     for malformed_id in ("FEE-1", "E", "e7", "E7-", "FEE-001-D2", "CAP-001@D", "INT-01-D2@D5", "REFUND-001-D2@6"):
-        assert parse_event_id(malformed_id) == IdFault("event ID", malformed_id)
-    assert parse_event_id("E7") == IncomingId("E7")
-    assert parse_event_id("E10-1") == InstalmentId(IncomingId("E10"), 1)
-    assert parse_event_id("FEE-001-D2@D5") == FeeId(acc_001, Day(2), Day(5))
-    assert parse_event_id("REFUND-001-D2@D6") == RefundId(acc_001, Day(2), Day(6))
-    assert parse_event_id("INT-001-D2@D5") == InterestId(acc_001, Day(2), Day(5))
-    assert parse_event_id("CAP-001@D6") == CapitalizationId(acc_001, Day(6))
+        assert parse_event_id(malformed_id) == Err(IdFault("event ID", malformed_id))
+    assert parse_event_id("E7") == Ok(IncomingId("E7"))
+    assert parse_event_id("E10-1") == Ok(InstalmentId(IncomingId("E10"), 1))
+    assert parse_event_id("FEE-001-D2@D5") == Ok(FeeId(acc_001, Day(2), Day(5)))
+    assert parse_event_id("REFUND-001-D2@D6") == Ok(RefundId(acc_001, Day(2), Day(6)))
+    assert parse_event_id("INT-001-D2@D5") == Ok(InterestId(acc_001, Day(2), Day(5)))
+    assert parse_event_id("CAP-001@D6") == Ok(CapitalizationId(acc_001, Day(6)))
     with pytest.raises(ValueError, match="an incoming event ID is E and digits"):
         IncomingId("E")
     with pytest.raises(ValueError, match="an instalment is numbered from 1"):
@@ -69,9 +73,10 @@ def test_event_id_refuses_a_malformed_value() -> None:
 
 def test_instalment_count_refuses_a_malformed_value() -> None:
     """An instalment count is a whole number of 2 or more; any other text is a fault."""
-    assert InstalmentCount.parse("1") == IdFault("instalment count", "1")
-    assert InstalmentCount.parse("three") == IdFault("instalment count", "three")
-    assert InstalmentCount.parse("3") == InstalmentCount(3)
+    assert InstalmentCount.parse("1") == Err(IdFault("instalment count", "1"))
+    assert InstalmentCount.parse("three") == Err(IdFault("instalment count", "three"))
+    assert InstalmentCount.parse("3") == Ok(InstalmentCount(3))
+    assert InstalmentCount.make(1) == Err(IdFault("instalment count", "1"))
     with pytest.raises(ValueError, match="an instalment count is at least 2"):
         InstalmentCount(1)
 
@@ -80,7 +85,5 @@ def test_a_marker_prints_its_kind_account_and_days() -> None:
     """Every event ID prints back as the text it was parsed from."""
     acc_002 = AccountId("ACC-002")
     for marker in ("E7", "E10-3", "FEE-002-D2@D5", "REFUND-002-D2@D6", "INT-002-D5@D6", "CAP-002@D6"):
-        event_id = parse_event_id(marker)
-        assert not isinstance(event_id, IdFault)
-        assert format_id(event_id) == marker
+        assert format_id(unwrap_ok(parse_event_id(marker))) == marker
     assert format_id(FeeId(acc_002, Day(4), Day(5))) == "FEE-002-D4@D5"
