@@ -39,6 +39,8 @@ Both are listed, as AMB-032 resolves.
 | AED to BHD rate             | 1 AED = 0.10238257 BHD               | resolved, AMB-027  |
 | BHD overdraft fee           | BHD 2.560                            | resolved, AMB-027  |
 | Unit coverage floor         | 80% of lines                         | in place           |
+| Report rule width           | 120 `=` characters                   | in place           |
+| Spelled instalment counts   | two to ten                           | in place           |
 | Hold time frame             | 30 calendar days                     | test only, AMB-018 |
 | Known-weakness replay       | through Day 32                       | test only, AMB-018 |
 
@@ -96,6 +98,19 @@ charged under the same rules as the AED fee. ACC-002 never goes negative in this
 
 Set in commit 199456f for this time-boxed assessment: it still guards the ledger core while leaving room to move fast.
 At 40% (half), most of the core could go unexecuted by unit tests.
+
+### Report rule width
+
+The rule above and below each day's banner in [OUTPUT_TARGET](OUTPUT_TARGET.md) is 120 `=` characters. The widest table
+the brief's report prints, Day 6's EOD applied, is 119 characters, so the rule spans every table, and 120 is the column
+limit every Markdown line here keeps, so the fenced report fits it. At 60 (half), the rule would stop midway across most
+of the report's tables.
+
+### Spelled instalment counts
+
+A credit in instalments prints its count as an English word from two to ten and as digits above, so the brief's "three
+equal instalments" prints as the brief words it. Two is the least count a split allows. At five (half), a credit in six
+to ten instalments would print its count in digits although a word is as short to read.
 
 ### Hold time frame
 
