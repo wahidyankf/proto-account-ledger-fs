@@ -156,6 +156,11 @@ class NotPositive:
     text: str
 
 
+def _is_positive(money: Money) -> bool:
+    """Whether the money is above zero: the one rule the guard and ``Amount.make`` both apply."""
+    return money.value > 0
+
+
 @dataclass(frozen=True, slots=True)
 class Amount[M: (Aed, Bhd)]:
     """What an event carries: money above zero."""
@@ -163,13 +168,13 @@ class Amount[M: (Aed, Bhd)]:
     money: M
 
     def __post_init__(self) -> None:
-        if self.money.value <= 0:
+        if not _is_positive(self.money):
             raise ValueError(f"an amount is above zero, not {self.money.value}")
 
     @staticmethod
     def make[N: (Aed, Bhd)](money: N) -> Result[Amount[N], NotPositive]:
         """The money as an amount, or a fault when it is zero or below."""
-        return Ok(Amount(money)) if money.value > 0 else Err(NotPositive(str(money.value)))
+        return Ok(Amount(money)) if _is_positive(money) else Err(NotPositive(str(money.value)))
 
 
 class Direction(Enum):

@@ -13,6 +13,11 @@ _INCOMING = re.compile(r"E[0-9]+")
 MAX_INSTALMENTS = 360  # a monthly plan over thirty years; a split never grows past it (NUMBERS.md)
 
 
+def _is_instalment_count(number: int) -> bool:
+    """Whether the number is from 2 to ``MAX_INSTALMENTS``: the one rule the guard and ``make`` both apply."""
+    return 2 <= number <= MAX_INSTALMENTS
+
+
 @dataclass(frozen=True, slots=True)
 class InstalmentCount:
     """How many instalments a credit is posted in, from 2 to ``MAX_INSTALMENTS``."""
@@ -20,13 +25,13 @@ class InstalmentCount:
     number: int
 
     def __post_init__(self) -> None:
-        if not 2 <= self.number <= MAX_INSTALMENTS:
+        if not _is_instalment_count(self.number):
             raise ValueError(f"an instalment count is from 2 to {MAX_INSTALMENTS}, not {self.number}")
 
     @staticmethod
     def make(number: int) -> Result[InstalmentCount, IdFault]:
         """The count, or a fault for one below 2 or above ``MAX_INSTALMENTS``."""
-        if 2 <= number <= MAX_INSTALMENTS:
+        if _is_instalment_count(number):
             return Ok(InstalmentCount(number))
         return Err(IdFault("instalment count", str(number)))
 
@@ -46,6 +51,11 @@ class IdFault:
     text: str
 
 
+def _is_day_number(number: int) -> bool:
+    """Whether the number is a day, 0 or later: the one rule the guard and ``make`` both apply."""
+    return number >= 0
+
+
 @dataclass(frozen=True, slots=True, order=True)
 class Day:
     """A day of the replay, counted from 0, the opening."""
@@ -53,13 +63,13 @@ class Day:
     number: int
 
     def __post_init__(self) -> None:
-        if self.number < 0:
+        if not _is_day_number(self.number):
             raise ValueError(f"a day is at least 0, not {self.number}")
 
     @staticmethod
     def make(number: int) -> Result[Day, IdFault]:
         """The day, or a fault for one before Day 0."""
-        return Ok(Day(number)) if number >= 0 else Err(IdFault("day", str(number)))
+        return Ok(Day(number)) if _is_day_number(number) else Err(IdFault("day", str(number)))
 
     @staticmethod
     def parse(text: str) -> Result[Day, IdFault]:
