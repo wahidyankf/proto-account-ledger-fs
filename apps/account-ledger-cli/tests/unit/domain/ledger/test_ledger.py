@@ -3,15 +3,13 @@ another account's event (AMB-036), and an account the ledger does not hold."""
 
 import pytest
 
+from account_ledger.application.stream import IncomingStream
 from account_ledger.challenge import CHALLENGE
 from account_ledger.common.result import Err
 from account_ledger.domain.account.domain_events import CreditPosted, DuplicateIgnored, EventRejected
 from account_ledger.domain.account.rejections import IdReused, TargetOnAnotherAccount
 from account_ledger.domain.ledger.ledger import Ledger, UnknownAccount
 from account_ledger.domain.model.ids import AccountId, Day, IncomingId
-from account_ledger.domain.stream_processing import (
-    process_stream,
-)
 from support.results import unwrap_ok
 from support.states import list_entries
 from support.streams import (
@@ -31,7 +29,7 @@ def test_amb_034_a_repeated_event_is_logged_as_a_duplicate_with_no_effect() -> N
     duplicate and credits once; a duplicate is not an error, so Day 1's errors read none."""
     e1 = make_credit("E1", 1, "100.00")
 
-    result = unwrap_ok(process_stream((e1, e1), CHALLENGE))
+    result = unwrap_ok(IncomingStream((e1, e1)).process(CHALLENGE))
     log = result.find_log(Day(1))
 
     assert list_entries(log, "E1") == [CreditPosted(e1, Day(1)), DuplicateIgnored(e1, Day(1))]
@@ -53,8 +51,8 @@ def test_amb_034_a_repeated_reversal_or_settlement_is_a_duplicate(kind: str) -> 
     )
     repeated_event = make_reversal("E4", 1, "E2") if kind == "reversal" else make_settlement("E4", 1, "Auth-A", "20.00")
 
-    result = unwrap_ok(process_stream((*opening, repeated_event, repeated_event), CHALLENGE))
-    single_log = unwrap_ok(process_stream((*opening, repeated_event), CHALLENGE)).find_log(Day(1))
+    result = unwrap_ok(IncomingStream((*opening, repeated_event, repeated_event)).process(CHALLENGE))
+    single_log = unwrap_ok(IncomingStream((*opening, repeated_event)).process(CHALLENGE)).find_log(Day(1))
     log = result.find_log(Day(1))
 
     assert list_entries(log, "E4")[1:] == [DuplicateIgnored(repeated_event, Day(1))]
@@ -73,7 +71,7 @@ def test_amb_034_the_same_event_booked_another_day_is_refused() -> None:
     the same value date and amount reuses its ID and is refused."""
     first_credit, retried_credit = make_credit("E1", 1, "100.00"), make_credit("E1", 2, "100.00", value=1)
 
-    log = unwrap_ok(process_stream((first_credit, retried_credit), CHALLENGE)).find_log(Day(2))
+    log = unwrap_ok(IncomingStream((first_credit, retried_credit)).process(CHALLENGE)).find_log(Day(2))
 
     assert list_entries(log, "E1") == [
         CreditPosted(first_credit, Day(1)),
@@ -86,7 +84,7 @@ def test_amb_034_a_reused_id_with_different_content_is_refused() -> None:
     """AMB-034: a second E1 that differs from the first in any field is refused and moves no balance."""
     first_credit, reused_credit = make_credit("E1", 1, "100.00"), make_credit("E1", 1, "90.00")
 
-    log = unwrap_ok(process_stream((first_credit, reused_credit), CHALLENGE)).find_log(Day(1))
+    log = unwrap_ok(IncomingStream((first_credit, reused_credit)).process(CHALLENGE)).find_log(Day(1))
 
     assert list_entries(log, "E1") == [
         CreditPosted(first_credit, Day(1)),
@@ -107,7 +105,7 @@ def test_amb_036_a_reversal_of_another_accounts_event_is_refused() -> None:
         make_reversal("E9", 2, "E7"),
     )
 
-    log = unwrap_ok(process_stream(stream, CHALLENGE)).find_log(Day(2))
+    log = unwrap_ok(IncomingStream(stream).process(CHALLENGE)).find_log(Day(2))
 
     assert list_entries(log, "E12") == [
         EventRejected(misplaced_reversal, Day(2), TargetOnAnotherAccount(IncomingId("E7"), ACC_001.id))

@@ -6,5 +6,7 @@ extend-select = ["TID251"]
 
 [lint.flake8-tidy-imports.banned-api]
 "account_ledger.domain".msg = "a common tool knows no ledger rule or value"
+"account_ledger.application".msg = "a common tool never imports the application"
 "account_ledger.adapters".msg = "a common tool never imports an adapter"
 "account_ledger.cli".msg = "a common tool never imports the shell"
+"account_ledger.challenge".msg = "a common tool never imports the shell's configuration"

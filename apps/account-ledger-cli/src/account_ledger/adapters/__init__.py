@@ -1,1 +1,1 @@
-"""The pure translators between text and the domain: the stream reader and the renderer."""
+"""The adapters: the CSV file source and the text report sink, which implement the application's ports over text."""

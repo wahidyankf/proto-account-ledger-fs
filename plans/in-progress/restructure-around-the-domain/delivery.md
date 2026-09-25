@@ -41,6 +41,14 @@ first, above all [the target layout](tech-docs/001-target-layout.md) and
   `build_report` and its private builders take it, so Phase 4 moves them without changing what they read. The gate
   passed: 161 passed and 1 xfailed, the corpus and literals equal. Open until Phase 5: `003-operations.md`'s `sum_money`
   example. Last gate passed: Phase 3. Next item: Phase 4, the first. No budget partly spent.
+- **2026-09-25 20:33, Phase 4.** Phase 3 is 0cbeb9a, pushed as 5a36329..0cbeb9a. `application/` holds the use case,
+  `LedgerRun`, its ports, `IncomingStream`, and the report read model with `DayReport.build` and `ReportedClosings`;
+  `adapters/csv_file.py` and `adapters/text_report.py` implement the driven ports; `run_cli` takes a `RunLedger`, so no
+  CLI test patches a module, and `ClosedPipe` is a plain `TextOutput`. Seven `ruff.toml` bans, each proved by a
+  mutation. `publish` joined the verb lists with the ports, before `flush`. The gate passed: 161 passed and 1 xfailed,
+  the corpus and literals equal. Open until Phase 5: `003-operations.md`'s `sum_money` and `001-naming.md`'s
+  `parse_stream`, both example names the code no longer has. Last gate passed: Phase 4. Next item: Phase 5, the first.
+  No budget partly spent.
 
 ## Execution Checkout
 
@@ -539,8 +547,9 @@ Replaces the ledger service's functions with the `Ledger` class and returns an u
       PASSED): test:quick, test:integration, and test:e2e pass, 161 passed and 1 xfailed across the layers, coverage
       95%; corpus equal; every baseline name kept, 5 added; literals kept; cited 60, missing 0; Markdown and hygiene
       clean. - Proof: the `assert` grep prints nothing.
-- [ ] [AI] Commit as `refactor(cli): run every account through the Ledger`, with the WORKLOG entry and the Execution
-      Record line, and push. Proof: the hash and range. Acceptance: AC-16.
+- [x] [AI] Commit as `refactor(cli): run every account through the Ledger`, with the WORKLOG entry and the Execution
+      Record line, and push. Proof: the hash and range. Acceptance: AC-16. - Done 20:13: 0cbeb9a, pushed as
+      5a36329..0cbeb9a; the push hooks passed.
 
 Pause safety: the Ledger is on `origin/main`. Re-verify with `sh local-tmp/restructure/gate.sh`.
 
@@ -549,56 +558,114 @@ Pause safety: the Ledger is on `origin/main`. Re-verify with `sh local-tmp/restr
 Builds `application/`, the two adapters, and the shell as
 [the application, ports, and adapters](tech-docs/003-application-ports-and-adapters.md) state (R2, R5, R12, R20).
 
-- [ ] [AI] Create `$SRC/application/__init__.py`, and move `$SRC/domain/report.py` to `$SRC/application/report.py` with
+- [x] [AI] Create `$SRC/application/__init__.py`, and move `$SRC/domain/report.py` to `$SRC/application/report.py` with
       `/usr/bin/git mv`; `DayReport.build` replaces `build_report`, `EventLog.list_processed_on` replaces the report's
       `entry.processed_day == day` filters, the `ReportedClosings` class replaces the alias and `update_reported`, and
       `_compute_closing` and `_compute_available`, forwarding wrappers of the module being moved, go with the move
-      (R19). Command: `pytest tests`, the corpus compare. Proof: passes; equal. Acceptance: AC-02, AC-08.
-- [ ] [AI] Move `$SRC/domain/stream_processing.py` to `$SRC/application/stream.py` with `/usr/bin/git mv`;
+      (R19). Command: `pytest tests`, the corpus compare. Proof: passes; equal. Acceptance: AC-02, AC-08. - Done:
+      `application/report.py` (git mv); `DayReport.build(ledger, day, reported)`, the `ReportedClosings` class with
+      `make_empty`, `update`, `list_days_before`, and `find_closings`; `EventLog.list_processed_on(day)` replaces the
+      three `processed_day == day` filters; `_map_balances` takes lambdas where `_compute_closing` and
+      `_compute_available` stood; the builders name each `Account` `account` where they named it `history`. - Proof:
+      pytest 161 passed, 1 xfailed; corpus equal; pyright 0; pylint and vulture exit 0.
+- [x] [AI] Move `$SRC/domain/stream_processing.py` to `$SRC/application/stream.py` with `/usr/bin/git mv`;
       `IncomingStream.process` replaces `process_stream`, and `_ProcessingState` holds the `Ledger`. Command:
-      `pytest tests`, the corpus compare. Proof: passes; equal. Acceptance: AC-02, AC-08.
-- [ ] [AI] Create `$SRC/application/ports.py` with `SourceFault`, `EventSource`, `ReportSink`, `RunLedger`, and
+      `pytest tests`, the corpus compare. Proof: passes; equal. Acceptance: AC-02, AC-08. - Done:
+      `application/stream.py` (git mv); `IncomingStream(events).process(config)` replaces `process_stream`, its
+      docstring unchanged; `_ProcessingState` has held the `Ledger` since Phase 3, and its `reported` field is the
+      class. Every caller and test builds an `IncomingStream`; until the CLI item, the CLI tests patch
+      `IncomingStream.process` where they patched `cli.process_stream`. - Proof: pytest 161 passed, 1 xfailed; corpus
+      equal; literals kept.
+- [x] [AI] Create `$SRC/application/ports.py` with `SourceFault`, `EventSource`, `ReportSink`, `RunLedger`, and
       `RunFault`, now that `IncomingStream` and `DayReport`, which its signatures name, exist. Command:
-      `(cd $APP && uv run --no-sync pyright)`. Proof: 0 errors. Acceptance: AC-11.
-- [ ] [AI] Move `$SRC/adapters/stream_csv.py` to `$SRC/adapters/csv_file.py` with `/usr/bin/git mv`: `CsvFileSource`
+      `(cd $APP && uv run --no-sync pyright)`. Proof: 0 errors. Acceptance: AC-11. - Done: `SourceFault(message)`, the
+      `Protocol`s `EventSource.read_events(config)`, `ReportSink.publish(reports)`, and `RunLedger.run(source, sink)`,
+      and `type RunFault = SourceFault | InternalFault`; each protocol method is a docstring and `...`, since pyright
+      refuses a docstring-only body that returns a value. `publish` joined both verb lists here, where `ReportSink`
+      declares it, rather than with `flush`. - Proof: pyright 0 errors; pylint exit 0.
+- [x] [AI] Move `$SRC/adapters/stream_csv.py` to `$SRC/adapters/csv_file.py` with `/usr/bin/git mv`: `CsvFileSource`
       with `read_events` and the static `parse`, `Reader`, `read_file`, and `_describe_fault` moved from `$SRC/cli.py`,
-      `REQUIRED` and `OPTIONAL` frozen, and `RowKind`. Command: `pytest tests`. Proof: passes. Acceptance: AC-11, AC-12.
-- [ ] [AI] Move `$SRC/adapters/render.py` to `$SRC/adapters/text_report.py` with `/usr/bin/git mv`: `TextOutput`,
+      `REQUIRED` and `OPTIONAL` frozen, and `RowKind`. Command: `pytest tests`. Proof: passes. Acceptance: AC-11,
+      AC-12. - Done: `adapters/csv_file.py` (git mv); `CsvFileSource(path, read_text)` with `read_events(config)`, which
+      gives `cannot read PATH: REASON` or the `StreamError`'s message as a `SourceFault`, and the static
+      `parse(text, config) -> Result[IncomingStream, StreamError]`; `Reader`, `read_file`, and `_describe_fault` moved
+      from `cli.py`, which reads through the source; `REQUIRED` and `OPTIONAL` are `MappingProxyType`s keyed by
+      `RowKind`, and `_find_kind` narrows the type cell to one. The CSV tests call `CsvFileSource.parse` and compare
+      with an `IncomingStream`. - Proof: pytest 161 passed, 1 xfailed; corpus equal, every file fault included; pyright
+      0; pylint exit 0.
+- [x] [AI] Move `$SRC/adapters/render.py` to `$SRC/adapters/text_report.py` with `/usr/bin/git mv`: `TextOutput`,
       `TextReportSink` with `publish` and the static `render`, `NUMBER_WORDS` frozen. Add `publish` and `flush`, which
       `TextOutput` declares and the test double implements, to both verb lists in `$APP/pyproject.toml`, and run
       `(cd $APP && uv run --no-sync pylint src tests)`. Command: `pytest tests`. Proof: passes. Acceptance: AC-11,
-      AC-12.
-- [ ] [AI] Write `$SRC/application/run.py`, `LedgerRun`. Command: `(cd $APP && uv run --no-sync pyright)`. Proof: 0
-      errors. Acceptance: AC-11.
-- [ ] [AI] Rewrite `$SRC/cli.py`: `run_cli(argv, read_text, out, err, run_ledger)` builds the two adapters and maps each
+      AC-12. - Done: `adapters/text_report.py` (git mv); `TextOutput`, a `Protocol` of `write(text, /)` and `flush()`;
+      `TextReportSink(out)` with `publish(reports)`, one write then a flush, and the static `render(reports)`;
+      `NUMBER_WORDS` a `MappingProxyType`; `run_cli` publishes through the sink. `flush` joined both verb lists
+      (`publish` did with the ports). Where the longer call made ruff split a line, the test names the report in a
+      local, so every literal stays in its test. The `_build_applied_row` fold waits for Phase 6, as R19 settles. -
+      Proof: pytest 161 passed, 1 xfailed; pylint exit 0; corpus equal; literals kept.
+- [x] [AI] Write `$SRC/application/run.py`, `LedgerRun`. Command: `(cd $APP && uv run --no-sync pyright)`. Proof: 0
+      errors. Acceptance: AC-11. - Done: `LedgerRun(config)` with `run(source, sink) -> Result[None, RunFault]`: read,
+      process, publish; the first `Err` ends it before anything is published. - Proof: pyright 0 errors.
+- [x] [AI] Rewrite `$SRC/cli.py`: `run_cli(argv, read_text, out, err, run_ledger)` builds the two adapters and maps each
       fault; `main` binds `read_file`, the streams, and `LedgerRun(CHALLENGE)`. The CLI tests in
       `$APP/tests/unit/test_cli.py` pass a fake `RunLedger` where they patched `process_stream`, each fake built inside
       its test with the literals the replaced helper held, such as `ZeroDivisionError("a bug in the domain")`, and
       `ClosedPipe` becomes a plain class. Command: `pytest tests`, the corpus compare. Proof: passes; equal, every file
-      fault and argument error included. Acceptance: AC-02, AC-11.
-- [ ] [AI] Write `$SRC/application/ruff.toml` and `$SRC/adapters/ruff.toml`, and rewrite the five existing bans, as
+      fault and argument error included. Acceptance: AC-02, AC-11. - Done:
+      `run_cli(argv, read_text, out, err, run_ledger)` keeps its three handlers and the argument check, builds
+      `CsvFileSource` and `TextReportSink`, and maps each `RunFault` through one `match` ending in `assert_never`;
+      `main` binds `read_file`, the streams, and `LedgerRun(CHALLENGE)`. The CLI tests pass `LedgerRun(CHALLENGE)`, or a
+      `FailingRun` or `RaisingRun` built in the test with the literals the patched helper held; no test patches a
+      module; `ClosedPipe` is a plain class with `write` and `flush`. - Proof: pytest 161 passed, 1 xfailed; corpus
+      equal, every file fault and argument error included; literals kept; pylint and vulture exit 0.
+- [x] [AI] Write `$SRC/application/ruff.toml` and `$SRC/adapters/ruff.toml`, and rewrite the five existing bans, as
       [the import bans](tech-docs/003-application-ports-and-adapters.md#the-import-bans) state. Prove each ban: add a
       forbidden import to one module of each package, see `ruff check` fail with TID251, restore. Command:
       `(cd $APP && uv run --no-sync ruff check .)`. Proof: passes; seven failures recorded under mutation. Acceptance:
-      AC-11.
-- [ ] [AI] Move the tests, from `$APP/tests/unit/` unless named: `test_stream_processing.py`, `test_criteria.py`, and
+      AC-11. - Done: `application/ruff.toml` and `adapters/ruff.toml` are new; the four domain files refuse
+      `application`, `adapters`, `cli`, and `challenge` in place of `domain.report` and `domain.stream_processing`,
+      `domain/model/` still refusing `domain.account` and `domain.ledger` and `domain/account/` `domain.ledger`;
+      `common/` adds `application` and `challenge`. - Proof: `ruff check .` passes. Seven failures recorded under
+      mutation, one forbidden import each, restored after: `common/result.py` challenge; `domain/__init__.py`
+      application; `domain/model/money.py` `domain.ledger`; `domain/account/event_log.py` application;
+      `domain/ledger/ledger.py` challenge; `application/run.py` adapters; `adapters/csv_file.py` challenge; each
+      reported as `banned-api`, TID251's name.
+- [x] [AI] Move the tests, from `$APP/tests/unit/` unless named: `test_stream_processing.py`, `test_criteria.py`, and
       `test_known_weakness.py` into `$APP/tests/unit/application/test_stream.py`; `test_report.py` to
       `$APP/tests/unit/application/`; `test_stream_csv.py` and `test_render.py` to
       `$APP/tests/unit/adapters/test_csv_file.py` and `test_text_report.py`;
       `$APP/tests/integration/test_stream_file.py` to `$APP/tests/integration/adapters/test_csv_file.py`, and
       `$APP/tests/integration/test_main.py` to `$APP/tests/integration/test_cli.py`, whose imports of `render_reports`
       and `process_stream` follow the new API. Command: `pytest tests`, `inventory.py --compare`. Proof: passes; no name
-      lost; `1 xfailed`. Acceptance: AC-03, AC-13.
-- [ ] [AI] Update the architecture as built: the L3 prose, diagram, and table; L4's report, stream, and adapter lines;
+      lost; `1 xfailed`. Acceptance: AC-03, AC-13. - Done: `test_stream_processing.py` (git mv), `test_criteria.py`, and
+      `test_known_weakness.py` merged into `tests/unit/application/test_stream.py` in that order, the known weakness
+      keeping `xfail(strict=True)`, its reason, and its annotations; `test_report.py` to `tests/unit/application/`;
+      `test_stream_csv.py` and `test_render.py` to `tests/unit/adapters/test_csv_file.py` and `test_text_report.py`;
+      `tests/integration/test_stream_file.py` to `tests/integration/adapters/test_csv_file.py`, one directory deeper, so
+      its path to the shipped stream climbs one more level; `tests/integration/test_main.py` to
+      `tests/integration/test_cli.py`; each module docstring names what it now tests. - Proof: pytest 161 passed, 1
+      xfailed; `inventory.py --compare`: every baseline name kept with its count; literals kept.
+- [x] [AI] Update the architecture as built: the L3 prose, diagram, and table; L4's report, stream, and adapter lines;
       the Dynamic View; the Domain Model's report paragraph; Reading the Code. Update `$APP/README.md`'s layout table,
       the `domain/` row and the new `application/` and `challenge.py` rows included, its DDD paragraph, and the known
       weakness's path; and the docstrings of `$SRC/domain/__init__.py` and `$SRC/adapters/__init__.py`, which name the
-      report and the renderer. Proof: every name exists. Acceptance: AC-14.
+      report and the renderer. Proof: every name exists. Acceptance: AC-14. - Done: L3 rewritten for four layers, its
+      diagram adding the application and the adapters as ports, its table the `csv_file`, `text_report`, `ports`, `run`,
+      and `stream` rows; L4's report, stream, ports, run, `csv_file`, and `text_report` lines,
+      `EventLog.list_processed_on`, and the Protocols beside the values; the Dynamic View from `run_cli` through
+      `LedgerRun` to `TextReportSink.publish`; the Domain Model's report paragraph; Reading the Code steps 2 and 12 and
+      its closing note. `/README.md`: the layout table's shell, `challenge.py`, adapters, `application/`, domain, and
+      unit-test rows, its DDD paragraph, and the known weakness's path. The docstrings of `domain/__init__.py`,
+      `adapters/__init__.py`, and `cli.py`, which no longer holds the file reader. - Proof: `doc_sweep.py` reports no
+      missing identifier, path, or link; every line within 120; Prettier clean. Open until Phase 5: `001-naming.md`
+      still gives `parse_stream` as an example name, beside `003-operations.md`'s `sum_money`.
 
 ### Phase 4 Gate
 
-- [ ] [AI] Run `sh local-tmp/restructure/gate.sh`. Proof: exit 0; the inventory lists the five new names. Acceptance:
-      AC-02, AC-03, AC-04, AC-11.
+- [x] [AI] Run `sh local-tmp/restructure/gate.sh`. Proof: exit 0; the inventory lists the five new names. Acceptance:
+      AC-02, AC-03, AC-04, AC-11. - Done 20:33: `gate.sh` exit 0 (GATE PASSED): test:quick, test:integration, and
+      test:e2e pass, coverage 95%; corpus equal; every baseline name kept, and the inventory lists the five new names;
+      literals kept; cited 60, missing 0; Markdown and hygiene clean.
 - [ ] [AI] Commit as `refactor(cli): put the use case behind ports and adapters`, with the WORKLOG entry and the
       Execution Record line, and push. Proof: the hash and range. Acceptance: AC-16.
 

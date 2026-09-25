@@ -1,0 +1,10 @@
+# The application drives the domain through the ports it declares; it never knows the adapters that implement them.
+extend = "../../../pyproject.toml"
+
+[lint]
+extend-select = ["TID251"]
+
+[lint.flake8-tidy-imports.banned-api]
+"account_ledger.adapters".msg = "the application never imports an adapter; it declares the port the adapter implements"
+"account_ledger.cli".msg = "the application never imports the shell"
+"account_ledger.challenge".msg = "the application never imports the shell's configuration; it is passed in"

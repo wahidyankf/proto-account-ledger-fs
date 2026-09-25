@@ -4,16 +4,22 @@ from typing import assert_never
 
 import pytest
 
+from account_ledger.application.report import (
+    Capitalized,
+    DayReport,
+    Generated,
+    Note,
+    NothingGenerated,
+    Restatement,
+    Step,
+)
+from account_ledger.application.stream import IncomingStream
 from account_ledger.challenge import CHALLENGE
 from account_ledger.domain.account.authorizations import Approved, AuthorizationState, Declined, Settled
 from account_ledger.domain.account.rejections import Rejection
 from account_ledger.domain.model.events import IncomingEvent
 from account_ledger.domain.model.ids import AccountId, AuthorizationId, Day
 from account_ledger.domain.model.money import AmountIn
-from account_ledger.domain.report import Capitalized, DayReport, Generated, Note, NothingGenerated, Restatement, Step
-from account_ledger.domain.stream_processing import (
-    process_stream,
-)
 from support.brief_stream import build_brief_stream
 from support.refusals import REFUSALS
 from support.results import unwrap_ok
@@ -24,7 +30,7 @@ from support.values import make_aed, make_bhd
 def test_amb_022_a_day_restates_each_earlier_closing_it_changed() -> None:
     """AMB-022: when a backdated event changes an earlier closing, that day's report adds a restated closing for each
     earlier day it changed; an account whose closing for that day did not change shows none."""
-    result = unwrap_ok(process_stream(build_brief_stream(), CHALLENGE))
+    result = unwrap_ok(IncomingStream(build_brief_stream()).process(CHALLENGE))
 
     assert result.find_report(Day(5)).restatements == (
         Restatement(Day(2), {ACC_001.id: make_aed("-370.00"), ACC_002.id: None}),
@@ -42,7 +48,7 @@ def test_amb_022_a_day_restates_each_earlier_closing_it_changed() -> None:
 def test_amb_019_every_known_authorization_is_listed_with_its_state() -> None:
     """AMB-019, AMB-025: every authorization known by the end of the day is listed with its state then, in the order
     first seen; a declined authorization is a state, printed with the others."""
-    result = unwrap_ok(process_stream(build_brief_stream(), CHALLENGE))
+    result = unwrap_ok(IncomingStream(build_brief_stream()).process(CHALLENGE))
 
     def list_authorizations(day: int) -> list[tuple[AuthorizationId, AuthorizationState]]:
         """Each authorization the day's report lists, with its state then."""
@@ -64,7 +70,7 @@ def test_amb_014_a_rejected_event_is_that_days_error(
 ) -> None:
     """AMB-014: every event is recorded with its outcome, and a refused one is that day's error, by account, with the
     reason it was refused; the renderer prints it in the text tech-docs 001 fixes (D22)."""
-    errors = unwrap_ok(process_stream(stream, CHALLENGE)).find_report(Day(1)).errors
+    errors = unwrap_ok(IncomingStream(stream).process(CHALLENGE)).find_report(Day(1)).errors
 
     assert {account_id: tuple(entry.reason for entry in entries) for account_id, entries in errors.items()} == {
         configured_account.id: (reason,) if configured_account.id == account else ()
@@ -94,7 +100,7 @@ BOTH = ("ACC-001", "ACC-002")
 def test_amb_033_a_step_that_generates_nothing_reports_its_row() -> None:
     """AMB-033: every end-of-day step is printed with the events it generates, and a step that generates nothing prints
     a row saying so (tech-docs 002)."""
-    result = unwrap_ok(process_stream(build_brief_stream(), CHALLENGE))
+    result = unwrap_ok(IncomingStream(build_brief_stream()).process(CHALLENGE))
 
     assert list_rows(result.find_report(Day(1))) == [
         (1, Note.NO_FEE, BOTH),
@@ -118,7 +124,8 @@ def test_amb_033_a_step_that_generates_nothing_reports_its_row() -> None:
         (3, "CAP-001@D6", ("ACC-001",)),
         (3, "CAP-002@D6", ("ACC-002",)),
     ]
-    aed_only_report = unwrap_ok(process_stream((make_credit("E1", 1, "100.00"),), CHALLENGE)).find_report(Day(6))
+    aed_only_stream = (make_credit("E1", 1, "100.00"),)
+    aed_only_report = unwrap_ok(IncomingStream(aed_only_stream).process(CHALLENGE)).find_report(Day(6))
     assert list_rows(aed_only_report)[-2:] == [
         (3, "CAP-001@D6", ("ACC-001",)),
         (3, Note.NO_CAPITALIZATION, ("ACC-002",)),

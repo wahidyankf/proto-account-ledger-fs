@@ -1,9 +1,11 @@
-# The domain is pure: every dependency points inward, so nothing here reaches the adapters or the shell.
+# The domain is pure and at the centre: every dependency points inward, so nothing here reaches a layer around it.
 extend = "../../../pyproject.toml"
 
 [lint]
 extend-select = ["TID251"]
 
 [lint.flake8-tidy-imports.banned-api]
+"account_ledger.application".msg = "the domain never imports the application, which drives it"
 "account_ledger.adapters".msg = "the domain never imports an adapter; the shell composes them"
 "account_ledger.cli".msg = "the domain never imports the shell"
+"account_ledger.challenge".msg = "the domain never imports the shell's configuration; it is passed in"

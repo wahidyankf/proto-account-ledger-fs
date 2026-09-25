@@ -5,8 +5,8 @@ extend = "../../../../pyproject.toml"
 extend-select = ["TID251"]
 
 [lint.flake8-tidy-imports.banned-api]
-"account_ledger.domain.ledger".msg = "the account aggregate never imports the ledger service, which sees every account"
-"account_ledger.domain.report".msg = "the account aggregate never imports the report"
-"account_ledger.domain.stream_processing".msg = "the account aggregate never imports the stream processing"
+"account_ledger.domain.ledger".msg = "the account aggregate never imports the Ledger, which sees every account"
+"account_ledger.application".msg = "the domain never imports the application, which drives it"
 "account_ledger.adapters".msg = "the domain never imports an adapter; the shell composes them"
 "account_ledger.cli".msg = "the domain never imports the shell"
+"account_ledger.challenge".msg = "the domain never imports the shell's configuration; it is passed in"

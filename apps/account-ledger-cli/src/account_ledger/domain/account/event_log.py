@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 
 from account_ledger.domain.account.domain_events import LogEntry
-from account_ledger.domain.model.ids import AccountId, EventId
+from account_ledger.domain.model.ids import AccountId, Day, EventId
 
 
 @dataclass(frozen=True, slots=True)
@@ -25,3 +25,7 @@ class EventLog:
     def select(self, account_id: AccountId) -> EventLog:
         """The account's own entries, in log order."""
         return EventLog(tuple(entry for entry in self.entries if entry.event.account == account_id))
+
+    def list_processed_on(self, day: Day) -> tuple[LogEntry, ...]:
+        """Every entry processed on the day, in log order."""
+        return tuple(entry for entry in self.entries if entry.processed_day == day)

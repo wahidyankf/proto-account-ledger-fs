@@ -1,6 +1,7 @@
-"""The stream reader: a valid stream parses to its events; each fault names its line."""
+"""The CSV file source: a valid stream parses to its events; each fault names its line."""
 
-from account_ledger.adapters.stream_csv import StreamError, parse_stream
+from account_ledger.adapters.csv_file import CsvFileSource, StreamError
+from account_ledger.application.stream import IncomingStream
 from account_ledger.challenge import CHALLENGE
 from account_ledger.common.result import Err, Ok
 from account_ledger.domain.model.events import (
@@ -79,26 +80,28 @@ def test_a_valid_stream_parses_to_its_events() -> None:
         ]
     )
 
-    assert parse_stream(text, CHALLENGE) == Ok(
-        (
-            Credit(IncomingId("E1"), Day(1), ACC_001, Day(1), AmountIn(make_aed("1200.00")), Whole()),
-            Debit(IncomingId("E2"), Day(1), ACC_001, Day(1), AmountIn(make_aed("950.00"))),
-            Authorization(
-                IncomingId("E3"), Day(2), ACC_001, Day(2), AuthorizationId("Auth-A"), AmountIn(make_aed("200.00"))
-            ),
-            Settlement(
-                IncomingId("E5"),
-                Day(4),
-                ACC_001,
-                Day(4),
-                AuthorizationId("Auth-A"),
-                AmountIn(make_aed("185.00")),
-                SettlementKind.FINAL,
-            ),
-            Reversal(IncomingId("E9"), Day(6), ACC_001, Day(2), IncomingId("E7")),
-            make_instalment_credit(
-                IncomingId("E10"), Day(5), ACC_002, Day(5), AmountIn(make_bhd("10.000")), InstalmentCount(3)
-            ),
+    assert CsvFileSource.parse(text, CHALLENGE) == Ok(
+        IncomingStream(
+            (
+                Credit(IncomingId("E1"), Day(1), ACC_001, Day(1), AmountIn(make_aed("1200.00")), Whole()),
+                Debit(IncomingId("E2"), Day(1), ACC_001, Day(1), AmountIn(make_aed("950.00"))),
+                Authorization(
+                    IncomingId("E3"), Day(2), ACC_001, Day(2), AuthorizationId("Auth-A"), AmountIn(make_aed("200.00"))
+                ),
+                Settlement(
+                    IncomingId("E5"),
+                    Day(4),
+                    ACC_001,
+                    Day(4),
+                    AuthorizationId("Auth-A"),
+                    AmountIn(make_aed("185.00")),
+                    SettlementKind.FINAL,
+                ),
+                Reversal(IncomingId("E9"), Day(6), ACC_001, Day(2), IncomingId("E7")),
+                make_instalment_credit(
+                    IncomingId("E10"), Day(5), ACC_002, Day(5), AmountIn(make_bhd("10.000")), InstalmentCount(3)
+                ),
+            )
         )
     )
 
@@ -108,7 +111,7 @@ E1 = {"event": "E1", "booked": "1", "type": "CREDIT", "account": "ACC-001", "amo
 
 def find_fault(**cells: str) -> StreamError | None:
     """The fault the reader reports for one row, E1 changed by ``cells``."""
-    match parse_stream(format_csv([{**E1, **cells}]), CHALLENGE):
+    match CsvFileSource.parse(format_csv([{**E1, **cells}]), CHALLENGE):
         case Err(fault):
             return fault
         case Ok():
@@ -119,11 +122,11 @@ def test_a_wrong_header_or_cell_count_is_refused() -> None:
     """A wrong or missing header is refused on line 1, and a row with the wrong cell count on its own line."""
     header = ",".join(HEADER)
     wrong_header = Err(StreamError(1, f"line 1: expected the header {header}"))
-    assert parse_stream("event,booked\nE1,1\n", CHALLENGE) == wrong_header
-    assert parse_stream(f"{header}\nE1,1,CREDIT,ACC-001,100.00,1,\n", CHALLENGE) == Err(
+    assert CsvFileSource.parse("event,booked\nE1,1\n", CHALLENGE) == wrong_header
+    assert CsvFileSource.parse(f"{header}\nE1,1,CREDIT,ACC-001,100.00,1,\n", CHALLENGE) == Err(
         StreamError(2, "line 2: expected 9 cells, found 7")
     )
-    assert parse_stream("", CHALLENGE) == wrong_header
+    assert CsvFileSource.parse("", CHALLENGE) == wrong_header
 
 
 def test_an_id_of_the_wrong_form_is_refused() -> None:
@@ -186,9 +189,9 @@ def test_a_reversal_reference_must_be_an_event_id() -> None:
     assert find_fault(type="REVERSAL", amount="", reference="Auth-A") == StreamError(
         2, "line 2: reference 'Auth-A' is not an event ID"
     )
-    assert parse_stream(
+    assert CsvFileSource.parse(
         format_csv([{**E1, "type": "REVERSAL", "amount": "", "reference": "FEE-001-D2@D5"}]), CHALLENGE
-    ) == Ok((Reversal(IncomingId("E1"), Day(1), ACC_001, Day(1), FeeId(ACC_001, Day(2), Day(5))),))
+    ) == Ok(IncomingStream((Reversal(IncomingId("E1"), Day(1), ACC_001, Day(1), FeeId(ACC_001, Day(2), Day(5))),)))
 
 
 def test_an_instalment_count_outside_2_to_360_is_refused() -> None:
@@ -215,11 +218,11 @@ def test_a_final_cell_other_than_yes_or_no_is_refused() -> None:
 
     def parse_settlement_kind(cell: str) -> SettlementKind:
         """The kind a settlement row parses to when its `final` cell is ``cell``."""
-        (event,) = unwrap_ok(parse_stream(f"{header}\n{settlement}{cell}\n", CHALLENGE))
+        (event,) = unwrap_ok(CsvFileSource.parse(f"{header}\n{settlement}{cell}\n", CHALLENGE)).events
         assert isinstance(event, Settlement)
         return event.kind
 
-    assert parse_stream(f"{header}\n{settlement}maybe\n", CHALLENGE) == Err(
+    assert CsvFileSource.parse(f"{header}\n{settlement}maybe\n", CHALLENGE) == Err(
         StreamError(2, "line 2: final must be yes or no")
     )
     assert [parse_settlement_kind("yes"), parse_settlement_kind(""), parse_settlement_kind("no")] == [
@@ -227,6 +230,6 @@ def test_a_final_cell_other_than_yes_or_no_is_refused() -> None:
         SettlementKind.FINAL,
         SettlementKind.PARTIAL,
     ]
-    assert parse_stream(f"{header}\nE1,1,CREDIT,ACC-001,10.00,1,,,no\n", CHALLENGE) == Err(
+    assert CsvFileSource.parse(f"{header}\nE1,1,CREDIT,ACC-001,10.00,1,,,no\n", CHALLENGE) == Err(
         StreamError(2, "line 2: column 'final' does not apply to CREDIT")
     )

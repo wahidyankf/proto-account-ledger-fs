@@ -1,8 +1,21 @@
-"""The report as text: each day's banner and its three blocks, as OUTPUT_TARGET prints them (tech-docs 003)."""
+"""The report sink: each day's banner and its three blocks, written as text as OUTPUT_TARGET prints them
+(tech-docs 003)."""
 
 from collections.abc import Sequence
-from typing import assert_never
+from dataclasses import dataclass
+from types import MappingProxyType
+from typing import Protocol, assert_never
 
+from account_ledger.application.report import (
+    Capitalized,
+    DayReport,
+    EndOfDayEvent,
+    Generated,
+    Note,
+    NothingGenerated,
+    Processed,
+    Step,
+)
 from account_ledger.domain.account.authorizations import (
     Approved,
     AuthorizationRecord,
@@ -45,16 +58,6 @@ from account_ledger.domain.model.events import (
 )
 from account_ledger.domain.model.ids import AccountId, Day
 from account_ledger.domain.model.money import Amount, Direction, Money
-from account_ledger.domain.report import (
-    Capitalized,
-    DayReport,
-    EndOfDayEvent,
-    Generated,
-    Note,
-    NothingGenerated,
-    Processed,
-    Step,
-)
 
 SEPARATOR = "=" * 120
 
@@ -64,9 +67,34 @@ EVENTS = ("Event", "Booked", "Type", "Account", "Detail", "Value date")
 APPLIED = ("Step", "Event", "Type", "Account", "Detail", "Value date")
 
 
-def render_reports(reports: Sequence[DayReport]) -> str:
-    """Every day's report, in order, each after one blank line, ending with a newline."""
-    return "\n\n".join(_format_day(report) for report in reports) + "\n"
+class TextOutput(Protocol):
+    """A text stream the report and the CLI write to: standard output or error, or a test's stand-in."""
+
+    def write(self, text: str, /) -> int:
+        """Write the text; return how many characters were written."""
+        ...
+
+    def flush(self) -> None:
+        """Push what was written on to its destination."""
+        ...
+
+
+@dataclass(frozen=True, slots=True)
+class TextReportSink:
+    """The report sink that writes every day's report to ``out`` as text."""
+
+    out: TextOutput
+
+    def publish(self, reports: tuple[DayReport, ...]) -> None:
+        """The whole report in one write, then a flush, so a closed pipe surfaces here, inside the CLI's handlers, not
+        at the exit-time flush."""
+        self.out.write(TextReportSink.render(reports))
+        self.out.flush()
+
+    @staticmethod
+    def render(reports: Sequence[DayReport]) -> str:
+        """Every day's report, in order, each after one blank line, ending with a newline."""
+        return "\n\n".join(_format_day(report) for report in reports) + "\n"
 
 
 def _format_day(report: DayReport) -> str:
@@ -180,8 +208,8 @@ def _format_posting(posting: Posting) -> str:
             assert_never(posting)
 
 
-NUMBER_WORDS = dict(
-    zip(range(2, 11), ("two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"), strict=True)
+NUMBER_WORDS = MappingProxyType(
+    dict(zip(range(2, 11), ("two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"), strict=True))
 )
 
 

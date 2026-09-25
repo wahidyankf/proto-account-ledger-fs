@@ -6,12 +6,10 @@ from pathlib import Path
 
 import pytest
 
-from account_ledger.adapters.render import render_reports
+from account_ledger.adapters.text_report import TextReportSink
+from account_ledger.application.stream import IncomingStream
 from account_ledger.challenge import CHALLENGE
 from account_ledger.cli import main
-from account_ledger.domain.stream_processing import (
-    process_stream,
-)
 from support.brief_stream import build_brief_stream
 from support.results import unwrap_ok
 
@@ -35,7 +33,7 @@ def test_main_reads_a_real_file_and_reports_a_missing_one(
     missing_exit_code = main()
 
     assert (captured_output.out, captured_output.err, read_exit_code) == (
-        render_reports(unwrap_ok(process_stream(build_brief_stream(), CHALLENGE)).reports),
+        TextReportSink.render(unwrap_ok(IncomingStream(build_brief_stream()).process(CHALLENGE)).reports),
         "",
         0,
     )

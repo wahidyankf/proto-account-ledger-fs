@@ -55,67 +55,69 @@ standard streams, in UTF-8 whatever the locale, since the report prints the minu
 
 ## L3 — Components
 
-The shell holds every effect and every raw value; the adapters translate between text and the domain's types; the domain
-holds every business rule. The adapters and the domain are pure. Every dependency points inward: from the shell to the
-adapters and the domain, from the adapters to the domain's types, and, inside the domain, from stream processing to the
-Ledger and the report, from those to the Account aggregate, and from the aggregate to the values. Each layer is a place
-in the package: the shell is `cli.py` and `challenge.py` at its root, the adapters are `adapters/`, and the domain is
-`domain/`, with `stream_processing.py` and `report.py` at its root, the Ledger in `domain/ledger/`, the aggregate in
-`domain/account/`, and the values in `domain/model/`. Each domain package has its own `ruff.toml` that refuses any
-import of the layers above it, and every one refuses `account_ledger.adapters` and `account_ledger.cli` (TID251). The
-values decide nothing. Below them sits `common/`, the tools with no ledger meaning: every layer may import it, and its
-own `ruff.toml` refuses any import of the other three.
+The shell holds every raw value and binds every real effect; the adapters translate between text and the application's
+ports; the application runs the one use case over the domain; the domain holds every business rule. The domain and the
+application are pure: the program reads and writes only in the adapters, through the reader and the streams the shell
+passes in. Every dependency points inward: from the shell to what it composes, from the adapters to the application's
+ports and the domain's types, from the application to the domain, and, inside the domain, from the Ledger to the Account
+aggregate and from the aggregate to the values. Each layer is a place in the package: the shell is `cli.py` and
+`challenge.py` at its root, the adapters are `adapters/`, the application is `application/`, and the domain is
+`domain/`, with the Ledger in `domain/ledger/`, the aggregate in `domain/account/`, and the values in `domain/model/`.
+Each package has its own `ruff.toml` that refuses any import of the layers around it (TID251): every domain package
+refuses `account_ledger.application`, `account_ledger.adapters`, and the shell's two modules, the application refuses
+the adapters and the shell, and the adapters refuse the shell. The values decide nothing. Below them sits `common/`, the
+tools with no ledger meaning: every layer may import it, and its own `ruff.toml` refuses any import of the others.
 
 ```text
-  shell      +--------------------------------------------------------------------------------+
-  cli.py     | cli: run_cli(argv, read_text, out, err) -> exit code; main binds real effects   |
-  challenge  | challenge: CHALLENGE, the brief's configuration the CLI passes on                |
-             +--------------------------------------------------------------------------------+
-                  | text                   | events                 | reports
-                  v                        |                        v
-  adapters   +--------------------------+  |  +--------------------------+
-  adapters/  | stream_csv               |  |  | render                   |
-             | text -> the events, or   |  |  | DayReport -> text, as    |
-             | a StreamError            |  |  | OUTPUT_TARGET prints it  |
-             +--------------------------+  |  +--------------------------+
-                  | builds the values      |        | reads the report, the domain events, and the values
-  ---------------------------------------------------------------------------------------------------
-  domain                                   v
-  domain/                     +--------------------------+
-                              | stream_processing        |
-                              | the stream in listed     |
-                              | order, each day closed   |
-                              | on time                  |
-                              +--------------------------+
-                                | each event, each close       | each day
-                                v                              v
-  ledger           +----------------------------------+   +----------------------------+
-  domain/ledger/   | ledger: Ledger, the config and   |   | report, the read model:    |
-                   |   the one log; IDs and the       |   | a day as data, read from   |
-                   |   cross-account check; each      |   | the Ledger's log and each  |
-                   |   close step on every account    |   | account's entries          |
-                   |   in account order               |   | domain/report.py           |
-                   +----------------------------------+   +----------------------------+
-                                | one account at a time                |
-  ---------------------------------------------------------------------------------------------------
-  aggregate                     v
-  domain/account/  +-------------------------------------------------------------------------+
-                   | the Account aggregate: every rule about one account, in one class       |
-                   |   account         AccountIn, asked by method, topic by topic: entries,  |
-                   |                   balances, authorizations, decisions, reversals, fees, |
-                   |                   and interest                                          |
-                   |   authorizations  the states, the D8 table over take, and each record   |
-                   |   event_log       EventLog: an account's entries, or the whole log's    |
-                   |   domain_events, rejections: what the rules record, and why one refuses |
-                   +-------------------------------------------------------------------------+
-  ---------------------------------------------------------------------------------------------------
-  model                                    v
+  shell        +------------------------------------------------------------------------------------+
+  cli.py       | cli: run_cli(argv, read_text, out, err, run_ledger) -> exit code; builds the two   |
+  challenge.py |   adapters, calls the use case, and codes each fault; main binds the real effects  |
+               | challenge: CHALLENGE, the brief's configuration main gives LedgerRun               |
+               +------------------------------------------------------------------------------------+
+                    | builds                      | builds                      | RunLedger.run(source, sink)
+                    v                             v                             |
+  adapters     +--------------------------+  +--------------------------+       |
+  adapters/    | csv_file: CsvFileSource  |  | text_report:             |       |
+               | the file read and parsed |  | TextReportSink, the      |       |
+               | into events, or a        |  | reports as OUTPUT_TARGET |       |
+               | SourceFault              |  | prints them              |       |
+               +--------------------------+  +--------------------------+       |
+                    | is an EventSource           | is a ReportSink             |
+  -------------------------------------------------------------------------------------------------------
+  application       v                             v                             v
+  application/ +------------------------------------------------------------------------------------+
+               | ports: EventSource, ReportSink, and RunLedger, the ports the use case declares     |
+               | run: LedgerRun, the use case: read the events, process them, publish the reports   |
+               | stream: IncomingStream, processed in listed order, each day closed on time         |
+               | report: DayReport, the read model: a day as data, read from the Ledger             |
+               +------------------------------------------------------------------------------------+
+                                  | each event, each close, each day's report
+  -------------------------------------------------------------------------------------------------------
+  ledger                          v
+  domain/ledger/   +--------------------------------------------------------------------------------+
+                   | ledger: Ledger, the config and the one log; IDs and the cross-account check;   |
+                   |   each close step on every account, in account order                           |
+                   +--------------------------------------------------------------------------------+
+                                  | one account at a time
+  -------------------------------------------------------------------------------------------------------
+  aggregate                       v
+  domain/account/  +--------------------------------------------------------------------------------+
+                   | the Account aggregate: every rule about one account, in one class              |
+                   |   account         AccountIn, asked by method, topic by topic: entries,         |
+                   |                   balances, authorizations, decisions, reversals, fees,        |
+                   |                   and interest                                                 |
+                   |   authorizations  the states, the D8 table over take, and each record          |
+                   |   event_log       EventLog: an account's entries, or the whole log's           |
+                   |   domain_events, rejections: what the rules record, and why one refuses        |
+                   +--------------------------------------------------------------------------------+
+  -------------------------------------------------------------------------------------------------------
+  model                           v
   domain/model/   +----------+  +----------+  +----------+  +----------+
                   | events   |  | config   |  | money    |  | ids      |
                   | incoming,|  | accounts,|  | Aed, Bhd,|  | days,    |
                   | generated|  | window   |  | Amount   |  | IDs      |
                   +----------+  +----------+  +----------+  +----------+
-  ---------------------------------------------------------------------------------------------------
+  -------------------------------------------------------------------------------------------------------
   common                                          every layer above may import it; it imports none
   common/                          +----------------+
                                    | result         |
@@ -125,11 +127,13 @@ own `ruff.toml` refuses any import of the other three.
 
 | Component                | Responsibility                                                                            |
 | ------------------------ | ----------------------------------------------------------------------------------------- |
-| `cli`                    | `run_cli` checks arguments, reads, parses, processes, renders, and codes each failure     |
+| `cli`                    | `run_cli` checks arguments, builds the adapters, runs the use case, and codes each fault  |
 | `challenge`              | `CHALLENGE`: ACC-001 in AED and ACC-002 in BHD, Days 1 to 6, capitalized on Day 6         |
-| `stream_csv`             | the stream file parsed into incoming events, or the first fault with its line             |
-| `render`                 | the report as text: banners, box tables, amounts with `−`, notes, and errors              |
-| `stream_processing`      | the stream in listed order, each day closed on time, with each day's log and report       |
+| `csv_file`               | `CsvFileSource`: the stream file read and parsed into events, or the first fault          |
+| `text_report`            | `TextReportSink`: the report as text: banners, box tables, amounts with `−`, and errors   |
+| `ports`                  | `EventSource`, `ReportSink`, and `RunLedger`, each a `Protocol` a signature consumes      |
+| `run`                    | `LedgerRun`: read the events, process them, publish the reports; the first fault ends it  |
+| `stream`                 | the stream in listed order, each day closed on time, with each day's log and report       |
 | `report`                 | the read model: a day's events, end-of-day rows, closings, restatements, holds, errors    |
 | `ledger/ledger`          | `Ledger`: the one log; IDs and the cross-account check, then the account; a day's close   |
 | `account/account`        | `AccountIn[M]`: the Account aggregate, one account's entries and every rule about them    |
@@ -145,8 +149,9 @@ own `ruff.toml` refuses any import of the other three.
 
 ## L4 — Code
 
-The types each component exposes and how they refer to one another. Every type is a frozen dataclass, a union of them,
-or an enum, none derives from another, and each constructor refuses an illegal value, so none can be built.
+The types each component exposes and how they refer to one another. Every value is a frozen dataclass, a union of them,
+or an enum, none derives from another, and each constructor refuses an illegal value, so none can be built. The ports
+and `TextOutput` are `Protocol`s, which an adapter or a test's stand-in satisfies by its shape, not by deriving.
 
 ```text
 result    Result[T, E] = Ok[T] | Err[E]      every parse, make, check, or sum that can fail returns one
@@ -176,7 +181,8 @@ account/rejections
           EventRejected.reason: Rejection = IdReused | AlreadyReversed | ReversesAReversal | UnknownTarget
                                             | TargetOnAnotherAccount | MovedNoMoney | AlreadyUndone
 account/event_log
-          EventLog = entries: LogEntry...   append(*entries), find_first_entry(event_id), select(account_id)
+          EventLog = entries: LogEntry...   append(*entries), find_first_entry(event_id), select(account_id),
+            list_processed_on(day)
 account/account
           AccountIn[M: (Aed, Bhd)] = id + opening M + log: EventLog, its own entries; every rule a method
           type Account = AccountIn[Aed] | AccountIn[Bhd]; a method works on either
@@ -195,10 +201,20 @@ account/authorizations
 report    DayReport = day, processed_events: Processed..., closing_balances, available_balances,
                       restatements: Restatement..., authorizations: AuthorizationRecord..., errors,
                       end_of_day: (Generated | Capitalized | NothingGenerated)...
-stream_processing
+          DayReport.build(ledger, day, reported: ReportedClosings) -> Result[DayReport, CurrencyMismatch]
+          ReportedClosings = closings by day and account     make_empty(), update(report), list_days_before(day),
+            find_closings(day)
+stream    IncomingStream = events: IncomingEvent...     process(config) -> Result[ProcessedStream, InternalFault]
           ProcessedStream = reports: DayReport..., logs: EventLog...     find_report(day), find_log(day)
-          process_stream(stream, config) -> Result[ProcessedStream, InternalFault]
-stream    parse_stream(text, config) -> Result[tuple[IncomingEvent, ...], StreamError(line, message)]
+ports     SourceFault = message     RunFault = SourceFault | InternalFault
+          EventSource: read_events(config) -> Result[IncomingStream, SourceFault]
+          ReportSink: publish(reports)     RunLedger: run(source, sink) -> Result[None, RunFault]
+run       LedgerRun = config     run(source, sink): read, process, then publish; the first Err ends it
+csv_file  CsvFileSource = path + read_text: Reader     read_events(config), an EventSource
+          CsvFileSource.parse(text, config) -> Result[IncomingStream, StreamError(line, message)]
+text_report
+          TextOutput: write(text), flush()     TextReportSink = out: TextOutput     publish(reports), a ReportSink
+          TextReportSink.render(reports) -> str
 ```
 
 `authorizations` is a hand-written state machine: `apply_settlement` is one `match` over the state, the settlement's
@@ -224,14 +240,16 @@ against an authorization the log does not know, is force-posted: it debits its a
 ## Dynamic View — One Day
 
 ```text
-process_stream, for each event in listed order, D the current day
+run_cli -> LedgerRun.run(CsvFileSource(path, read_text), TextReportSink(out))
+  CsvFileSource.read_events(config): read the file, parse it ---> IncomingStream, or a SourceFault
+IncomingStream.process, for each event in listed order, D the current day
   1. the event is booked after D: close D (a and b), open D + 1, and look again; a day with no events closes too;
      no day closes after the window's last, so an event booked after the window reaches no day's log or report
   2. otherwise: Ledger.process_event(event, D) ---> the ledger + one entry, and a credit's instalments
        idempotency first, across every account; then a reversal whose target is on another account;
        then the account decides from its own entries, by kind; a reversal checked against its target in order
        an event booked before D is late and is processed on D (AMB-015)
-process_stream, once every event is processed: close every day left in the window
+IncomingStream.process, once every event is processed: close every day left in the window
 
 closing day D
   a. Ledger.close_day(D): each step on every account in turn; step 1 AccountIn.assess_fees,
@@ -240,10 +258,10 @@ closing day D
        step 2  interest: each day first..D: daily interest of its base, less what was generated for it
                          -> InterestAccrual for D, InterestAdjustment for an earlier day
        step 3  capitalization, on a capitalization day: accrued interest above zero -> Capitalization
-  b. report.build_report(ledger, D, reported_closings) ---> DayReport: what D processed and generated, its closings,
+  b. DayReport.build(ledger, D, reported) ---> DayReport: what D processed and generated, its closings,
        and each earlier closing that changed since last reported
-cli, after the last day
-  render.render_reports(reports) ---> the whole text, then one write and one flush to standard output
+LedgerRun, after the last day
+  TextReportSink.publish(reports): render(reports), the whole text, then one write and one flush to standard output
 ```
 
 Every balance is recomputed from the log whenever it is asked for (D7), so a late event value-dated in the past changes
@@ -303,16 +321,17 @@ seen before (AMB-034) and a reversal whose target is on another account (AMB-036
 on every account in turn. `find_account` builds an account's aggregate from its opening and its own entries, and an
 event on an account it does not hold is returned as `UnknownAccount`. Each method returns a new `Ledger`.
 
-**The report** is a read model: `domain/report.py` reads the Ledger's log and each account and writes nothing back.
-`stream_processing` drives the Ledger and the report over the stream, day by day.
+**The report** is a read model, outside the domain because it serves the output, not a rule: `application/report.py`
+reads the Ledger's log and each account and writes nothing back. `IncomingStream.process` drives the Ledger and the
+report over the stream, day by day, and `LedgerRun` is the use case around them, reached through its ports.
 
 ## Reading the Code
 
 To read the code for the first time, follow one day through it, in this order:
 
 1. `cli.py`, `run_cli`: where the program starts, and how every failure becomes an exit status.
-2. `domain/stream_processing.py`: the loop over events, where a later day's event closes the current day first, as the
-   dynamic view above draws.
+2. `application/run.py`, `LedgerRun.run`, then `application/stream.py`, `IncomingStream.process`: the use case, and the
+   loop over events, where a later day's event closes the current day first, as the dynamic view above draws.
 3. `domain/ledger/ledger.py`, `Ledger.process_event`: duplicates and cross-account reversals caught on the whole log.
 4. `domain/account/account.py`, `AccountIn.decide_event`: what one incoming event adds to its account.
 5. `Ledger.close_day`: the three steps of a day's close, each run on every account.
@@ -325,9 +344,9 @@ To read the code for the first time, follow one day through it, in this order:
 10. The aggregate's reversals topic: when a reversal is refused, and which events the posted ones undid.
 11. `domain/account/domain_events.py`, `rejections.py`, and `event_log.py`: every domain event the rules record, every
     reason an event is rejected, and the entries each account reads.
-12. `domain/report.py`, then `adapters/render.py`: a day as data, then as the text OUTPUT_TARGET shows.
+12. `application/report.py`, then `adapters/text_report.py`: a day as data, then as the text OUTPUT_TARGET shows.
 
-`adapters/stream_csv.py` turns the file into events and holds no ledger rule. `domain/model/`, `events.py`, `config.py`,
+`adapters/csv_file.py` turns the file into events and holds no ledger rule. `domain/model/`, `events.py`, `config.py`,
 `money.py`, and `ids.py`, defines the values the rules pass around; look them up when a name is unfamiliar rather than
 reading them first.
 

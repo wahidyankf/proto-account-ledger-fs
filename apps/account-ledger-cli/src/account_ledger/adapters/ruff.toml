@@ -1,0 +1,9 @@
+# The adapters implement the application's ports over text; the shell composes them, and they never reach it.
+extend = "../../../pyproject.toml"
+
+[lint]
+extend-select = ["TID251"]
+
+[lint.flake8-tidy-imports.banned-api]
+"account_ledger.cli".msg = "an adapter never imports the shell, which composes it"
+"account_ledger.challenge".msg = "an adapter never imports the shell's configuration; it is passed in"

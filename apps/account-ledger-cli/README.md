@@ -10,26 +10,30 @@ Specification: [specs/apps/account-ledger/cli/](../../specs/apps/account-ledger/
 
 ## Layout
 
-| Path                           | Holds                                                                           |
-| ------------------------------ | ------------------------------------------------------------------------------- |
-| `src/account_ledger/cli.py`    | imperative shell: `run_cli` injects every effect; `main` binds the real ones    |
-| `src/account_ledger/adapters/` | pure translators: `stream_csv` reads the stream, `render` writes the report     |
-| `src/account_ledger/domain/`   | the domain, in DDD terms: `model/`, `account/`, `ledger/`, and the report       |
-| `src/account_ledger/common/`   | tools with no ledger meaning, `Result` for now; imports nothing from the others |
-| `streams/challenge.csv`        | the brief's stream, E1 to E10                                                   |
-| `tests/unit/`                  | in-process tests; `run_cli` gets an injected reader and `io.StringIO` streams   |
-| `tests/integration/`           | the real stream file from disk, and `main` on the real descriptors with `capfd` |
-| `tests/e2e/`                   | `python -m account_ledger` as a subprocess: the golden run and the error paths  |
-| `tests/support/`               | the brief's stream in code and as CSV, stream builders, OUTPUT_TARGET's text    |
-| `pyproject.toml`, `uv.lock`    | uv project (`package = false`) pinning pytest, ruff, pylint, pyright, vulture   |
-| `project.json`                 | Nx targets                                                                      |
+| Path                              | Holds                                                                           |
+| --------------------------------- | ------------------------------------------------------------------------------- |
+| `src/account_ledger/cli.py`       | the shell: `run_cli` takes every effect and the use case; `main` binds them     |
+| `src/account_ledger/challenge.py` | `CHALLENGE`, the brief's configuration, which `main` passes to the use case     |
+| `src/account_ledger/adapters/`    | the adapters: `csv_file` reads the stream, `text_report` writes the report      |
+| `src/account_ledger/application/` | the use case, `LedgerRun`, its ports, the stream processing, and the report     |
+| `src/account_ledger/domain/`      | the domain, in DDD terms: `model/`, `account/`, and `ledger/`                   |
+| `src/account_ledger/common/`      | tools with no ledger meaning, `Result` for now; imports nothing from the others |
+| `streams/challenge.csv`           | the brief's stream, E1 to E10                                                   |
+| `tests/unit/`                     | in-process tests, one directory per source package; `run_cli` gets every effect |
+| `tests/integration/`              | the real stream file from disk, and `main` on the real descriptors with `capfd` |
+| `tests/e2e/`                      | `python -m account_ledger` as a subprocess: the golden run and the error paths  |
+| `tests/support/`                  | the brief's stream in code and as CSV, stream builders, OUTPUT_TARGET's text    |
+| `pyproject.toml`, `uv.lock`       | uv project (`package = false`) pinning pytest, ruff, pylint, pyright, vulture   |
+| `project.json`                    | Nx targets                                                                      |
 
-The domain is laid out in DDD terms. `domain/model/` holds the values: money, IDs, the brief's events, and the accounts.
-`domain/account/` is the Account aggregate: one account's entries, the domain events it records, and every rule about
-one account, each a method of `account.py`'s `AccountIn`. `domain/ledger/` is the `Ledger`: the configured accounts and
-the one log of them all, idempotency, the cross-account check, and the day's close. `domain/report.py` is the report
-read model, and `domain/stream_processing.py` drives the stream day by day. Each package's `ruff.toml` refuses an import
-from the layers above it (TID251).
+The code is laid out in DDD and hexagonal terms. `domain/model/` holds the values: money, IDs, the brief's events, and
+the accounts. `domain/account/` is the Account aggregate: one account's entries, the domain events it records, and every
+rule about one account, each a method of `account.py`'s `AccountIn`. `domain/ledger/` is the `Ledger`: the configured
+accounts and the one log of them all, idempotency, the cross-account check, and the day's close. Around the domain,
+`application/` holds the one use case, `LedgerRun`, with the ports it declares, `EventSource`, `ReportSink`, and
+`RunLedger`; the stream processing, `IncomingStream`; and the report read model, `DayReport`. `adapters/` implements the
+two driven ports, and `cli.py` composes them. Each package's `ruff.toml` refuses an import from the layers around it
+(TID251).
 
 Every level is plain pytest, written test-first; there is no Gherkin corpus and no step binding.
 
@@ -104,9 +108,9 @@ locale, because the report prints `−` (U+2212) for a negative amount.
 ## Known Weakness
 
 A hold never expires (AMB-018): an approved authorization that is never settled keeps reducing the available balance for
-as long as the ledger runs. `tests/unit/test_known_weakness.py` holds the brief's one failing test against this design,
-inline-annotated with what it reveals. It processes an authorization left unsettled through Day 32, past the 30 calendar
-days Visa allows at most, and asserts the hold has lapsed.
+as long as the ledger runs. `tests/unit/application/test_stream.py` holds the brief's one failing test against this
+design, inline-annotated with what it reveals. It processes an authorization left unsettled through Day 32, past the 30
+calendar days Visa allows at most, and asserts the hold has lapsed.
 
 It is marked `xfail(strict=True)`, so the suite reports it as `1 xfailed` and passes. Once holds gain a lifetime, the
 test passes, pytest reports `XPASS(strict)`, and the run fails until the marker is removed. The constants it uses are

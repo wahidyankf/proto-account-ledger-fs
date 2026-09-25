@@ -1,4 +1,4 @@
-"""Parsing the stream file: text in, incoming events or the first fault out.
+"""The stream file, the event source: its text read and parsed, incoming events or the first fault out.
 
 Every cell is text; each value is built through its domain type's ``parse``, so a fault is refused by the type that
 would have held it, and this module adds only the line number and the column. Faults are returned as ``Err`` (S3).
@@ -6,8 +6,14 @@ would have held it, and this module adds only the line number and the column. Fa
 
 import csv
 import io
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from pathlib import Path
+from types import MappingProxyType
+from typing import Literal
 
+from account_ledger.application.ports import SourceFault
+from account_ledger.application.stream import IncomingStream
 from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.model.config import AccountOpening, LedgerConfig
 from account_ledger.domain.model.events import (
@@ -46,23 +52,31 @@ from account_ledger.domain.model.money import (
     TooManyPlaces,
 )
 
+type RowKind = Literal["CREDIT", "DEBIT", "AUTHORIZATION", "SETTLEMENT", "REVERSAL"]
+
 COLUMNS = ("event", "booked", "type", "account", "amount", "value_date", "reference", "instalments", "final")
-KINDS = ("CREDIT", "DEBIT", "AUTHORIZATION", "SETTLEMENT", "REVERSAL")
+KINDS: tuple[RowKind, ...] = ("CREDIT", "DEBIT", "AUTHORIZATION", "SETTLEMENT", "REVERSAL")
 _COMMON_COLUMNS = frozenset({"event", "booked", "type", "account", "value_date"})
-REQUIRED = {
-    "CREDIT": _COMMON_COLUMNS | {"amount"},
-    "DEBIT": _COMMON_COLUMNS | {"amount"},
-    "AUTHORIZATION": _COMMON_COLUMNS | {"amount", "reference"},
-    "SETTLEMENT": _COMMON_COLUMNS | {"amount", "reference"},
-    "REVERSAL": _COMMON_COLUMNS | {"reference"},
-}
-OPTIONAL: dict[str, frozenset[str]] = {
-    "CREDIT": frozenset({"instalments"}),
-    "DEBIT": frozenset(),
-    "AUTHORIZATION": frozenset(),
-    "SETTLEMENT": frozenset({"final"}),
-    "REVERSAL": frozenset(),
-}
+REQUIRED: Mapping[RowKind, frozenset[str]] = MappingProxyType(
+    {
+        "CREDIT": _COMMON_COLUMNS | {"amount"},
+        "DEBIT": _COMMON_COLUMNS | {"amount"},
+        "AUTHORIZATION": _COMMON_COLUMNS | {"amount", "reference"},
+        "SETTLEMENT": _COMMON_COLUMNS | {"amount", "reference"},
+        "REVERSAL": _COMMON_COLUMNS | {"reference"},
+    }
+)
+OPTIONAL: Mapping[RowKind, frozenset[str]] = MappingProxyType(
+    {
+        "CREDIT": frozenset({"instalments"}),
+        "DEBIT": frozenset(),
+        "AUTHORIZATION": frozenset(),
+        "SETTLEMENT": frozenset({"final"}),
+        "REVERSAL": frozenset(),
+    }
+)
+
+type Reader = Callable[[str], Result[str, OSError | UnicodeDecodeError]]
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,6 +92,60 @@ class RowFault:
     """What is wrong with one row, before its line number is known."""
 
     message: str
+
+
+@dataclass(frozen=True, slots=True)
+class CsvFileSource:
+    """The stream file at ``path``, read through ``read_text``: the event source the use case reads."""
+
+    path: str
+    read_text: Reader
+
+    def read_events(self, config: LedgerConfig) -> Result[IncomingStream, SourceFault]:
+        """The file's events, or why they could not be read: the file cannot be read, or its stream is malformed."""
+        text = self.read_text(self.path)
+        if isinstance(text, Err):
+            return Err(SourceFault(f"cannot read {self.path}: {_describe_fault(text.error)}"))
+        return CsvFileSource.parse(text.value, config).map_err(lambda fault: SourceFault(fault.message))
+
+    @staticmethod
+    def parse(text: str, config: LedgerConfig) -> Result[IncomingStream, StreamError]:
+        """The stream's events in listed order, or the first fault; the header is line 1."""
+        if isinstance(read_rows := _read_rows(text), Err):
+            return read_rows
+        rows = read_rows.value
+        if not rows or tuple(rows[0]) != COLUMNS:
+            return Err(StreamError(1, f"line 1: expected the header {','.join(COLUMNS)}"))
+        events: list[IncomingEvent] = []
+        for line, cells in enumerate(rows[1:], start=2):
+            if len(cells) != len(COLUMNS):
+                return Err(StreamError(line, f"line {line}: expected {len(COLUMNS)} cells, found {len(cells)}"))
+            event = _parse_row(dict(zip(COLUMNS, cells, strict=True)), config)
+            if isinstance(event, Err):
+                return Err(StreamError(line, f"line {line}: {event.error.message}"))
+            events.append(event.value)
+        return Ok(IncomingStream(tuple(events)))
+
+
+def read_file(path: str) -> Result[str, OSError | UnicodeDecodeError]:
+    """The stream file's text, read as UTF-8, or the refusal of a file that cannot be read or decoded; ``read_text``
+    refuses by raising, so the refusal is caught here and returned."""
+    try:
+        return Ok(Path(path).read_text(encoding="utf-8"))
+    except (OSError, UnicodeDecodeError) as fault:
+        return Err(fault)
+
+
+def _describe_fault(fault: OSError | UnicodeDecodeError) -> str:
+    """`no such file` for a missing file, `not UTF-8 text` for one that does not decode, and the operating system's
+    message otherwise (tech-docs 003)."""
+    match fault:
+        case FileNotFoundError():
+            return "no such file"
+        case UnicodeDecodeError():
+            return "not UTF-8 text"
+        case OSError():
+            return fault.strerror or str(fault)
 
 
 def _check_id[T](parsed_id: Result[T, IdFault]) -> Result[T, RowFault]:
@@ -148,8 +216,8 @@ type _CommonFields = tuple[
 
 def _parse_row(cells: dict[str, str], config: LedgerConfig) -> Result[IncomingEvent, RowFault]:
     """The row's event, checked in column order: its type, the columns it fills, its common fields, then the rest."""
-    if (kind := cells["type"]) not in KINDS:
-        return Err(RowFault(f"type '{kind}' is not one of {', '.join(KINDS)}"))
+    if (kind := _find_kind(cells["type"])) is None:
+        return Err(RowFault(f"type '{cells['type']}' is not one of {', '.join(KINDS)}"))
     if isinstance(checked_columns := _check_columns(cells, kind), Err):
         return checked_columns
     if isinstance(parsed_fields := _parse_common_fields(cells, config), Err):
@@ -168,7 +236,12 @@ def _parse_row(cells: dict[str, str], config: LedgerConfig) -> Result[IncomingEv
             return _parse_authorization_or_settlement(cells, kind, fields, parsed_amount.value)
 
 
-def _check_columns(cells: dict[str, str], kind: str) -> Result[None, RowFault]:
+def _find_kind(text: str) -> RowKind | None:
+    """The row kind the type cell names, or ``None`` for text that names none."""
+    return next((kind for kind in KINDS if kind == text), None)
+
+
+def _check_columns(cells: dict[str, str], kind: RowKind) -> Result[None, RowFault]:
     """Nothing when the row fills exactly the columns its kind takes, or a fault naming the first column it leaves
     empty though required, or fills though the kind does not take it."""
     for column in COLUMNS:
@@ -211,7 +284,7 @@ def _parse_credit(instalments: str, fields: _CommonFields, amount: Amount) -> Re
 
 
 def _parse_authorization_or_settlement(
-    cells: dict[str, str], kind: str, fields: _CommonFields, amount: Amount
+    cells: dict[str, str], kind: RowKind, fields: _CommonFields, amount: Amount
 ) -> Result[Authorization | Settlement, RowFault]:
     """An authorization, or a settlement against one, each naming its hold in the reference."""
     if isinstance(hold := _check_id(AuthorizationId.parse(cells["reference"])), Err):
@@ -221,24 +294,6 @@ def _parse_authorization_or_settlement(
     return _parse_settlement_kind(cells["final"]).map(
         lambda settlement_kind: Settlement(*fields, hold.value, amount, settlement_kind)
     )
-
-
-def parse_stream(text: str, config: LedgerConfig) -> Result[tuple[IncomingEvent, ...], StreamError]:
-    """The stream's events in listed order, or the first fault; the header is line 1."""
-    if isinstance(read_rows := _read_rows(text), Err):
-        return read_rows
-    rows = read_rows.value
-    if not rows or tuple(rows[0]) != COLUMNS:
-        return Err(StreamError(1, f"line 1: expected the header {','.join(COLUMNS)}"))
-    events: list[IncomingEvent] = []
-    for line, cells in enumerate(rows[1:], start=2):
-        if len(cells) != len(COLUMNS):
-            return Err(StreamError(line, f"line {line}: expected {len(COLUMNS)} cells, found {len(cells)}"))
-        event = _parse_row(dict(zip(COLUMNS, cells, strict=True)), config)
-        if isinstance(event, Err):
-            return Err(StreamError(line, f"line {line}: {event.error.message}"))
-        events.append(event.value)
-    return Ok(tuple(events))
 
 
 def _read_rows(text: str) -> Result[list[list[str]], StreamError]:

@@ -16,6 +16,10 @@ Each entry records when, what was found, why it matters, and, once routed, its o
   command line was silently skipped; a 123-column line reached the Phase 1 gate, where `check-md.sh` caught it. The
   checker now takes files too and exits 1 on a long line. Why it matters: a check that passes on input it never reads
   proves nothing, so each scratch check should fail loudly on an argument it cannot use.
+- **2026-09-25 20:24, Phase 4.** The first run of the seven ban mutations counted no failures: it grepped ruff's output
+  for `TID251`, but this ruff prints a rule by its name, `banned-api`, not its code. Rerun matching the name, all seven
+  failed as they should. Why it matters: a mutation check that greps for a failure proves nothing until one deliberate
+  failure has been seen to match; each such grep should be tried once against a failure first.
 
 [capture]: ../../../repo-governance/conventions/structure/plans/008-knowledge-capture-and-archival.md
 [triage]: ../../../repo-governance/conventions/structure/plans/017-learning-triage.md
