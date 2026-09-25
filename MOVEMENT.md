@@ -331,8 +331,8 @@ Closing Summary:
 E10 is booked Day 5 but arrives after E9, so it is processed on Day 6 as a late event value-dated Day 5 (AMB-015): Day 6
 restates ACC-002's Day 5 and generates its interest for Day 5 as an adjustment.
 
-Readings that touch this day without changing a figure: AMB-028, on reversing a reversal, and AMB-035, on what a
-reversal such as E9 may target.
+Readings that touch this day without changing a figure: AMB-028, on reversing a reversal; AMB-035, on what a reversal
+such as E9 may target; AMB-036, on the account its target is on; and AMB-037, on its value date, which is E7's.
 
 ## Why the Fixed Figures Hold
 
