@@ -22,15 +22,15 @@ def test_an_empty_stream_reports_the_opening_balances_for_day_0_to_6() -> None:
             AccountId("ACC-001"): make_aed("0.00"),
             AccountId("ACC-002"): make_bhd("0.000"),
         }
-    assert result.find_log(Day(6)) == ()
+    assert result.find_log(Day(6)).entries == ()
 
 
 def test_amb_015_a_late_event_is_processed_on_the_current_day() -> None:
     """AMB-015: E10, booked Day 5 but listed after E9, arrives once Day 5 has closed and is processed on Day 6."""
     result = unwrap_ok(process_stream(build_brief_stream(), CHALLENGE))
 
-    assert IncomingId("E10") not in [entry.event.id for entry in result.find_log(Day(5))]
-    e10 = [entry for entry in result.find_log(Day(6)) if entry.event.id == IncomingId("E10")]
+    assert IncomingId("E10") not in [entry.event.id for entry in result.find_log(Day(5)).entries]
+    e10 = [entry for entry in result.find_log(Day(6)).entries if entry.event.id == IncomingId("E10")]
     assert [entry.processed_day for entry in e10] == [Day(6)]
 
 

@@ -3,15 +3,8 @@
 from dataclasses import dataclass, replace
 
 from account_ledger.common.result import Err, Ok, Result
-from account_ledger.domain.ledger.end_of_day import (
-    close_day,
-)
-from account_ledger.domain.ledger.event_log import (
-    Log,
-)
-from account_ledger.domain.ledger.processing import (
-    process_event,
-)
+from account_ledger.domain.account.event_log import EventLog
+from account_ledger.domain.ledger.ledger import InternalFault, Ledger
 from account_ledger.domain.model.config import LedgerConfig
 from account_ledger.domain.model.events import IncomingEvent
 from account_ledger.domain.model.ids import Day
@@ -24,13 +17,13 @@ class ProcessedStream:
     """Day 0, then one report per day of the window, each beside the log as it stood at that day's close."""
 
     reports: tuple[DayReport, ...]
-    logs: tuple[Log, ...]
+    logs: tuple[EventLog, ...]
 
     def find_report(self, day: Day) -> DayReport:
         """The report for the day."""
         return self.reports[self._find_index(day)]
 
-    def find_log(self, day: Day) -> Log:
+    def find_log(self, day: Day) -> EventLog:
         """The log as it stood at the day's close."""
         return self.logs[self._find_index(day)]
 
@@ -41,62 +34,62 @@ class ProcessedStream:
 
 @dataclass(frozen=True, slots=True)
 class _ProcessingState:
-    """The processing so far: the log, the reports and logs kept, the closings last reported, and the current day."""
+    """The processing so far: the ledger, the reports and logs kept, the closings last reported, and the current
+    day."""
 
-    log: Log
+    ledger: Ledger
     reports: tuple[DayReport, ...]
-    logs: tuple[Log, ...]
+    logs: tuple[EventLog, ...]
     reported_closings: ReportedClosings
     day: Day
 
-    def process_event(self, event: IncomingEvent, config: LedgerConfig) -> Result[_ProcessingState, CurrencyMismatch]:
+    def process_event(self, event: IncomingEvent) -> Result[_ProcessingState, InternalFault]:
         """The state with the event processed on the current day."""
-        return process_event(self.log, event, self.day, config).map(lambda log: replace(self, log=log))
+        return self.ledger.process_event(event, self.day).map(lambda ledger: replace(self, ledger=ledger))
 
-    def close_days_before(self, booked: Day | None, config: LedgerConfig) -> Result[_ProcessingState, CurrencyMismatch]:
+    def close_days_before(self, booked: Day | None) -> Result[_ProcessingState, InternalFault]:
         """Close each day before ``booked``, or every day left in the window when there is none."""
         state = self
-        while state.day <= config.last_day and (booked is None or booked > state.day):
-            if isinstance(closed_state := state.close_current_day(config), Err):
+        while state.day <= self.ledger.config.last_day and (booked is None or booked > state.day):
+            if isinstance(closed_state := state.close_current_day(), Err):
                 return closed_state
             state = closed_state.value
         return Ok(state)
 
-    def close_current_day(self, config: LedgerConfig) -> Result[_ProcessingState, CurrencyMismatch]:
+    def close_current_day(self) -> Result[_ProcessingState, CurrencyMismatch]:
         """The current day's close: its end of day runs, its report and log are kept, and the next day opens."""
-        if isinstance(closed_log := close_day(self.log, self.day, config), Err):
-            return closed_log
-        log = closed_log.value
-        if isinstance(day_report := build_report(log, self.day, config, self.reported_closings), Err):
+        if isinstance(closed_ledger := self.ledger.close_day(self.day), Err):
+            return closed_ledger
+        ledger = closed_ledger.value
+        if isinstance(day_report := build_report(ledger, self.day, self.reported_closings), Err):
             return day_report
         return Ok(
             _ProcessingState(
-                log,
+                ledger,
                 (*self.reports, day_report.value),
-                (*self.logs, log),
+                (*self.logs, ledger.log),
                 update_reported(self.reported_closings, day_report.value),
                 self.day.advance(),
             )
         )
 
 
-def process_stream(
-    stream: tuple[IncomingEvent, ...], config: LedgerConfig
-) -> Result[ProcessedStream, CurrencyMismatch]:
+def process_stream(stream: tuple[IncomingEvent, ...], config: LedgerConfig) -> Result[ProcessedStream, InternalFault]:
     """Process the stream in listed order through the configured window (AMB-001, AMB-015).
 
     Each event is processed on the current day. An event booked on a later day is the sign to close the current day
     first, and every day up to its own, those with no events included; it is processed only once its day is open. An
     event listed after one booked later is late and is processed on the current day. Once every event is processed,
     every day left in the window still closes. No day closes after the window, so an event booked after it reaches no
-    day's log or report. A currency mismatch, which only a bug brings, ends the processing and is returned."""
-    if isinstance(opening_report := build_report((), Day(0), config, {}), Err):
+    day's log or report. An internal fault, which only a bug brings, ends the processing and is returned."""
+    ledger = Ledger.open(config)
+    if isinstance(opening_report := build_report(ledger, Day(0), {}), Err):
         return opening_report
-    state = _ProcessingState((), (opening_report.value,), ((),), {}, config.first_day)
+    state = _ProcessingState(ledger, (opening_report.value,), (ledger.log,), {}, config.first_day)
     for event in stream:
-        if isinstance(processed_state := state.close_days_before(event.booked, config), Err):
+        if isinstance(processed_state := state.close_days_before(event.booked), Err):
             return processed_state
-        if isinstance(processed_state := processed_state.value.process_event(event, config), Err):
+        if isinstance(processed_state := processed_state.value.process_event(event), Err):
             return processed_state
         state = processed_state.value
-    return state.close_days_before(None, config).map(lambda final: ProcessedStream(final.reports, final.logs))
+    return state.close_days_before(None).map(lambda final: ProcessedStream(final.reports, final.logs))

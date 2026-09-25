@@ -33,6 +33,15 @@ first, above all [the target layout](tech-docs/001-target-layout.md) and
   Open until Phase 5: `003-operations.md` still gives `sum_money` as its example. Last gate passed: Phase 2. Next item:
   Phase 3, the first. No budget partly spent.
 
+- **2026-09-25 20:11, Phase 3.** Phase 2 is 5a36329, pushed as f4d325d..5a36329. `Ledger(config, log)` in
+  `ledger/ledger.py` replaces `processing.py`, `end_of_day.py`, `ledger/event_log.py`, and `Log`, each deletion with its
+  mutation proof; a private `_append(*entries)` builds each new ledger. An event on an unconfigured account is
+  `Err(UnknownAccount)`, and the CLI prints it as an internal fault through one `match`; the last `assert` in the source
+  is gone. Earlier than planned, because the log now lives in the ledger: `_ProcessingState` holds the `Ledger`, and
+  `build_report` and its private builders take it, so Phase 4 moves them without changing what they read. The gate
+  passed: 161 passed and 1 xfailed, the corpus and literals equal. Open until Phase 5: `003-operations.md`'s `sum_money`
+  example. Last gate passed: Phase 3. Next item: Phase 4, the first. No budget partly spent.
+
 ## Execution Checkout
 
 - **Working copy.** The main checkout at the repository root, on `main`, with no worktree and no task branch, per the
@@ -461,7 +470,7 @@ Pause safety: the aggregate is one class on `origin/main`. Re-verify with `sh lo
 
 Replaces the ledger service's functions with the `Ledger` class and returns an unconfigured account as a fault (R6, R8).
 
-- [ ] [AI] Write `Ledger(config, log)` in `$SRC/domain/ledger/ledger.py`, moved from `processing.py` with
+- [x] [AI] Write `Ledger(config, log)` in `$SRC/domain/ledger/ledger.py`, moved from `processing.py` with
       `/usr/bin/git mv`, with `open`, `find_account`, `list_accounts`, `process_event`, `close_day`, and the private
       steps; delete `$SRC/domain/ledger/end_of_day.py` and `$SRC/domain/ledger/event_log.py` and the `Log` alias;
       `$SRC/domain/stream_processing.py`, `$SRC/domain/report.py`, `$APP/tests/support/*.py`, and the tests call the
@@ -470,33 +479,66 @@ Replaces the ledger service's functions with the `Ledger` class and returns an u
       the capitalization step of `close_day` and see `test_c8_capitalization_equals_the_sum_of_interest_events` fail;
       for `ledger/event_log.py`, make `find_account` build every account from ACC-001's opening and see a test fail.
       Command: `pytest tests`, the corpus compare, `(cd $APP && uv run --no-sync pylint src tests)`. Proof: all pass;
-      equal. Acceptance: AC-02, AC-10.
-- [ ] [AI] RED: `test_an_event_on_an_unconfigured_account_is_an_internal_fault` in `$APP/tests/unit/test_processing.py`.
+      equal. Acceptance: AC-02, AC-10. - Done: `ledger/ledger.py` (git mv from `processing.py`) holds `Ledger` with
+      `open`, `find_account`, `list_accounts`, `process_event`, `close_day`, `_check_target_account`, and `_append`;
+      `end_of_day.py`, `ledger/event_log.py`, and `Log` are gone. `_ProcessingState` and `build_report` take the ledger,
+      `ProcessedStream.logs` holds `EventLog`s, and the tests read `.entries` where they iterated the tuple. - Proof:
+      pytest 159 passed, 1 xfailed; corpus equal; pylint and vulture exit 0; `open` in both verb lists. Mutations:
+      repeated-ID check skipped, 8 failed, the five AMB-034 tests among them; capitalization skipped, 7 failed,
+      `test_c8_capitalization_equals_the_sum_of_interest_events` among them; `find_account` building from ACC-001's
+      opening, 44 failed; each restored.
+- [x] [AI] RED: `test_an_event_on_an_unconfigured_account_is_an_internal_fault` in `$APP/tests/unit/test_processing.py`.
       The RED adds `UnknownAccount` and `InternalFault`, and replaces the `assert` with a stub returning the ledger
       unchanged. Command: `pytest tests/unit/test_processing.py`. Proof: fails on its assertion. Acceptance: AC-03,
-      AC-06.
-- [ ] [AI] GREEN: `_find_opening` returns `Err(UnknownAccount)`, and `process_event` returns it. Command:
-      `pytest tests`. Proof: passes. Acceptance: AC-06.
-- [ ] [AI] RED: `test_an_unknown_account_exits_2_naming_it` in `$APP/tests/unit/test_cli.py`, patching the processing as
+      AC-06. - Done: the test in `test_processing.py`; `UnknownAccount` and `InternalFault` in `ledger.py`; the `assert`
+      replaced by a stub returning the ledger unchanged. - Proof: fails on its assertion,
+      `Ok(Ledger(...)) == Err(UnknownAccount(account=AccountId(value='ACC-003')))`.
+- [x] [AI] GREEN: `_find_opening` returns `Err(UnknownAccount)`, and `process_event` returns it. Command:
+      `pytest tests`. Proof: passes. Acceptance: AC-06. - Done:
+      `Ledger._find_opening(account_id) -> Result[AccountOpening, UnknownAccount]`; `process_event` returns
+      `Result[Ledger, InternalFault]`. - Proof: pytest 160 passed, 1 xfailed; pyright's one error, in
+      `stream_processing.py`, is the widening the next RED makes.
+- [x] [AI] RED: `test_an_unknown_account_exits_2_naming_it` in `$APP/tests/unit/test_cli.py`, patching the processing as
       its neighbours do today, until Phase 4 gives it a fake port. The RED widens the processing's fault to
       `InternalFault` with a stub line in `run_cli`. Command: `pytest tests/unit/test_cli.py`. Proof: fails on its
-      assertion. Acceptance: AC-03.
-- [ ] [AI] GREEN: `run_cli` prints `error: internal: ACC-003 is not a configured account` and exits 2 through one
-      `match` over `InternalFault` ending in `assert_never`. Command: `pytest tests`. Proof: passes. Acceptance: AC-06.
-- [ ] [AI] REFACTOR: both cycles' docstrings; in `$APP/README.md`, the exit table's internal row reads "an internal
+      assertion. Acceptance: AC-03. - Done: the test in `test_cli.py`, patching `process_stream` as its neighbours do;
+      `process_stream` and `_ProcessingState`'s event steps return `InternalFault`; `run_cli` holds a stub returning 2
+      for `UnknownAccount` with no line. - Proof: fails on its assertion,
+      `('', '', 2) == ('', 'error: internal: ACC-003 is not a configured account\\n', 2)`; pyright 0 errors.
+- [x] [AI] GREEN: `run_cli` prints `error: internal: ACC-003 is not a configured account` and exits 2 through one
+      `match` over `InternalFault` ending in `assert_never`. Command: `pytest tests`. Proof: passes. Acceptance:
+      AC-06. - Done: `run_cli` writes `error: internal: ` and `_describe_internal_fault(fault)`, one `match` over
+      `InternalFault` ending in `assert_never`; the currency mismatch's line is unchanged. - Proof: pytest 161 passed, 1
+      xfailed; pyright 0 errors.
+- [x] [AI] REFACTOR: both cycles' docstrings; in `$APP/README.md`, the exit table's internal row reads "an internal
       fault" for "a currency mismatch", and the sentence after the table names the new line and says no input reaches
-      it. Command: `pytest tests`. Proof: passes. Acceptance: AC-14.
-- [ ] [AI] Move `$APP/tests/unit/test_processing.py` to `$APP/tests/unit/domain/ledger/test_ledger.py` and the AMB-036
+      it. Command: `pytest tests`. Proof: passes. Acceptance: AC-14. - Done: `process_stream`'s and `_process_file`'s
+      docstrings name the internal fault; the app README's exit row reads "an internal fault, which only a bug brings",
+      and the sentence after the table gives the unknown account's line and says no input reaches it. - Proof: pytest
+      161 passed, 1 xfailed; Prettier clean.
+- [x] [AI] Move `$APP/tests/unit/test_processing.py` to `$APP/tests/unit/domain/ledger/test_ledger.py` and the AMB-036
       test into it. Command: `pytest tests`, `inventory.py --compare`. Proof: passes; no name lost. Acceptance: AC-03,
-      AC-13.
-- [ ] [AI] Update the architecture as built: L3's `ledger/` rows and diagram box, L4's ledger line, the Dynamic View's
+      AC-13. - Done: `tests/unit/domain/ledger/test_ledger.py` (git mv), holding the four AMB-034 tests, the AMB-036
+      test moved from `test_account.py`, and the unconfigured-account test; its docstring names all three. - Proof:
+      pytest 161 passed, 1 xfailed; `inventory.py --compare`: every baseline name kept with its count, 5 added; literals
+      kept (115 names); cited 60, missing 0.
+- [x] [AI] Update the architecture as built: L3's `ledger/` rows and diagram box, L4's ledger line, the Dynamic View's
       calls, and the Domain Model's Ledger paragraph; and the docstring of `$SRC/domain/ledger/__init__.py`, which says
-      "the log of every account". Proof: every name exists. Acceptance: AC-14.
+      "the log of every account". Proof: every name exists. Acceptance: AC-14. - Done: L3's prose, the `ledger` box, and
+      one `ledger/ledger` row for the three; L4's `ledger/ledger` block and `stream_processing`'s `EventLog` logs and
+      `InternalFault`; the Dynamic View's `Ledger.process_event`, `Ledger.close_day`, `build_report(ledger, ...)`, and
+      the unknown account's line; the Domain Model's `Ledger` row and paragraph; Reading the Code steps 3 and 5;
+      `ledger/__init__.py` and `ledger/ruff.toml`'s comment. Beyond the item, the stale "ledger service" in
+      `/README.md`'s domain paragraph and `specs/apps/account-ledger/README.md` names the `Ledger`. - Proof:
+      `doc_sweep.py` reports no missing identifier, path, or link; every line within 120; Prettier clean.
 
 ### Phase 3 Gate
 
-- [ ] [AI] Run `sh local-tmp/restructure/gate.sh`; `grep -rn --include='*.py' "assert " $SRC | grep -v assert_never`
-      prints nothing. Proof: exit 0. Acceptance: AC-02, AC-03, AC-04, AC-06.
+- [x] [AI] Run `sh local-tmp/restructure/gate.sh`; `grep -rn --include='*.py' "assert " $SRC | grep -v assert_never`
+      prints nothing. Proof: exit 0. Acceptance: AC-02, AC-03, AC-04, AC-06. - Done 20:11: `gate.sh` exit 0 (GATE
+      PASSED): test:quick, test:integration, and test:e2e pass, 161 passed and 1 xfailed across the layers, coverage
+      95%; corpus equal; every baseline name kept, 5 added; literals kept; cited 60, missing 0; Markdown and hygiene
+      clean. - Proof: the `assert` grep prints nothing.
 - [ ] [AI] Commit as `refactor(cli): run every account through the Ledger`, with the WORKLOG entry and the Execution
       Record line, and push. Proof: the hash and range. Acceptance: AC-16.
 

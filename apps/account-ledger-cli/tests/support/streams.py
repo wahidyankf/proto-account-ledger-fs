@@ -7,9 +7,7 @@ from account_ledger.domain.account.domain_events import (
     InterestAdjusted,
     InterestCapitalized,
 )
-from account_ledger.domain.ledger.event_log import (
-    Log,
-)
+from account_ledger.domain.account.event_log import EventLog
 from account_ledger.domain.model.config import AccountOpeningIn
 from account_ledger.domain.model.events import (
     Authorization,
@@ -125,20 +123,20 @@ def make_reversal(event: str, day: int, reverses: str, value: int | None = None,
     return Reversal(IncomingId(event), Day(day), AccountId(account), Day(value or day), target)
 
 
-def list_fee_ids(log: Log) -> list[str]:
+def list_fee_ids(log: EventLog) -> list[str]:
     """The generated ID of every fee in the log, in the order generated."""
-    return [entry.event.id.format() for entry in log if isinstance(entry, FeeCharged)]
+    return [entry.event.id.format() for entry in log.entries if isinstance(entry, FeeCharged)]
 
 
-def list_refund_ids(log: Log) -> list[str]:
+def list_refund_ids(log: EventLog) -> list[str]:
     """The generated ID of every fee refund in the log, in the order generated."""
-    return [entry.event.id.format() for entry in log if isinstance(entry, FeeRefunded)]
+    return [entry.event.id.format() for entry in log.entries if isinstance(entry, FeeRefunded)]
 
 
-def list_interest_amounts(log: Log) -> list[tuple[str, Money]]:
+def list_interest_amounts(log: EventLog) -> list[tuple[str, Money]]:
     """The generated ID and signed amount of every interest event in the log, in the order generated."""
     amounts: list[tuple[str, Money]] = []
-    for entry in log:
+    for entry in log.entries:
         match entry:
             case InterestAccrued(event=InterestAccrual(id=interest_id, amount=amount)):
                 amounts.append((interest_id.format(), amount.money))
@@ -149,10 +147,12 @@ def list_interest_amounts(log: Log) -> list[tuple[str, Money]]:
     return amounts
 
 
-def list_capitalization_amounts(log: Log) -> list[tuple[str, Money]]:
+def list_capitalization_amounts(log: EventLog) -> list[tuple[str, Money]]:
     """The generated ID and amount of every capitalization in the log, in the order generated."""
     return [
-        (entry.event.id.format(), entry.event.amount.money) for entry in log if isinstance(entry, InterestCapitalized)
+        (entry.event.id.format(), entry.event.amount.money)
+        for entry in log.entries
+        if isinstance(entry, InterestCapitalized)
     ]
 
 

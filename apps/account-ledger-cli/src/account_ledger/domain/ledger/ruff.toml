@@ -1,4 +1,4 @@
-# The ledger service works on the log and the accounts' histories; the report and the stream processing build on it.
+# The Ledger works on the one log and every account; the report and the stream processing build on it.
 extend = "../../../../pyproject.toml"
 
 [lint]

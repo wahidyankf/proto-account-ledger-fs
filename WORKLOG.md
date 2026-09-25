@@ -8,6 +8,7 @@ earlier work is claimed.
 
 | When                   | What                                                                                        |
 | ---------------------- | ------------------------------------------------------------------------------------------- |
+| 2026-09-25 19:58–20:12 | Restructure Phase 3: the Ledger class; an unknown account is an internal fault, no assert   |
 | 2026-09-25 19:37–19:58 | Restructure Phase 2: AccountIn holds every account rule; D8 table over take; tests merged   |
 | 2026-09-25 19:18–19:37 | Restructure Phase 1: values without bases; take, directions, instalments; CHALLENGE moved   |
 | 2026-09-25 19:05–19:18 | Restructure Phase 0: baseline gates, corpus, inventory, literals, timings, audits recorded  |

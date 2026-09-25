@@ -58,13 +58,13 @@ standard streams, in UTF-8 whatever the locale, since the report prints the minu
 The shell holds every effect and every raw value; the adapters translate between text and the domain's types; the domain
 holds every business rule. The adapters and the domain are pure. Every dependency points inward: from the shell to the
 adapters and the domain, from the adapters to the domain's types, and, inside the domain, from stream processing to the
-ledger service and the report, from those to the Account aggregate, and from the aggregate to the values. Each layer is
-a place in the package: the shell is `cli.py` and `challenge.py` at its root, the adapters are `adapters/`, and the
-domain is `domain/`, with `stream_processing.py` and `report.py` at its root, the ledger service in `domain/ledger/`,
-the aggregate in `domain/account/`, and the values in `domain/model/`. Each domain package has its own `ruff.toml` that
-refuses any import of the layers above it, and every one refuses `account_ledger.adapters` and `account_ledger.cli`
-(TID251). The values decide nothing. Below them sits `common/`, the tools with no ledger meaning: every layer may import
-it, and its own `ruff.toml` refuses any import of the other three.
+Ledger and the report, from those to the Account aggregate, and from the aggregate to the values. Each layer is a place
+in the package: the shell is `cli.py` and `challenge.py` at its root, the adapters are `adapters/`, and the domain is
+`domain/`, with `stream_processing.py` and `report.py` at its root, the Ledger in `domain/ledger/`, the aggregate in
+`domain/account/`, and the values in `domain/model/`. Each domain package has its own `ruff.toml` that refuses any
+import of the layers above it, and every one refuses `account_ledger.adapters` and `account_ledger.cli` (TID251). The
+values decide nothing. Below them sits `common/`, the tools with no ledger meaning: every layer may import it, and its
+own `ruff.toml` refuses any import of the other three.
 
 ```text
   shell      +--------------------------------------------------------------------------------+
@@ -89,12 +89,12 @@ it, and its own `ruff.toml` refuses any import of the other three.
                               +--------------------------+
                                 | each event, each close       | each day
                                 v                              v
-  ledger service   +----------------------------------+   +----------------------------+
-  domain/ledger/   | processing: IDs across accounts, |   | report, the read model:    |
-                   |   the cross-account check        |   | a day as data, read from   |
-                   | end_of_day: each step on every   |   | the log and each account's |
-                   |   account, in account order      |   | entries                    |
-                   | event_log: the log               |   | domain/report.py           |
+  ledger           +----------------------------------+   +----------------------------+
+  domain/ledger/   | ledger: Ledger, the config and   |   | report, the read model:    |
+                   |   the one log; IDs and the       |   | a day as data, read from   |
+                   |   cross-account check; each      |   | the Ledger's log and each  |
+                   |   close step on every account    |   | account's entries          |
+                   |   in account order               |   | domain/report.py           |
                    +----------------------------------+   +----------------------------+
                                 | one account at a time                |
   ---------------------------------------------------------------------------------------------------
@@ -131,9 +131,7 @@ it, and its own `ruff.toml` refuses any import of the other three.
 | `render`                 | the report as text: banners, box tables, amounts with `−`, notes, and errors              |
 | `stream_processing`      | the stream in listed order, each day closed on time, with each day's log and report       |
 | `report`                 | the read model: a day's events, end-of-day rows, closings, restatements, holds, errors    |
-| `ledger/processing`      | idempotency and the cross-account check on the log; then the account decides              |
-| `ledger/end_of_day`      | a day's close, each step on every account: fees, interest, then capitalization            |
-| `ledger/event_log`       | the append-only log of every account's domain events, and each account's `AccountIn`      |
+| `ledger/ledger`          | `Ledger`: the one log; IDs and the cross-account check, then the account; a day's close   |
 | `account/account`        | `AccountIn[M]`: the Account aggregate, one account's entries and every rule about them    |
 | `account/authorizations` | the four states, `apply_settlement` as the D8 table, and each authorization's record      |
 | `account/event_log`      | `EventLog`: entries in log order, appended to, searched, and selected by account          |
@@ -182,8 +180,12 @@ account/event_log
 account/account
           AccountIn[M: (Aed, Bhd)] = id + opening M + log: EventLog, its own entries; every rule a method
           type Account = AccountIn[Aed] | AccountIn[Bhd]; a method works on either
-ledger/event_log
-          Log = tuple[LogEntry, ...]     find_history(log, opening) -> AccountIn[M]
+ledger/ledger
+          Ledger = config: LedgerConfig + log: EventLog     Ledger.open(config), an empty log
+          find_account(opening) -> Account     list_accounts() -> Account..., in the configured order
+          process_event(event, today) -> Result[Ledger, InternalFault]
+          close_day(today) -> Result[Ledger, CurrencyMismatch]
+          InternalFault = CurrencyMismatch | UnknownAccount(account)
 account/authorizations
           AuthorizationState = Approved(hold) | PartiallySettled(settled_amount, hold)
                                  | Declined(requested_amount) | Settled(settled_amount)
@@ -194,8 +196,8 @@ report    DayReport = day, processed_events: Processed..., closing_balances, ava
                       restatements: Restatement..., authorizations: AuthorizationRecord..., errors,
                       end_of_day: (Generated | Capitalized | NothingGenerated)...
 stream_processing
-          ProcessedStream = reports: DayReport..., logs: Log...     find_report(day), find_log(day)
-          process_stream(stream, config) -> Result[ProcessedStream, CurrencyMismatch]
+          ProcessedStream = reports: DayReport..., logs: EventLog...     find_report(day), find_log(day)
+          process_stream(stream, config) -> Result[ProcessedStream, InternalFault]
 stream    parse_stream(text, config) -> Result[tuple[IncomingEvent, ...], StreamError(line, message)]
 ```
 
@@ -225,20 +227,20 @@ against an authorization the log does not know, is force-posted: it debits its a
 process_stream, for each event in listed order, D the current day
   1. the event is booked after D: close D (a and b), open D + 1, and look again; a day with no events closes too;
      no day closes after the window's last, so an event booked after the window reaches no day's log or report
-  2. otherwise: ledger.processing.process_event(log, event, D) ---> log + one entry, and a credit's instalments
+  2. otherwise: Ledger.process_event(event, D) ---> the ledger + one entry, and a credit's instalments
        idempotency first, across every account; then a reversal whose target is on another account;
-       then the account decides from its own history, by kind; a reversal checked against its target in order
+       then the account decides from its own entries, by kind; a reversal checked against its target in order
        an event booked before D is late and is processed on D (AMB-015)
 process_stream, once every event is processed: close every day left in the window
 
 closing day D
-  a. ledger.end_of_day.close_day(log, D): each step on every account in turn; step 1 in account.fees,
-     steps 2 and 3 in account.interest, each reading one account's history
+  a. Ledger.close_day(D): each step on every account in turn; step 1 AccountIn.assess_fees,
+     steps 2 and 3 AccountIn.accrue_interest and .capitalize_interest, each reading one account's entries
        step 1  fees:     each day first..D: negative with no fee in force -> Fee; non-negative with one -> FeeRefund
        step 2  interest: each day first..D: daily interest of its base, less what was generated for it
                          -> InterestAccrual for D, InterestAdjustment for an earlier day
        step 3  capitalization, on a capitalization day: accrued interest above zero -> Capitalization
-  b. report.build_report(log, D, reported_closings) ---> DayReport: what D processed and generated, its closings,
+  b. report.build_report(ledger, D, reported_closings) ---> DayReport: what D processed and generated, its closings,
        and each earlier closing that changed since last reported
 cli, after the last day
   render.render_reports(reports) ---> the whole text, then one write and one flush to standard output
@@ -247,7 +249,9 @@ cli, after the last day
 Every balance is recomputed from the log whenever it is asked for (D7), so a late event value-dated in the past changes
 every later closing without any stored balance being updated. Each sum of money returns a `CurrencyMismatch` rather than
 a wrong total when it meets two currencies. The reader keeps every effect in its account's currency, so only a bug
-brings one; it ends the processing, and `run_cli` prints `error: internal: ` and exits 2.
+brings one; it ends the processing, and `run_cli` prints `error: internal: ` and exits 2. An event on an account the
+ledger does not hold is the other internal fault, `UnknownAccount`, and ends it the same way; the reader refuses such an
+event first, so no input reaches it.
 
 ## Domain Model
 
@@ -259,7 +263,7 @@ type in `domain/` belongs to it, and none outside `domain/` holds a ledger rule.
 | an account, in its currency        | `AccountIn[M]`, the Account aggregate, with `M` either `Aed` or `Bhd`         |
 | an account as the brief opens it   | `AccountOpeningIn[M]`: its `AccountId` and opening balance, in the config     |
 | an event in the stream             | `IncomingEvent`: `Credit`, `Debit`, `Authorization`, `Settlement`, `Reversal` |
-| the ledger, append-only            | `Log`, the one tuple of every account's domain events                         |
+| the ledger, append-only            | `Ledger`: the configured accounts and one `EventLog` of every domain event    |
 | a hold                             | the `hold` of an `Approved` or a `PartiallySettled` authorization             |
 | the closing and available balances | `compute_closing` and `compute_available`, methods of `AccountIn`             |
 | an overdraft fee, and its refund   | `Fee` and `FeeRefund`, recorded as `FeeCharged` and `FeeRefunded`             |
@@ -293,12 +297,14 @@ It records each fact as a **domain event**, one kind per fact: `CreditPosted`, `
 `SettlementForcePosted`, `EventRejected`, and the rest listed in L4. The aggregate's balances are not stored; each is
 recomputed from its domain events whenever it is asked for (D7).
 
-**The Ledger service**, `domain/ledger/`, is the only code that sees every account at once. It keeps the one log
-(AMB-014, AMB-024), refuses what spans accounts before any account decides, an event ID seen before (AMB-034) and a
-reversal whose target is on another account (AMB-036), and runs a day's close as each step on every account in turn.
+**The Ledger**, `Ledger` in `domain/ledger/ledger.py`, is the only object that sees every account at once. It holds the
+configuration and the one log (AMB-014, AMB-024), refuses what spans accounts before any account decides, an event ID
+seen before (AMB-034) and a reversal whose target is on another account (AMB-036), and runs a day's close as each step
+on every account in turn. `find_account` builds an account's aggregate from its opening and its own entries, and an
+event on an account it does not hold is returned as `UnknownAccount`. Each method returns a new `Ledger`.
 
-**The report** is a read model: `domain/report.py` reads the log and each account and writes nothing back.
-`stream_processing` drives the service and the report over the stream, day by day.
+**The report** is a read model: `domain/report.py` reads the Ledger's log and each account and writes nothing back.
+`stream_processing` drives the Ledger and the report over the stream, day by day.
 
 ## Reading the Code
 
@@ -307,9 +313,9 @@ To read the code for the first time, follow one day through it, in this order:
 1. `cli.py`, `run_cli`: where the program starts, and how every failure becomes an exit status.
 2. `domain/stream_processing.py`: the loop over events, where a later day's event closes the current day first, as the
    dynamic view above draws.
-3. `domain/ledger/processing.py`, `process_event`: duplicates and cross-account reversals caught on the whole log.
+3. `domain/ledger/ledger.py`, `Ledger.process_event`: duplicates and cross-account reversals caught on the whole log.
 4. `domain/account/account.py`, `AccountIn.decide_event`: what one incoming event adds to its account.
-5. `domain/ledger/end_of_day.py`, `close_day`: the three steps of a day's close, each run on every account.
+5. `Ledger.close_day`: the three steps of a day's close, each run on every account.
 6. `AccountIn.assess_fees`: when a day is charged an overdraft fee, and when that fee is refunded.
 7. `AccountIn.accrue_interest` and `.capitalize_interest`: each day's interest, its adjustment when a closing changes,
    and its capitalization.

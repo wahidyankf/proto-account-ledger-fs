@@ -5,12 +5,14 @@ import os
 import sys
 from collections.abc import Callable, Sequence
 from pathlib import Path
-from typing import TextIO
+from typing import TextIO, assert_never
 
 from account_ledger.adapters.render import render_reports
 from account_ledger.adapters.stream_csv import parse_stream
 from account_ledger.challenge import CHALLENGE
 from account_ledger.common.result import Err, Ok, Result
+from account_ledger.domain.ledger.ledger import InternalFault, UnknownAccount
+from account_ledger.domain.model.money import CurrencyMismatch
 from account_ledger.domain.stream_processing import (
     process_stream,
 )
@@ -37,7 +39,8 @@ def run_cli(argv: Sequence[str], read_text: Reader, out: TextIO, err: TextIO) ->
 
 
 def _process_file(argv: Sequence[str], read_text: Reader, out: TextIO, err: TextIO) -> int:
-    """The exit code: 0 for a written report, 2 for a wrong argument count, an unreadable file, or a bad stream."""
+    """The exit code: 0 for a written report, 2 for a wrong argument count, an unreadable file, a bad stream, or an
+    internal fault."""
     if len(argv) != 1:
         err.write(f"{USAGE}\n")
         return 2
@@ -52,12 +55,23 @@ def _process_file(argv: Sequence[str], read_text: Reader, out: TextIO, err: Text
         return 2
     processed = process_stream(events.value, CHALLENGE)
     if isinstance(processed, Err):
-        mismatch = processed.error
-        err.write(f"error: internal: {mismatch.found_currency} met where {mismatch.expected_currency} was required\n")
+        err.write(f"error: internal: {_describe_internal_fault(processed.error)}\n")
         return 2
     out.write(render_reports(processed.value.reports))
     out.flush()  # a closed pipe surfaces here, inside the handlers, not at the exit-time flush
     return 0
+
+
+def _describe_internal_fault(fault: InternalFault) -> str:
+    """What a fault only a bug brings met: the currency found where another was required, or an account the ledger
+    does not hold."""
+    match fault:
+        case CurrencyMismatch():
+            return f"{fault.found_currency} met where {fault.expected_currency} was required"
+        case UnknownAccount():
+            return f"{fault.account.value} is not a configured account"
+        case _:
+            assert_never(fault)
 
 
 def _describe_fault(fault: OSError | UnicodeDecodeError) -> str:

@@ -11,9 +11,7 @@ from account_ledger.domain.account.domain_events import (
     SettlementApplied,
     SettlementForcePosted,
 )
-from account_ledger.domain.ledger.event_log import (
-    find_history,
-)
+from account_ledger.domain.ledger.ledger import Ledger
 from account_ledger.domain.model.events import Settlement
 from account_ledger.domain.model.ids import AuthorizationId, Day, IncomingId, InstalmentId
 from account_ledger.domain.model.money import Aed, AmountIn, Bhd
@@ -40,7 +38,7 @@ def test_c1_day_2_closes_at_minus_370_at_end_of_day_5_before_fees() -> None:
     AED −370.00." """
     log = unwrap_ok(process_stream(build_brief_stream(), CHALLENGE)).find_log(Day(5))
 
-    assert unwrap_ok(find_history(log, ACC_001).compute_closing(Day(2))) == make_aed("-370.00")
+    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001).compute_closing(Day(2))) == make_aed("-370.00")
 
 
 def test_c5_a_hold_reduces_available_balance_but_not_ledger_balance() -> None:
@@ -59,7 +57,7 @@ def test_c5_auth_b_is_declined() -> None:
 
     auth_b = [
         record.state
-        for record in find_history(log, ACC_001).list_records()
+        for record in Ledger(CHALLENGE, log).find_account(ACC_001).list_records()
         if record.authorization.authorization == AuthorizationId("Auth-B")
     ]
     assert auth_b == [Declined(AmountIn(make_aed("90.00")))]
@@ -93,7 +91,7 @@ def test_c4_e6_is_force_posted_for_180() -> None:
     assert list_settlements(log, settlement.id.value) == [SettlementForcePosted(settlement, Day(4))]
     assert list_states(log, "Auth-Z") == []
     assert list_states(log, "Auth-A") == [Settled(AmountIn(make_aed("185.00")))]
-    assert unwrap_ok(find_history(log, ACC_001).compute_closing(Day(4))) == make_aed("285.00")
+    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001).compute_closing(Day(4))) == make_aed("285.00")
 
 
 def test_c7_e10_posts_3_333_3_333_3_334() -> None:
@@ -101,12 +99,12 @@ def test_c7_e10_posts_3_333_3_333_3_334() -> None:
     10.002, so E10 posts 3.333, 3.333, and 3.334, each value-dated Day 5, summing to the 10.000 sent."""
     log = unwrap_ok(process_stream(build_brief_stream(), CHALLENGE)).find_log(Day(6))
 
-    parts = [entry.event for entry in log if isinstance(entry, InstalmentPosted)]
+    parts = [entry.event for entry in log.entries if isinstance(entry, InstalmentPosted)]
     assert [(part.id, part.amount, part.value_date) for part in parts] == [
         (InstalmentId(IncomingId("E10"), number), AmountIn(make_bhd(text)), Day(5))
         for number, text in ((1, "3.333"), (2, "3.333"), (3, "3.334"))
     ]
-    assert unwrap_ok(find_history(log, ACC_002).compute_closing(Day(5))) == make_bhd("10.000")
+    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_002).compute_closing(Day(5))) == make_bhd("10.000")
 
 
 def test_c2_e7_causes_three_fees_all_value_dated_day_5() -> None:
@@ -115,7 +113,7 @@ def test_c2_e7_causes_three_fees_all_value_dated_day_5() -> None:
     log = unwrap_ok(process_stream(build_brief_stream(), CHALLENGE)).find_log(Day(5))
 
     assert list_fee_ids(log) == ["FEE-001-D2@D5", "FEE-001-D4@D5", "FEE-001-D5@D5"]
-    fees = [entry.event for entry in log if isinstance(entry, FeeCharged)]
+    fees = [entry.event for entry in log.entries if isinstance(entry, FeeCharged)]
     assert [(fee.amount, fee.value_date) for fee in fees] == [(AmountIn(make_aed("25.00")), Day(5))] * 3
 
 
@@ -125,7 +123,7 @@ def test_c6_e9_restores_days_2_to_4_and_refunds_the_fees() -> None:
     value-dated Day 6."""
     log = unwrap_ok(process_stream(build_brief_stream(), CHALLENGE)).find_log(Day(6))
 
-    assert [unwrap_ok(find_history(log, ACC_001).compute_closing(Day(day))) for day in (2, 3, 4)] == [
+    assert [unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001).compute_closing(Day(day))) for day in (2, 3, 4)] == [
         make_aed("250.00"),
         make_aed("650.00"),
         make_aed("285.00"),
@@ -159,5 +157,5 @@ def test_c6_day_6_closes_at_285_76_not_285_79() -> None:
     ACC-001 capitalizes 0.76 and closes Day 6 at 285.76, not 285.79."""
     log = unwrap_ok(process_stream(build_brief_stream(), CHALLENGE)).find_log(Day(6))
 
-    assert unwrap_ok(find_history(log, ACC_001).compute_closing(Day(5))) == make_aed("210.00")
-    assert unwrap_ok(find_history(log, ACC_001).compute_closing(Day(6))) == make_aed("285.76")
+    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001).compute_closing(Day(5))) == make_aed("210.00")
+    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001).compute_closing(Day(6))) == make_aed("285.76")

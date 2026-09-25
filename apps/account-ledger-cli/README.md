@@ -26,10 +26,10 @@ Specification: [specs/apps/account-ledger/cli/](../../specs/apps/account-ledger/
 
 The domain is laid out in DDD terms. `domain/model/` holds the values: money, IDs, the brief's events, and the accounts.
 `domain/account/` is the Account aggregate: one account's entries, the domain events it records, and every rule about
-one account, each a method of `account.py`'s `AccountIn`. `domain/ledger/` is the ledger service: the log of every
-account, idempotency, the cross-account check, and the day's close. `domain/report.py` is the report read model, and
-`domain/stream_processing.py` drives the stream day by day. Each package's `ruff.toml` refuses an import from the layers
-above it (TID251).
+one account, each a method of `account.py`'s `AccountIn`. `domain/ledger/` is the `Ledger`: the configured accounts and
+the one log of them all, idempotency, the cross-account check, and the day's close. `domain/report.py` is the report
+read model, and `domain/stream_processing.py` drives the stream day by day. Each package's `ruff.toml` refuses an import
+from the layers above it (TID251).
 
 Every level is plain pytest, written test-first; there is no Gherkin corpus and no step binding.
 
@@ -84,20 +84,22 @@ closed exit vocabulary, standard output for the report and standard error for ev
 signal statuses. The floor tier has no `--help`, so this table publishes the statuses instead; that is the adaptation
 D13 records.
 
-| Status | When                                         | Standard output | Standard error                           |
-| ------ | -------------------------------------------- | --------------- | ---------------------------------------- |
-| `0`    | the stream was processed, refusals included  | the report      | nothing                                  |
-| `2`    | no argument, or more than one                | nothing         | `usage: account-ledger-cli <stream.csv>` |
-| `2`    | the file cannot be read                      | nothing         | `error: cannot read PATH: REASON`        |
-| `2`    | the stream is malformed                      | nothing         | `error: line N: ...`                     |
-| `2`    | a currency mismatch, which only a bug brings | nothing         | `error: internal: ...`                   |
-| `2`    | any other failure, never with a traceback    | nothing         | `error: internal failure: TYPE`          |
-| `141`  | output closed early, as by `\| head`         | what was taken  | nothing                                  |
-| `130`  | interrupted                                  | what was taken  | nothing                                  |
+| Status | When                                        | Standard output | Standard error                           |
+| ------ | ------------------------------------------- | --------------- | ---------------------------------------- |
+| `0`    | the stream was processed, refusals included | the report      | nothing                                  |
+| `2`    | no argument, or more than one               | nothing         | `usage: account-ledger-cli <stream.csv>` |
+| `2`    | the file cannot be read                     | nothing         | `error: cannot read PATH: REASON`        |
+| `2`    | the stream is malformed                     | nothing         | `error: line N: ...`                     |
+| `2`    | an internal fault, which only a bug brings  | nothing         | `error: internal: ...`                   |
+| `2`    | any other failure, never with a traceback   | nothing         | `error: internal failure: TYPE`          |
+| `141`  | output closed early, as by `\| head`        | what was taken  | nothing                                  |
+| `130`  | interrupted                                 | what was taken  | nothing                                  |
 
 `REASON` is `no such file` for a missing file, `not UTF-8 text` for one that does not decode, and the operating system's
-message otherwise. A currency mismatch prints `error: internal: FOUND met where EXPECTED was required`. Both streams are
-written as UTF-8 whatever the locale, because the report prints `−` (U+2212) for a negative amount.
+message otherwise. A currency mismatch prints `error: internal: FOUND met where EXPECTED was required`, and an event on
+an account the ledger does not hold prints `error: internal: ACC-NNN is not a configured account`; no input reaches the
+second, because the stream reader refuses an unconfigured account first. Both streams are written as UTF-8 whatever the
+locale, because the report prints `−` (U+2212) for a negative amount.
 
 ## Known Weakness
 

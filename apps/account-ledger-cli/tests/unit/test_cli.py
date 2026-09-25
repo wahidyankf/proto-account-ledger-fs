@@ -9,6 +9,8 @@ from account_ledger.adapters.render import render_reports
 from account_ledger.challenge import CHALLENGE
 from account_ledger.cli import run_cli
 from account_ledger.common.result import Err, Ok, Result
+from account_ledger.domain.ledger.ledger import UnknownAccount
+from account_ledger.domain.model.ids import AccountId
 from account_ledger.domain.model.money import CurrencyMismatch
 from account_ledger.domain.stream_processing import (
     process_stream,
@@ -100,6 +102,26 @@ def test_a_currency_mismatch_exits_2_naming_both_currencies(monkeypatch: pytest.
     exit_code = run_cli(["streams/challenge.csv"], read_brief, out, err)
 
     assert (out.getvalue(), err.getvalue(), exit_code) == ("", "error: internal: BHD met where AED was required\n", 2)
+
+
+def test_an_unknown_account_exits_2_naming_it(monkeypatch: pytest.MonkeyPatch) -> None:
+    """AC-36: processing that returns an account the ledger does not hold, which only a bug brings since the stream
+    reader refuses one first, prints `error: internal: ` with the account, prints no report, and exits 2."""
+    out, err = io.StringIO(), io.StringIO()
+
+    def process_with_unknown_account(*_: object) -> Err[UnknownAccount]:
+        """Processing that meets an event on ACC-003."""
+        return Err(UnknownAccount(AccountId("ACC-003")))
+
+    monkeypatch.setattr(cli, "process_stream", process_with_unknown_account)
+
+    exit_code = run_cli(["streams/challenge.csv"], read_brief, out, err)
+
+    assert (out.getvalue(), err.getvalue(), exit_code) == (
+        "",
+        "error: internal: ACC-003 is not a configured account\n",
+        2,
+    )
 
 
 def test_an_internal_failure_exits_2_without_a_traceback(monkeypatch: pytest.MonkeyPatch) -> None:
