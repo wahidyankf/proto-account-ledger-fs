@@ -2,6 +2,7 @@
 
 from typing import assert_never
 
+from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.authorizations import (
     AuthorizationState,
     NoTransition,
@@ -37,7 +38,6 @@ from account_ledger.domain.model.events import (
 )
 from account_ledger.domain.model.ids import Day, InstalmentCount, InstalmentId
 from account_ledger.domain.model.money import CurrencyMismatch, split_amount_of
-from account_ledger.domain.model.result import Err, Ok, Result
 from account_ledger.domain.reversals import check_reversal
 
 

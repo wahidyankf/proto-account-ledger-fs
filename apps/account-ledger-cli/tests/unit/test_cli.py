@@ -7,9 +7,9 @@ import pytest
 from account_ledger import cli
 from account_ledger.adapters.render import render_reports
 from account_ledger.cli import run_cli
+from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.money import CurrencyMismatch
-from account_ledger.domain.model.result import Err, Ok, Result
 from account_ledger.domain.replay import replay_stream
 from support.brief_stream import BRIEF_CSV, build_brief_stream
 from support.results import unwrap_ok

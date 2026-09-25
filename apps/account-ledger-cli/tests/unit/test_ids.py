@@ -2,6 +2,7 @@
 
 import pytest
 
+from account_ledger.common.result import Err, Ok
 from account_ledger.domain.model.ids import (
     AccountId,
     AuthorizationId,
@@ -17,7 +18,6 @@ from account_ledger.domain.model.ids import (
     format_id,
     parse_event_id,
 )
-from account_ledger.domain.model.result import Err, Ok
 from support.results import unwrap_ok
 
 

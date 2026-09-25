@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from enum import Enum, auto
 from types import MappingProxyType
 
+from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.authorizations import AuthorizationRecord, list_records
 from account_ledger.domain.balances import compute_available_of, compute_closing_of
 from account_ledger.domain.interest import list_accrued_days_of
@@ -33,7 +34,6 @@ from account_ledger.domain.model.events import (
 )
 from account_ledger.domain.model.ids import AccountId, Day
 from account_ledger.domain.model.money import CurrencyMismatch, Money
-from account_ledger.domain.model.result import Err, Ok, Result
 
 
 @dataclass(frozen=True, slots=True)

@@ -8,6 +8,7 @@ import csv
 import io
 from dataclasses import dataclass
 
+from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.model.config import AnyAccount, LedgerConfig
 from account_ledger.domain.model.events import (
     AnyAmount,
@@ -46,7 +47,6 @@ from account_ledger.domain.model.money import (
     format_digits,
     split_amount_of,
 )
-from account_ledger.domain.model.result import Err, Ok, Result
 
 COLUMNS = ("event", "booked", "type", "account", "amount", "value_date", "reference", "instalments", "final")
 KINDS = ("CREDIT", "DEBIT", "AUTHORIZATION", "SETTLEMENT", "REVERSAL")

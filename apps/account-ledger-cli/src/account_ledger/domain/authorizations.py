@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import assert_never
 
+from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.model.config import Account
 from account_ledger.domain.model.event_log import (
     Accepted,
@@ -27,7 +28,6 @@ from account_ledger.domain.model.money import (
     sum_amounts,
     sum_money,
 )
-from account_ledger.domain.model.result import Err, Ok, Result
 
 
 @dataclass(frozen=True, slots=True)

@@ -2,6 +2,7 @@
 
 import pytest
 
+from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.authorizations import (
     Approved,
     AuthorizationState,
@@ -21,7 +22,6 @@ from account_ledger.domain.model.event_log import ForcePosted, SettlementAccepte
 from account_ledger.domain.model.events import Capture
 from account_ledger.domain.model.ids import Day
 from account_ledger.domain.model.money import Aed, Amount
-from account_ledger.domain.model.result import Err, Ok, Result
 from account_ledger.domain.replay import replay_stream
 from support.results import unwrap_ok
 from support.states import list_settlements, list_states

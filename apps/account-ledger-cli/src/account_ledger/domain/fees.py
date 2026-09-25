@@ -1,13 +1,13 @@
 """Fees: an overdraft fee for each day that closes negative, refunded once the day closes at or above zero (AMB-002,
 AMB-004, AMB-011, AMB-027)."""
 
+from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.balances import compute_closing
 from account_ledger.domain.model.config import Account, AnyAccount, is_aed
 from account_ledger.domain.model.event_log import Accepted, Log, append_entry
 from account_ledger.domain.model.events import Fee, FeeRefund, Reversal
 from account_ledger.domain.model.ids import AccountId, Day, FeeId, RefundId
 from account_ledger.domain.model.money import Aed, Bhd, CurrencyMismatch, compute_overdraft_fee_of
-from account_ledger.domain.model.result import Err, Ok, Result
 
 
 def assess_fees(log: Log, account: AnyAccount, today: Day, first_day: Day) -> Result[Log, CurrencyMismatch]:

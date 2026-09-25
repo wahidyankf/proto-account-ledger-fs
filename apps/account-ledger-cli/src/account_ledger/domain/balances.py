@@ -2,6 +2,7 @@
 
 from typing import assert_never
 
+from account_ledger.common.result import Err, Result
 from account_ledger.domain.authorizations import sum_holds
 from account_ledger.domain.model.config import Account, AnyAccount, is_aed
 from account_ledger.domain.model.event_log import (
@@ -28,7 +29,6 @@ from account_ledger.domain.model.events import (
 )
 from account_ledger.domain.model.ids import AccountId, Day
 from account_ledger.domain.model.money import Aed, Bhd, CurrencyMismatch, Money, sum_money
-from account_ledger.domain.model.result import Err, Result
 
 
 def _list_effects(log: Log, account_id: AccountId) -> list[tuple[Day, Money]]:

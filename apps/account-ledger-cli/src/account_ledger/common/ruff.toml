@@ -1,0 +1,10 @@
+# The common tools know no ledger: every layer may import them, and they import nothing from the application.
+extend = "../../../pyproject.toml"
+
+[lint]
+extend-select = ["TID251"]
+
+[lint.flake8-tidy-imports.banned-api]
+"account_ledger.domain".msg = "a common tool knows no ledger rule or value"
+"account_ledger.adapters".msg = "a common tool never imports an adapter"
+"account_ledger.cli".msg = "a common tool never imports the shell"

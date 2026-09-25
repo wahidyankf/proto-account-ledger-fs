@@ -2,13 +2,13 @@
 
 from collections.abc import Callable
 
+from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.fees import assess_fees
 from account_ledger.domain.interest import accrue_interest, capitalize_interest
 from account_ledger.domain.model.config import AnyAccount, LedgerConfig
 from account_ledger.domain.model.event_log import Log
 from account_ledger.domain.model.ids import Day
 from account_ledger.domain.model.money import CurrencyMismatch
-from account_ledger.domain.model.result import Err, Ok, Result
 
 type _Step = Callable[[Log, AnyAccount], Result[Log, CurrencyMismatch]]
 

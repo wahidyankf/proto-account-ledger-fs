@@ -9,8 +9,8 @@ from typing import TextIO
 
 from account_ledger.adapters.render import render_reports
 from account_ledger.adapters.stream_csv import parse_stream
+from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.model.config import CHALLENGE
-from account_ledger.domain.model.result import Err, Ok, Result
 from account_ledger.domain.replay import replay_stream
 
 USAGE = "usage: account-ledger-cli <stream.csv>"

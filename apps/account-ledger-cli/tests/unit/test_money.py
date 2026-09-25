@@ -4,6 +4,7 @@ from decimal import Decimal
 
 import pytest
 
+from account_ledger.common.result import Err, Ok
 from account_ledger.domain.model.ids import InstalmentCount
 from account_ledger.domain.model.money import (
     AboveLimit,
@@ -25,7 +26,6 @@ from account_ledger.domain.model.money import (
     sum_money,
     try_narrow_currency,
 )
-from account_ledger.domain.model.result import Err, Ok
 from support.values import make_aed, make_bhd
 
 

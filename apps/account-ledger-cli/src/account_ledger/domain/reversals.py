@@ -1,5 +1,6 @@
 """Reversals: when one is refused, and which events the accepted ones undid (AMB-028, AMB-035)."""
 
+from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.model.event_log import (
     Accepted,
     AlreadyReversed,
@@ -18,7 +19,6 @@ from account_ledger.domain.model.event_log import (
 )
 from account_ledger.domain.model.events import Credit, Fee, FeeRefund, Instalment, Instalments, Reversal
 from account_ledger.domain.model.ids import AccountId, Day, EventId, FeeId, IncomingId, RefundId
-from account_ledger.domain.model.result import Err, Ok, Result
 
 
 def check_reversal(log: Log, target_id: EventId) -> Result[None, Rejection]:

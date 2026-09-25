@@ -3,6 +3,7 @@
 
 from typing import assert_never
 
+from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.balances import compute_closing
 from account_ledger.domain.model.config import Account, AnyAccount, is_aed
 from account_ledger.domain.model.event_log import Accepted, Log, append_entry, list_counted_events
@@ -18,7 +19,6 @@ from account_ledger.domain.model.money import (
     make_amount_of,
     sum_money,
 )
-from account_ledger.domain.model.result import Err, Ok, Result
 from account_ledger.domain.reversals import list_reversed_targets
 
 

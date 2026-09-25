@@ -3,9 +3,9 @@
 from dataclasses import dataclass
 from typing import TypeIs
 
+from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.model.ids import AccountId, Day
 from account_ledger.domain.model.money import Aed, Bhd
-from account_ledger.domain.model.result import Err, Ok, Result
 
 
 @dataclass(frozen=True, slots=True)

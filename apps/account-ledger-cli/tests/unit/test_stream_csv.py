@@ -1,6 +1,7 @@
 """The stream reader: a valid stream parses to its events; each fault names its line."""
 
 from account_ledger.adapters.stream_csv import StreamError, parse_stream
+from account_ledger.common.result import Err, Ok
 from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.events import (
     Authorization,
@@ -14,7 +15,6 @@ from account_ledger.domain.model.events import (
 )
 from account_ledger.domain.model.ids import AccountId, AuthorizationId, Day, FeeId, IncomingId, InstalmentCount
 from account_ledger.domain.model.money import Amount
-from account_ledger.domain.model.result import Err, Ok
 from support.results import unwrap_ok
 from support.streams import HEADER, format_csv
 from support.values import make_aed, make_bhd

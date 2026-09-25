@@ -1,6 +1,6 @@
 """Result: each combinator acts on its own side and hands the other back unchanged."""
 
-from account_ledger.domain.model.result import Err, Ok, Result
+from account_ledger.common.result import Err, Ok, Result
 
 
 def check_positive(number: int) -> Result[int, str]:

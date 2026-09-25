@@ -4,9 +4,9 @@ from dataclasses import replace
 
 import pytest
 
+from account_ledger.common.result import Err, Ok
 from account_ledger.domain.model.config import CHALLENGE, Account, ConfigFault, LedgerConfig
 from account_ledger.domain.model.ids import AccountId, Day
-from account_ledger.domain.model.result import Err, Ok
 from support.values import make_aed, make_bhd
 
 ACC_001 = Account(AccountId("ACC-001"), make_aed("0.00"))

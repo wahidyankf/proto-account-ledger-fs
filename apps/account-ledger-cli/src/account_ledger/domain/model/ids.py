@@ -5,7 +5,7 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import assert_never
 
-from account_ledger.domain.model.result import Err, Ok, Result
+from account_ledger.common.result import Err, Ok, Result
 
 _ACCOUNT = re.compile(r"ACC-[0-9]{3}")
 _HOLD = re.compile(r"Auth-[A-Za-z0-9]+")

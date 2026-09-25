@@ -60,7 +60,8 @@ adapters and the domain, from the adapters to the domain's types, and, inside th
 types. Each layer is a place in the package: the shell is `cli.py` at its root, the adapters are `adapters/`, and the
 domain is `domain/`, its values in `domain/model/`, under its own `ruff.toml` that refuses any import of
 `account_ledger.adapters` or `account_ledger.cli` (TID251). The values are everything below the model line: they decide
-nothing.
+nothing. Below them sits `common/`, the tools with no ledger meaning: every layer may import it, and its own `ruff.toml`
+refuses any import of the other three.
 
 ```text
   shell      +--------------------------------------------------------------------------------+
@@ -116,6 +117,12 @@ nothing.
           | incoming |  | accounts,|  | Aed, Bhd,|  | days,    |
           | and fired|  | window   |  | Amount   |  | IDs      |
           +----------+  +----------+  +----------+  +----------+
+  ---------------------------------------------------------------------------------------------------
+  common                                          every layer above may import it; it imports none
+  common/                          +----------------+
+                                   | result         |
+                                   | Ok, Err        |
+                                   +----------------+
 ```
 
 | Component        | Responsibility                                                                                    |
@@ -137,6 +144,7 @@ nothing.
 | `config`         | the accounts, each typed by its currency, the window of days, and the capitalization days         |
 | `money`          | `Aed` and `Bhd`, one type per currency; `Amount` above zero; the split, fee, and daily interest   |
 | `ids`            | days, account and hold IDs, incoming IDs, fired-event markers, and instalment counts              |
+| `result`         | `Ok` and `Err`, so every failure a caller can meet comes back as a value; it knows no ledger      |
 
 `event_log` imports `AuthorizationState` for annotations only, so the log and the state machine do not import each other
 at run time.
@@ -161,7 +169,8 @@ event_log LogEntry = Accepted | AuthorizationDecided | SettlementAccepted | Reje
           Log = tuple[LogEntry, ...]
 auth      AuthorizationState = Approved(hold) | PartiallySettled(captured_amount, hold)
                                  | Declined(requested_amount) | Settled(captured_amount)
-          apply_trigger(state, SettleFinal | SettlePartial) -> Result[AuthorizationState, NoTransition]
+          apply_trigger(state, SettleFinal | SettlePartial)
+            -> Result[AuthorizationState, NoTransition | CurrencyMismatch]
           AuthorizationRecord = the Authorization + its state now
 report    DayReport = day, processed_events: Processed..., closing_balances, available_balances,
                       restatements: Restatement..., authorizations: AuthorizationRecord..., errors,

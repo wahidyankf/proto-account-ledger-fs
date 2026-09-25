@@ -2,13 +2,13 @@
 
 from dataclasses import dataclass, replace
 
+from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.end_of_day import close_day
 from account_ledger.domain.model.config import LedgerConfig
 from account_ledger.domain.model.event_log import Log
 from account_ledger.domain.model.events import IncomingEvent
 from account_ledger.domain.model.ids import Day
 from account_ledger.domain.model.money import CurrencyMismatch
-from account_ledger.domain.model.result import Err, Ok, Result
 from account_ledger.domain.processing import process_event
 from account_ledger.domain.report import DayReport, ReportedClosings, build_report, update_reported
 

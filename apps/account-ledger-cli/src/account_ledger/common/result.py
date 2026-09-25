@@ -6,7 +6,7 @@ apart with ``match`` or an ``isinstance`` early return, or chains it: ``map`` an
 side and pass the result on unchanged. Each method acts on its own side and hands the other back as it is.
 
 Both are hand-written rather than dataclasses: each exposes its content only through a read-only property, so pyright
-infers them covariant, and an ``Ok[Credit]`` is an ``Ok[IncomingEvent]``; a frozen dataclass would be invariant.
+infers them covariant, and an ``Ok[bool]`` is an ``Ok[int]``; a frozen dataclass would be invariant.
 """
 
 from collections.abc import Callable

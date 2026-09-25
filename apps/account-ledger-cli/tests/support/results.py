@@ -1,6 +1,6 @@
 """Reading a ``Result`` in a test: the success's value, or a failed test naming the fault."""
 
-from account_ledger.domain.model.result import Err, Result
+from account_ledger.common.result import Err, Result
 
 
 def unwrap_ok[T, E](result: Result[T, E]) -> T:

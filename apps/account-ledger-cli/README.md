@@ -16,6 +16,7 @@ Specification: [specs/apps/account-ledger/cli/](../../specs/apps/account-ledger/
 | `src/account_ledger/adapters/`     | pure translators: `stream_csv` reads the stream, `render` writes the report     |
 | `src/account_ledger/domain/`       | the domain: every ledger rule; may not import adapters or cli                   |
 | `src/account_ledger/domain/model/` | the values the rules pass around: money, IDs, events, accounts, and the log     |
+| `src/account_ledger/common/`       | tools with no ledger meaning, `Result` for now; imports nothing from the others |
 | `streams/challenge.csv`            | the brief's stream, E1 to E10                                                   |
 | `tests/unit/`                      | in-process tests; `run_cli` gets an injected reader and `io.StringIO` streams   |
 | `tests/integration/`               | the real stream file from disk, and `main` on the real descriptors with `capfd` |

@@ -12,9 +12,9 @@ when_to_use: >-
 A failure a caller can meet belongs in its signature, so pyright makes every caller handle it. An exception that might
 go uncaught hides the failure until it ends the run.
 
-- **Result:** a function that can fail for any reason but a bug must return `Result[T, Fault]` from
-  `domain/model/result.py`: `Ok` holding the value, or `Err` holding a named fault type. It never returns a bare string,
-  a bare `T | Fault` union, or a raised exception. The caller takes the result apart in one of three ways:
+- **Result:** a function that can fail for any reason but a bug must return `Result[T, Fault]` from `common/result.py`:
+  `Ok` holding the value, or `Err` holding a named fault type. It never returns a bare string, a bare `T | Fault` union,
+  or a raised exception. The caller takes the result apart in one of three ways:
   - `match`;
   - an `isinstance(result, Err)` early return, which suits a chain of several fallible steps;
   - the combinators `map`, `map_err`, `flat_map`, `flat_map_err`, `tap`, and `tap_err`, which suit a single step.
