@@ -1070,6 +1070,8 @@ After every substantive phase is terminal. The completion gate is the execution 
       Checkout's `EV` export, and the commands in 004 and the tree in 008, each history. - Full validation from the
       archived state, 21:33–21:36, `--skip-nx-cache`, every command exit 0: test:quick (152 passed, 1 xfailed; coverage
       94.95%), test:integration (3 passed), test:e2e (6 passed), `check:hygiene`, and internal-link. The archive commit
-      and its push are recorded in the commit after it, which cannot name itself.
+      and its push are recorded in the commit after it, which cannot name itself. - Committed as `3f5deba` (21:37),
+      `docs(plan): archive the restructure plan`, and pushed as `7065bb8..3f5deba`; the pre-commit and pre-push gates
+      passed.
 
 [cycle]: ../../../repo-governance/development/quality/testing/test-driven-development/001-cycle-and-evidence.md
