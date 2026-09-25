@@ -12,6 +12,9 @@ The assessment docs are the root files that answer the challenge brief: `challen
 `NUMBERS.md`, `REJECTED.md`, `WORKLOG.md`, `MOVEMENT.md`, and `OUTPUT_TARGET.md`. They are read side by side and
 defended figure by figure, so one fact told two ways is a wrong answer in one of them.
 
+`architecture-trade-offs.pdf` at the root answers Part 2 but is not one of them: it is printed from
+`docs/explanation/architecture-trade-offs.md` and owns no fact.
+
 ## Owners
 
 | Document           | Owns                                                                                |
