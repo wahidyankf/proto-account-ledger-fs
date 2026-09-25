@@ -32,7 +32,8 @@
       "options": {
         "commands": [
           "uv run --no-sync ruff check .",
-          "uv run --no-sync ruff format --check ."
+          "uv run --no-sync ruff format --check .",
+          "uv run --no-sync pylint src tests"
         ],
         "parallel": false,
         "cwd": "apps/account-ledger-cli"

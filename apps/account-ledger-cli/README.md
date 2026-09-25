@@ -21,7 +21,7 @@ Specification: [specs/apps/account-ledger/cli/](../../specs/apps/account-ledger/
 | `tests/integration/`               | the real stream file from disk, and `main` on the real descriptors with `capfd` |
 | `tests/e2e/`                       | `python -m account_ledger` as a subprocess: the golden run and the error paths  |
 | `tests/support/`                   | the brief's stream in code and as CSV, stream builders, OUTPUT_TARGET's text    |
-| `pyproject.toml`, `uv.lock`        | uv project (`package = false`), pinned dev tools, pytest, ruff, and pyright     |
+| `pyproject.toml`, `uv.lock`        | uv project (`package = false`) pinning pytest, ruff, pylint, and pyright        |
 | `project.json`                     | Nx targets                                                                      |
 
 Every level is plain pytest, written test-first; there is no Gherkin corpus and no step binding.
@@ -32,7 +32,7 @@ Every level is plain pytest, written test-first; there is no Gherkin corpus and 
 npx nx run account-ledger-cli:install           # uv sync --locked; every other target depends on it
 npx nx run account-ledger-cli:run               # prints the daily report for streams/challenge.csv
 npx nx run account-ledger-cli:typecheck         # pyright, strict
-npx nx run account-ledger-cli:lint              # ruff check + ruff format --check
+npx nx run account-ledger-cli:lint              # ruff check + ruff format --check + pylint docstrings
 npx nx run account-ledger-cli:test:unit         # unit suite, 80% line coverage gate
 npx nx run account-ledger-cli:test:integration  # integration suite
 npx nx run account-ledger-cli:test:e2e          # end-to-end suite

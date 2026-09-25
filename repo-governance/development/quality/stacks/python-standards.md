@@ -23,6 +23,11 @@ applies. It implements [Explicit Over Implicit](../../../principles/explicit-ove
   or below (`PLR1702`). This makes a function that gathers too many branches or nests too deep get split while it is
   still small. `PLR1702` is a preview rule, so the configuration sets `explicit-preview-rules` to keep every other
   preview rule off.
+- **Docstrings:** every module, class, method, and function must carry a docstring, private ones included, so a reader
+  learns what each piece is for without reading its body. Magic methods are exempt, since Python fixes their meaning.
+  Ruff's `D1` rules, except `D105`, check public names, and pylint, running only `missing-module-docstring`,
+  `missing-class-docstring`, and `missing-function-docstring` with `no-docstring-rgx = "^__.+__$"`, checks private ones.
+  A function nested in another should carry one too; no gate checks it, since neither tool reads nested functions.
 - **Types:** pyright in `strict` mode reports zero errors and warnings; every signature is annotated.
 - **Suppressions:** `Any`, `cast()`, `# type: ignore`, and `# noqa` each take the narrowest scope and state their
   reason, as [Lint Strictness](../checks/lint-strictness.md) requires.
