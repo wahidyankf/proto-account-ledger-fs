@@ -8,6 +8,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from decimal import ROUND_DOWN, ROUND_HALF_EVEN, Decimal, InvalidOperation
 from enum import Enum
+from typing import ClassVar, Self
 
 from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.model.ids import InstalmentCount
@@ -61,7 +62,12 @@ def _make_scaled_value(value: Decimal, places: int, currency: str) -> Result[Dec
         return Err(TooManyPlaces(str(value), places=places, currency=currency))
     if abs(value) >= AMOUNT_LIMIT:
         return Err(AboveLimit(str(value)))
-    return Ok(value.quantize(Decimal(1).scaleb(-places)))
+    return Ok(value.quantize(_find_minor_unit(places)))
+
+
+def _find_minor_unit(places: int) -> Decimal:
+    """The smallest unit at so many places: 0.01 at 2, 0.001 at 3."""
+    return Decimal(1).scaleb(-places)
 
 
 def _check_places(value: Decimal, places: int, currency: str) -> None:
@@ -70,46 +76,50 @@ def _check_places(value: Decimal, places: int, currency: str) -> None:
         raise ValueError(f"{currency} holds exactly {places} places, not {value}")
 
 
-@dataclass(frozen=True, slots=True, order=True)
-class Aed:
-    """An amount in UAE dirhams, with exactly two places."""
+@dataclass(frozen=True, slots=True)
+class _MoneyBase:
+    """What money in every currency holds and does: a decimal at exactly its currency's places. Each currency is a
+    subclass that names its code and places, so one implementation serves both, and AED and BHD values still never
+    combine: every operator takes and gives ``Self``, and order is defined on each currency, not here."""
 
+    CURRENCY: ClassVar[str]
+    PLACES: ClassVar[int]
     value: Decimal
 
     def __post_init__(self) -> None:
-        _check_places(self.value, 2, "AED")
+        _check_places(self.value, self.PLACES, self.CURRENCY)
 
-    @staticmethod
-    def make(value: Decimal) -> Result[Aed, MoneyFault]:
-        """The AED amount of a decimal, or a fault for a non-finite one or one with more than 2 places."""
-        return _make_scaled_value(value, 2, "AED").map(Aed)
+    @classmethod
+    def make(cls, value: Decimal) -> Result[Self, MoneyFault]:
+        """The money of a decimal, or a fault for a non-finite one or one with more places than the currency's."""
+        return _make_scaled_value(value, cls.PLACES, cls.CURRENCY).map(cls)
 
-    @staticmethod
-    def parse(text: str) -> Result[Aed, MoneyFault]:
-        """The AED amount the text holds, or a fault saying why it is not one."""
-        return _read_decimal(text).flat_map(Aed.make)
+    @classmethod
+    def parse(cls, text: str) -> Result[Self, MoneyFault]:
+        """The money the text holds, or a fault saying why it is not money in this currency."""
+        return _read_decimal(text).flat_map(cls.make)
 
-    @staticmethod
-    def make_zero() -> Aed:
-        """AED 0.00."""
-        return Aed(Decimal("0.00"))
+    @classmethod
+    def make_zero(cls) -> Self:
+        """Zero at the currency's places: AED 0.00, BHD 0.000."""
+        return cls(_find_minor_unit(cls.PLACES) * 0)
 
-    def __add__(self, other: Aed) -> Aed:
-        if type(other) is not Aed:
+    def __add__(self, other: Self) -> Self:
+        if type(other) is not type(self):
             return NotImplemented
-        return Aed(self.value + other.value)
+        return type(self)(self.value + other.value)
 
-    def __sub__(self, other: Aed) -> Aed:
-        if type(other) is not Aed:
+    def __sub__(self, other: Self) -> Self:
+        if type(other) is not type(self):
             return NotImplemented
-        return Aed(self.value - other.value)
+        return type(self)(self.value - other.value)
 
-    def __neg__(self) -> Aed:
-        return Aed(-self.value)
+    def __neg__(self) -> Self:
+        return type(self)(-self.value)
 
     def get_currency(self) -> str:
-        """The currency code, AED."""
-        return "AED"
+        """The currency code, such as AED."""
+        return self.CURRENCY
 
     def format_digits(self) -> str:
         """The value's text, for the renderer and messages: its places, no sign change, no separators."""
@@ -117,7 +127,17 @@ class Aed:
 
     def is_below(self, amount: Amount) -> Result[bool, CurrencyMismatch]:
         """Whether this balance is below an amount of its own currency, or the mismatch a bug would bring."""
-        return _is_below(self, amount)
+        if type(amount.money) is not type(self):
+            return Err(_make_mismatch(self, amount.money))
+        return Ok(self.value < amount.money.value)
+
+
+@dataclass(frozen=True, slots=True, order=True)
+class Aed(_MoneyBase):
+    """An amount in UAE dirhams, with exactly two places."""
+
+    CURRENCY: ClassVar[str] = "AED"
+    PLACES: ClassVar[int] = 2
 
     def make_amount(self) -> Result[AmountIn[Aed], NotPositive]:
         """This value as an amount, or a fault when it is zero or below."""
@@ -125,57 +145,15 @@ class Aed:
 
     def compute_overdraft_fee(self) -> AmountIn[Aed]:
         """The overdraft fee in AED: AED 25.00 (AMB-027)."""
-        return _compute_overdraft_fee(self)
+        return AmountIn(_round_money(self, AED_FEE))
 
 
 @dataclass(frozen=True, slots=True, order=True)
-class Bhd:
+class Bhd(_MoneyBase):
     """An amount in Bahraini dinars, with exactly three places."""
 
-    value: Decimal
-
-    def __post_init__(self) -> None:
-        _check_places(self.value, 3, "BHD")
-
-    @staticmethod
-    def make(value: Decimal) -> Result[Bhd, MoneyFault]:
-        """The BHD amount of a decimal, or a fault for a non-finite one or one with more than 3 places."""
-        return _make_scaled_value(value, 3, "BHD").map(Bhd)
-
-    @staticmethod
-    def parse(text: str) -> Result[Bhd, MoneyFault]:
-        """The BHD amount the text holds, or a fault saying why it is not one."""
-        return _read_decimal(text).flat_map(Bhd.make)
-
-    @staticmethod
-    def make_zero() -> Bhd:
-        """BHD 0.000."""
-        return Bhd(Decimal("0.000"))
-
-    def __add__(self, other: Bhd) -> Bhd:
-        if type(other) is not Bhd:
-            return NotImplemented
-        return Bhd(self.value + other.value)
-
-    def __sub__(self, other: Bhd) -> Bhd:
-        if type(other) is not Bhd:
-            return NotImplemented
-        return Bhd(self.value - other.value)
-
-    def __neg__(self) -> Bhd:
-        return Bhd(-self.value)
-
-    def get_currency(self) -> str:
-        """The currency code, BHD."""
-        return "BHD"
-
-    def format_digits(self) -> str:
-        """The value's text, for the renderer and messages: its places, no sign change, no separators."""
-        return str(self.value)
-
-    def is_below(self, amount: Amount) -> Result[bool, CurrencyMismatch]:
-        """Whether this balance is below an amount of its own currency, or the mismatch a bug would bring."""
-        return _is_below(self, amount)
+    CURRENCY: ClassVar[str] = "BHD"
+    PLACES: ClassVar[int] = 3
 
     def make_amount(self) -> Result[AmountIn[Bhd], NotPositive]:
         """This value as an amount, or a fault when it is zero or below."""
@@ -183,7 +161,7 @@ class Bhd:
 
     def compute_overdraft_fee(self) -> AmountIn[Bhd]:
         """The overdraft fee in BHD: AED 25.00 converted, rounded half-even (AMB-027)."""
-        return _compute_overdraft_fee(self)
+        return AmountIn(_round_money(self, AED_FEE * AED_TO_BHD))
 
 
 type Money = Aed | Bhd
@@ -219,7 +197,7 @@ class AmountIn[M: (Aed, Bhd)]:
     def split(self, count: InstalmentCount) -> Result[tuple[AmountIn[M], ...], TooManyInstalments]:
         """Equal parts rounded down, the remainder on the last (AMB-020); each part at least one minor unit."""
         total = self.money
-        part = type(total)((total.value / count.number).quantize(_get_minor_unit(total), rounding=ROUND_DOWN))
+        part = type(total)((total.value / count.number).quantize(_find_minor_unit(total.PLACES), rounding=ROUND_DOWN))
         if part.value <= 0:
             return Err(TooManyInstalments(str(total.value), count=count.number))
         last_part = type(total)(total.value - part.value * (count.number - 1))
@@ -266,7 +244,7 @@ def require_same_currency[M: (Aed, Bhd)](sample: M, money: Money) -> Result[M, C
 DAILY_RATE = Decimal("0.0004")
 
 
-def _make_mismatch(expected_money: Money, found_money: Money) -> CurrencyMismatch:
+def _make_mismatch(expected_money: _MoneyBase, found_money: _MoneyBase) -> CurrencyMismatch:
     """The fault for a value of one currency met where the other's was required."""
     return CurrencyMismatch(expected_currency=expected_money.get_currency(), found_currency=found_money.get_currency())
 
@@ -282,18 +260,9 @@ def sum_money[M: (Aed, Bhd)](start: M, money_values: Iterable[Money]) -> Result[
     return Ok(total)
 
 
-def _get_minor_unit(money: Money) -> Decimal:
-    """The currency's smallest unit: 0.01 for AED, 0.001 for BHD."""
-    match money:
-        case Aed():
-            return Decimal("0.01")
-        case Bhd():
-            return Decimal("0.001")
-
-
 def _round_money[M: (Aed, Bhd)](sample: M, value: Decimal) -> M:
     """A computed value, rounded half-even to the places of ``sample``'s currency (AMB-006)."""
-    return type(sample)(value.quantize(_get_minor_unit(sample), rounding=ROUND_HALF_EVEN))
+    return type(sample)(value.quantize(_find_minor_unit(sample.PLACES), rounding=ROUND_HALF_EVEN))
 
 
 def compute_daily_interest[M: (Aed, Bhd)](balance: M) -> M:
@@ -311,21 +280,3 @@ class TooManyInstalments:
 
 AED_FEE = Decimal("25.00")
 AED_TO_BHD = Decimal("0.10238257")
-
-
-def _compute_overdraft_fee[M: (Aed, Bhd)](sample: M) -> AmountIn[M]:
-    """The fee in ``sample``'s currency: AED 25.00, and for BHD its conversion, rounded half-even (AMB-027)."""
-    match sample:
-        case Aed():
-            return AmountIn(_round_money(sample, AED_FEE))
-        case Bhd():
-            return AmountIn(_round_money(sample, AED_FEE * AED_TO_BHD))
-
-
-def _is_below(money: Money, amount: Amount) -> Result[bool, CurrencyMismatch]:
-    """Whether a balance is below an amount of its own currency, or the mismatch a bug would bring."""
-    match (money, amount.money):
-        case (Aed(), Aed()) | (Bhd(), Bhd()):
-            return Ok(money.value < amount.money.value)
-        case _:
-            return Err(_make_mismatch(money, amount.money))

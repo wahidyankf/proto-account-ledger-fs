@@ -161,6 +161,7 @@ or an enum, and each constructor refuses an illegal value, so none can be built.
 ```text
 result    Result[T, E] = Ok[T] | Err[E]      every parse, make, check, or sum that can fail returns one
 money     Aed | Bhd = Money             AmountIn[M: (Aed, Bhd)], above zero    Direction: UP | DOWN
+          Aed, Bhd each a _MoneyBase: a value at its CURRENCY's PLACES; one implementation, operators on Self
           Amount = AmountIn[Aed] | AmountIn[Bhd]
 ids       Day   AccountId   AuthorizationId   IncomingId   InstalmentCount
           EventId = IncomingId | InstalmentId | FeeId | RefundId | InterestId | CapitalizationId
