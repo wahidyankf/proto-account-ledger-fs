@@ -90,29 +90,25 @@ nothing.
                         | per event  |   | interest,  |     | data       |
                         |            |   | capitalize |     |            |
                         +------------+   +------------+     +------------+
-                           |      |           |                  |
-            decides and    |      v           v                  v
-            settles        |   +---------------------------------------+
-                           |   | balances: closing, holds, available,  |
-                           |   | accrued, accrued days, interest base  |
-                           |   +---------------------------------------+
-                           v                  |
-                   +----------------+  reads  |
-                   | authorizations | <-------+
-                   | the states and |
-                   | transition     |
-                   +----------------+
-                           |                  every component above reads the log;
-                           |                  only processing and end_of_day append
+                              |                |                  |
+                              v                v                  v
+            +-------------------------------------------------------------------------+
+            | the rules; each uses only those listed below it                         |
+            |   balances        closing, holds, available, accrued, interest base     |
+            |   authorizations  the states, decide, transition, and the records       |
+            |   reversals       which reversal is refused, and which events one undid |
+            +-------------------------------------------------------------------------+
+                                           |      every component above reads the log;
+                                           |      only processing and end_of_day append
   ---------------------------------------------------------------------------------------------------
-  model                    v
-  domain/model/    +----------------+
-                   | event_log      |
-                   | entries and    |
-                   | rejections     |
-                   +----------------+
-                           |
-                           v
+  model                                    v
+  domain/model/                    +----------------+
+                                   | event_log      |
+                                   | entries and    |
+                                   | rejections     |
+                                   +----------------+
+                                           |
+                                           v
           +----------+  +----------+  +----------+  +----------+
           | events   |  | config   |  | money    |  | ids      |
           | incoming |  | accounts,|  | Aed, Bhd,|  | days,    |
@@ -126,11 +122,12 @@ nothing.
 | `stream_csv`     | parsing the stream file into incoming events, or the first fault with its line                  |
 | `render`         | the report as text: banners, box tables, amounts with `−` and separators, and every Detail text |
 | `replay`         | the stream in listed order, closing each day on time, with the log and report of every day      |
-| `processing`     | one entry per incoming event: idempotency first, then by kind, with reversal checks in order    |
+| `processing`     | one entry per incoming event: idempotency first, then by kind; `reversals` checks a reversal    |
 | `end_of_day`     | a day's close: fee re-evaluation, interest accruals and adjustments, then capitalization        |
 | `report`         | a day's processed events, end-of-day rows, closings, restated closings, holds, and errors       |
 | `balances`       | closing, holds, available, accrued interest and its days, and interest base, each over the log  |
 | `authorizations` | the authorization states, `decide`, `transition`, and the records replayed from the log         |
+| `reversals`      | why a reversal is refused, in tech-docs 002's order, and which events the accepted ones undid   |
 | `event_log`      | the append-only tuple of entries, each kind holding only its outcome, and every `Rejection`     |
 | `events`         | the incoming event kinds, joined in `IncomingEvent`, and the fired kinds, in `FiredEvent`       |
 | `config`         | the accounts, each typed by its currency, the window of days, and the capitalization days       |
@@ -219,7 +216,8 @@ To read the code for the first time, follow one day through it, in this order:
 5. `domain/model/event_log.py`: every kind of entry those two add, and every reason an event is rejected.
 6. `domain/authorizations.py`, then `domain/balances.py`: how an authorization moves from state to state, and how each
    balance is worked out from the log.
-7. `domain/report.py`, then `adapters/render.py`: a day as data, then as the text OUTPUT_TARGET shows.
+7. `domain/reversals.py`: when a reversal is refused, and which events the accepted ones undid.
+8. `domain/report.py`, then `adapters/render.py`: a day as data, then as the text OUTPUT_TARGET shows.
 
 `adapters/stream_csv.py` turns the file into events and holds no ledger rule. The rest of `domain/model/`, `events.py`,
 `config.py`, `money.py`, and `ids.py`, defines the values the rules pass around; look them up when a name is unfamiliar

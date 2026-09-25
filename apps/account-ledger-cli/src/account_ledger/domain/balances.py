@@ -1,11 +1,10 @@
 """Balances: pure functions over a log, each scanning it whole (D7) and returning the account's own currency."""
 
-from collections.abc import Iterator
 from typing import assert_never
 
 from account_ledger.domain.authorizations import Approved, Declined, PartiallySettled, Settled, records
 from account_ledger.domain.model.config import Account, AnyAccount, is_aed
-from account_ledger.domain.model.event_log import Accepted, Log, LoggedEvent, SettlementAccepted, first, instalments_of
+from account_ledger.domain.model.event_log import Log, LoggedEvent, counted, first, instalments_of
 from account_ledger.domain.model.events import (
     Authorization,
     Capitalization,
@@ -21,32 +20,14 @@ from account_ledger.domain.model.events import (
     Settlement,
     Whole,
 )
-from account_ledger.domain.model.ids import AccountId, CapitalizationId, Day, EventId
+from account_ledger.domain.model.ids import AccountId, CapitalizationId, Day
 from account_ledger.domain.model.money import Aed, Bhd, CurrencyMismatch, Direction, Money, same_as
+from account_ledger.domain.reversals import reversed_targets
 
 
 def _effects(log: Log, account_id: AccountId) -> list[tuple[Day, Money]]:
     """Each counted entry's value day and signed effect on the account's ledger balance."""
-    return [(event.value_day, moved) for event in _counted(log, account_id) for moved in _moved(log, event)]
-
-
-def _counted(log: Log, account_id: AccountId) -> Iterator[LoggedEvent]:
-    """The events of the account's accepted entries; a hold is read by ``holds``, and a refusal moves nothing."""
-    for entry in log:
-        match entry:
-            case Accepted(event=event) | SettlementAccepted(event=event) if event.account == account_id:
-                yield event
-            case _:
-                pass
-
-
-def _reversed(log: Log, account_id: AccountId, by: Day | None = None) -> frozenset[EventId]:
-    """The events an accepted reversal on the account undid (AMB-035); with ``by``, only those value-dated by then."""
-    return frozenset(
-        event.reverses
-        for event in _counted(log, account_id)
-        if isinstance(event, Reversal) and (by is None or event.value_day <= by)
-    )
+    return [(event.value_day, moved) for event in counted(log, account_id) for moved in _moved(log, event)]
 
 
 def _moved(log: Log, event: LoggedEvent) -> tuple[Money, ...]:
@@ -127,9 +108,9 @@ def available_of(log: Log, account: AnyAccount, day: Day) -> Money:
 def accrued_days[M: (Aed, Bhd)](log: Log, account: Account[M], capitalization: CapitalizationId) -> tuple[Day, ...]:
     """The days whose interest a capitalization pays: each day whose interest events, fired since the account's
     previous capitalization, do not net to zero (tech-docs 003)."""
-    zero, undone = type(account.opening).zero(), _reversed(log, account.id)
+    zero, undone = type(account.opening).zero(), reversed_targets(log, account.id)
     net: dict[Day, M] = {}
-    for event in _counted(log, account.id):
+    for event in counted(log, account.id):
         match event:
             case Capitalization(id=paid) if paid == capitalization:
                 break
@@ -154,8 +135,8 @@ def interest_base[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> M:
     """The closing less any capitalization value-dated that day, which posts after the day's interest (AMB-023); one
     whose reversal that closing already counts is out of it already (AMB-035)."""
     total = closing(log, account, day)
-    undone = _reversed(log, account.id, by=day)
-    for event in _counted(log, account.id):
+    undone = reversed_targets(log, account.id, by=day)
+    for event in counted(log, account.id):
         match event:
             case Capitalization(id=paid, value_day=value_day, amount=amount) if value_day == day and paid not in undone:
                 total = total - _same(total, amount.money)
@@ -167,8 +148,8 @@ def interest_base[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> M:
 def accrued[M: (Aed, Bhd)](log: Log, account: Account[M]) -> M:
     """The account's interest events, net of their directions, less its capitalizations, each less its reversals
     (AMB-007, AMB-035)."""
-    total, undone = type(account.opening).zero(), _reversed(log, account.id)
-    for event in _counted(log, account.id):
+    total, undone = type(account.opening).zero(), reversed_targets(log, account.id)
+    for event in counted(log, account.id):
         match event:
             case InterestAccrual() | InterestAdjustment() if event.id not in undone:
                 total = total + _same(total, _signed_interest(event))
@@ -181,8 +162,8 @@ def accrued[M: (Aed, Bhd)](log: Log, account: Account[M]) -> M:
 
 def interest_fired[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> M:
     """The account's interest events for a day, net of their directions and reversals (tech-docs 002, step 2)."""
-    total, undone = type(account.opening).zero(), _reversed(log, account.id)
-    for event in _counted(log, account.id):
+    total, undone = type(account.opening).zero(), reversed_targets(log, account.id)
+    for event in counted(log, account.id):
         match event:
             case InterestAccrual() | InterestAdjustment() if event.id.for_day == day and event.id not in undone:
                 total = total + _same(total, _signed_interest(event))

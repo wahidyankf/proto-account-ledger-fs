@@ -1,5 +1,6 @@
 """The log: the append-only tuple of every entry, the only state the ledger keeps (AMB-004, D7)."""
 
+from collections.abc import Iterator
 from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING
@@ -14,7 +15,7 @@ from account_ledger.domain.model.events import (
     Reversal,
     Settlement,
 )
-from account_ledger.domain.model.ids import Day, EventId, IncomingId
+from account_ledger.domain.model.ids import AccountId, Day, EventId, IncomingId
 
 if TYPE_CHECKING:  # authorizations reads the log, so the states are imported for annotations only
     from account_ledger.domain.authorizations import AuthorizationState
@@ -150,3 +151,13 @@ def instalments_of(log: Log, credit: IncomingId) -> tuple[Instalment, ...]:
         for entry in log
         if isinstance(entry, Accepted) and isinstance(entry.event, Instalment) and entry.event.id.parent == credit
     )
+
+
+def counted(log: Log, account_id: AccountId) -> Iterator[LoggedEvent]:
+    """The events of the account's accepted entries; a hold is read by ``holds``, and a refusal moves nothing."""
+    for entry in log:
+        match entry:
+            case Accepted(event=event) | SettlementAccepted(event=event) if event.account == account_id:
+                yield event
+            case _:
+                pass
