@@ -21,8 +21,8 @@ from account_ledger.domain.model.money import Aed, Amount, Bhd, Direction
 type AnyAmount = Amount[Aed] | Amount[Bhd]
 
 
-class Capture(Enum):
-    """Whether a settlement is the last capture against its hold (AMB-013)."""
+class SettlementKind(Enum):
+    """Whether a settlement is the last one against its hold (AMB-013)."""
 
     FINAL = "final"
     PARTIAL = "partial"
@@ -80,7 +80,7 @@ class Authorization:
 
 @dataclass(frozen=True, slots=True)
 class Settlement:
-    """A capture against an authorization's hold, final or partial (AMB-013)."""
+    """A settlement against an authorization's hold, final or partial (AMB-013)."""
 
     id: IncomingId
     booked: Day
@@ -88,7 +88,7 @@ class Settlement:
     value_day: Day
     authorization: AuthorizationId
     amount: AnyAmount
-    capture: Capture
+    kind: SettlementKind
 
 
 @dataclass(frozen=True, slots=True)

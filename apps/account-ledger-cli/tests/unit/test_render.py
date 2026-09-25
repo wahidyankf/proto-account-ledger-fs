@@ -7,7 +7,7 @@ import pytest
 from account_ledger.adapters.render import render_reports
 from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.event_log import Rejection
-from account_ledger.domain.model.events import Capture, IncomingEvent
+from account_ledger.domain.model.events import IncomingEvent, SettlementKind
 from account_ledger.domain.model.ids import AccountId, Day
 from account_ledger.domain.stream_processing import process_stream
 from support.brief_stream import build_brief_stream
@@ -246,11 +246,11 @@ def test_the_texts_beyond_output_target_follow_its_patterns() -> None:
 
 def test_a_partially_settled_authorization_prints_its_remaining_hold() -> None:
     """D22, tech-docs 003: a partial settlement prints `settles for ..., hold kept`, and its authorization `partially
-    settled for C, hold H`; once a final capture follows, it prints `settled for` the captures' sum."""
+    settled for C, hold H`; once a final settlement follows, it prints `settled for` the settlements' sum."""
     stream = (
         make_credit("E1", 1, "500.00"),
         make_authorization("E2", 1, "Auth-A", "200.00"),
-        make_settlement("E3", 2, "Auth-A", "120.00", capture=Capture.PARTIAL),
+        make_settlement("E3", 2, "Auth-A", "120.00", kind=SettlementKind.PARTIAL),
         make_settlement("E4", 3, "Auth-A", "40.00"),
     )
     lines = render_reports(unwrap_ok(process_stream(stream, CHALLENGE)).reports[2:4]).split("\n")
@@ -298,9 +298,11 @@ def test_amb_014_a_rejected_event_prints_its_refusal(
 
     errors = next(line for line in lines if line.startswith("| Errors")).split(" | ")
     columns = {
-        held_account.id: errors[index].strip(" |") for index, held_account in enumerate(CHALLENGE.accounts, start=1)
+        configured_account.id: errors[index].strip(" |")
+        for index, configured_account in enumerate(CHALLENGE.accounts, start=1)
     }
 
     assert columns == {
-        held_account.id: error if held_account.id == account else "none" for held_account in CHALLENGE.accounts
+        configured_account.id: error if configured_account.id == account else "none"
+        for configured_account in CHALLENGE.accounts
     }

@@ -85,7 +85,7 @@ equal as possible and the remainder on the last. 3.334 × 3 = 10.002 invents 0.0
 ### Hold released on settlement
 
 Resolved in AMB-013: a final settlement, which is every settlement without a `final` flag, releases the whole hold, and
-one marked as followed by more captures keeps the rest. Releasing half of Auth-A's hold, 100.00, would still reserve
+one marked as followed by more settlements keeps the rest. Releasing half of Auth-A's hold, 100.00, would still reserve
 funds no merchant can claim.
 
 ### Day representation

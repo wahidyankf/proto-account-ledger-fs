@@ -6,7 +6,7 @@ A refused criterion is proven by a test of what the ledger does instead (REJECTE
 from account_ledger.domain.authorizations import Approved, Declined, Settled, list_records
 from account_ledger.domain.balances import compute_closing
 from account_ledger.domain.model.config import CHALLENGE
-from account_ledger.domain.model.event_log import Accepted, Captured, ForcePosted, SettlementAccepted
+from account_ledger.domain.model.event_log import Accepted, AppliedToHold, ForcePosted, SettlementAccepted
 from account_ledger.domain.model.events import Fee, Instalment, Settlement
 from account_ledger.domain.model.ids import AuthorizationId, Day, IncomingId, InstalmentId
 from account_ledger.domain.model.money import Aed, Amount, Bhd
@@ -55,7 +55,7 @@ def test_c5_auth_b_is_declined() -> None:
 
 
 def test_c3_auth_a_settlement_is_accepted_and_releases_the_hold() -> None:
-    """C3, accepted: "The Day 4 settlement of Auth-A must be accepted." It captures 185.00 and, being final, releases
+    """C3, accepted: "The Day 4 settlement of Auth-A must be accepted." It settles 185.00 and, being final, releases
     the whole 200.00 hold (AMB-013)."""
     result = unwrap_ok(process_stream(build_brief_stream(), CHALLENGE))
     log = result.find_log(Day(4))
@@ -65,8 +65,8 @@ def test_c3_auth_a_settlement_is_accepted_and_releases_the_hold() -> None:
     assert day_4.available_balances[ACC_001.id] == day_4.closing_balances[ACC_001.id]
     settlement = next(event for event in build_brief_stream() if event.id == IncomingId("E5"))
     assert isinstance(settlement, Settlement)
-    capture_effect = Captured(Approved(Amount(make_aed("200.00"))), Settled(Amount(make_aed("185.00"))))
-    assert list_settlements(log, settlement.id.value) == [SettlementAccepted(settlement, Day(4), capture_effect)]
+    applied_effect = AppliedToHold(Approved(Amount(make_aed("200.00"))), Settled(Amount(make_aed("185.00"))))
+    assert list_settlements(log, settlement.id.value) == [SettlementAccepted(settlement, Day(4), applied_effect)]
 
 
 def test_c4_e6_is_force_posted_for_180() -> None:

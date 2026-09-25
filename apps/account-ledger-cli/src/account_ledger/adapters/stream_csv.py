@@ -13,7 +13,6 @@ from account_ledger.domain.model.config import AnyAccount, LedgerConfig
 from account_ledger.domain.model.events import (
     AnyAmount,
     Authorization,
-    Capture,
     Credit,
     Debit,
     IncomingEvent,
@@ -21,6 +20,7 @@ from account_ledger.domain.model.events import (
     Posting,
     Reversal,
     Settlement,
+    SettlementKind,
     Whole,
 )
 from account_ledger.domain.model.ids import (
@@ -131,13 +131,13 @@ def _parse_posting(text: str) -> Result[Posting, RowFault]:
     )
 
 
-def _parse_capture(text: str) -> Result[Capture, RowFault]:
-    """`yes` or blank is a final settlement, `no` one followed by more captures (AMB-013)."""
+def _parse_settlement_kind(text: str) -> Result[SettlementKind, RowFault]:
+    """`yes` or blank is a final settlement, `no` one followed by more settlements (AMB-013)."""
     match text:
         case "" | "yes":
-            return Ok(Capture.FINAL)
+            return Ok(SettlementKind.FINAL)
         case "no":
-            return Ok(Capture.PARTIAL)
+            return Ok(SettlementKind.PARTIAL)
         case _:
             return Err(RowFault("final must be yes or no"))
 
@@ -164,7 +164,7 @@ def _parse_row(cells: dict[str, str], config: LedgerConfig) -> Result[IncomingEv
         case "DEBIT":
             return Ok(Debit(*head, parsed_amount.value))
         case _:
-            return _parse_held_event(cells, kind, head, parsed_amount.value)
+            return _parse_authorization_or_settlement(cells, kind, head, parsed_amount.value)
 
 
 def _check_columns(cells: dict[str, str], kind: str) -> Result[None, RowFault]:
@@ -187,7 +187,7 @@ def _parse_head(cells: dict[str, str], config: LedgerConfig) -> Result[tuple[_He
     if isinstance(account_id := _check_id(AccountId.parse(cells["account"])), Err):
         return account_id
     if (account := config.find_account(account_id.value)) is None:
-        return Err(RowFault(f"account '{cells['account']}' is not held by this ledger"))
+        return Err(RowFault(f"account '{cells['account']}' is not a configured account"))
     if isinstance(value_day := _parse_day(cells["value_date"], config), Err):
         return value_day
     return Ok(((event_id.value, booked.value, account_id.value, value_day.value), account))
@@ -212,7 +212,7 @@ def _parse_credit(instalments: str, head: _Head, amount: AnyAmount) -> Result[Cr
     return Ok(Credit(*head, amount, posting))
 
 
-def _parse_held_event(
+def _parse_authorization_or_settlement(
     cells: dict[str, str], kind: str, head: _Head, amount: AnyAmount
 ) -> Result[Authorization | Settlement, RowFault]:
     """An authorization, or a settlement against one, each naming its hold in the reference."""
@@ -220,7 +220,9 @@ def _parse_held_event(
         return hold
     if kind == "AUTHORIZATION":
         return Ok(Authorization(*head, hold.value, amount))
-    return _parse_capture(cells["final"]).map(lambda capture: Settlement(*head, hold.value, amount, capture))
+    return _parse_settlement_kind(cells["final"]).map(
+        lambda settlement_kind: Settlement(*head, hold.value, amount, settlement_kind)
+    )
 
 
 def parse_stream(text: str, config: LedgerConfig) -> Result[tuple[IncomingEvent, ...], StreamError]:

@@ -5,18 +5,18 @@ from typing import assert_never
 from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.authorizations import (
     AuthorizationState,
-    NoTransition,
-    apply_trigger,
+    CannotSettle,
+    apply_settlement,
     decide_authorization,
-    derive_trigger,
+    derive_settlement_input,
     find_record,
 )
 from account_ledger.domain.balances import compute_available_of
 from account_ledger.domain.model.config import LedgerConfig
 from account_ledger.domain.model.event_log import (
     Accepted,
+    AppliedToHold,
     AuthorizationDecided,
-    Captured,
     Duplicate,
     ForcePosted,
     IdReused,
@@ -79,7 +79,7 @@ def _decide_authorization_entry(
 def _decide_settlement_entry(
     log: Log, settlement: Settlement, today: Day
 ) -> Result[SettlementAccepted, CurrencyMismatch]:
-    """The settlement, capturing against the authorization it names, or force-posted when there is none (AMB-012)."""
+    """The settlement, settling against the authorization it names, or force-posted when there is none (AMB-012)."""
     record = find_record(log, settlement)
     if record is None:  # an unknown authorization has no transition either (AMB-012)
         return Ok(SettlementAccepted(settlement, today, ForcePosted()))
@@ -88,13 +88,14 @@ def _decide_settlement_entry(
 
 def _decide_effect(
     state_before: AuthorizationState, settlement: Settlement
-) -> Result[Captured | ForcePosted, CurrencyMismatch]:
-    """The capture a settlement completes, or a force-post when the table has no transition for it (AMB-029)."""
-    match apply_trigger(state_before, derive_trigger(settlement)):
+) -> Result[AppliedToHold | ForcePosted, CurrencyMismatch]:
+    """What a settlement does to its authorization, or a force-post when the table has no transition for it
+    (AMB-029)."""
+    match apply_settlement(state_before, derive_settlement_input(settlement)):
         case Ok(state_after):
-            return Ok(Captured(state_before, state_after))
+            return Ok(AppliedToHold(state_before, state_after))
         case Err(fault):
-            return Ok(ForcePosted()) if isinstance(fault, NoTransition) else Err(fault)
+            return Ok(ForcePosted()) if isinstance(fault, CannotSettle) else Err(fault)
 
 
 def _generate_instalments(credit: Credit, count: InstalmentCount, today: Day) -> tuple[Accepted, ...]:

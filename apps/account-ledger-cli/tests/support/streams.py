@@ -6,7 +6,6 @@ from account_ledger.domain.model.events import (
     AnyAmount,
     Authorization,
     Capitalization,
-    Capture,
     Credit,
     Debit,
     Fee,
@@ -17,6 +16,7 @@ from account_ledger.domain.model.events import (
     InterestAdjustment,
     Reversal,
     Settlement,
+    SettlementKind,
     Whole,
 )
 from account_ledger.domain.model.ids import (
@@ -91,7 +91,7 @@ def make_settlement(
     amount: str,
     value: int | None = None,
     account: str = "ACC-001",
-    capture: Capture = Capture.FINAL,
+    kind: SettlementKind = SettlementKind.FINAL,
 ) -> Settlement:
     """A settlement of the hold, final unless partial, on ACC-001 unless named, value-dated its booked day."""
     return Settlement(
@@ -101,7 +101,7 @@ def make_settlement(
         Day(value or day),
         AuthorizationId(hold),
         _make_amount(account, amount),
-        capture,
+        kind,
     )
 
 

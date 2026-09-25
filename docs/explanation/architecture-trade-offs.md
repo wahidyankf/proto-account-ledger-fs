@@ -89,7 +89,7 @@ these ways other than a settlement that matches its hold:
 | declined on arrival            | the hold would take the available balance below zero; no hold is placed     |
 | settled for less than the hold | a final settlement debits its amount and releases the whole hold (AMB-013)  |
 | settled for more than the hold | the full amount is debited, and the balance may go negative (AMB-030)       |
-| partial captures               | each keeps the rest on hold; one reaching the hold, or a final one, settles |
+| partial settlements            | each keeps the rest on hold; one reaching the hold, or a final one, settles |
 | never settled                  | the hold stays forever, the known weakness (AMB-018)                        |
 | voided by the merchant         | not possible: a reversal of an authorization is refused (AMB-035)           |
 | its settlement reversed        | the debit is undone; the authorization stays settled (AMB-035)              |
@@ -105,8 +105,8 @@ For each, what it represents and what the bank should mandate:
 - **Settled for more.** A tip or a hotel's incidentals. Mandate: accept an overage within the card network's tolerance
   for that merchant category; beyond it, post the excess as a force-post and review it, and never let the overage alone
   trigger a fee without that review.
-- **Partial captures.** A split shipment. Mandate: keep the rest on hold, as the model does, but give the remainder the
-  same lifetime as any hold, so an order never finished does not hold money forever.
+- **Partial settlements.** A split shipment. Mandate: keep the rest on hold, as the model does, but give the remainder
+  the same lifetime as any hold, so an order never finished does not hold money forever.
 - **Never settled.** A cancelled order or an abandoned rental whose merchant never clears. Mandate: a hold-expiry event
   generated at the close after the network's time frame for the merchant category; Visa's longest is 30 calendar days
   ([NUMBERS](../../NUMBERS.md)). The failing test records this gap, and a clearing that arrives after expiry is a

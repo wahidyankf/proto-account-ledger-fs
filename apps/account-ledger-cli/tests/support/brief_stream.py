@@ -2,13 +2,13 @@
 
 from account_ledger.domain.model.events import (
     Authorization,
-    Capture,
     Credit,
     Debit,
     IncomingEvent,
     Instalments,
     Reversal,
     Settlement,
+    SettlementKind,
     Whole,
 )
 from account_ledger.domain.model.ids import AccountId, AuthorizationId, Day, IncomingId, InstalmentCount
@@ -32,7 +32,7 @@ def build_brief_stream() -> tuple[IncomingEvent, ...]:
             Day(4),
             AuthorizationId("Auth-A"),
             Amount(make_aed("185.00")),
-            Capture.FINAL,
+            SettlementKind.FINAL,
         ),
         Settlement(
             IncomingId("E6"),
@@ -41,7 +41,7 @@ def build_brief_stream() -> tuple[IncomingEvent, ...]:
             Day(4),
             AuthorizationId("Auth-Z"),
             Amount(make_aed("180.00")),
-            Capture.FINAL,
+            SettlementKind.FINAL,
         ),
         Debit(IncomingId("E7"), Day(5), ACC_001, Day(2), Amount(make_aed("620.00"))),
         Authorization(IncomingId("E8"), Day(5), ACC_001, Day(5), AuthorizationId("Auth-B"), Amount(make_aed("90.00"))),

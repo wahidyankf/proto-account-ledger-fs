@@ -6,7 +6,7 @@ from account_ledger.domain.model.ids import AuthorizationId, IncomingId
 
 
 def list_states(log: Log, hold: str) -> list[AuthorizationState]:
-    """The state of every authorization with this hold ID, in the order first seen."""
+    """The state of every authorization with this authorization ID, in the order first seen."""
     return [record.state for record in list_records(log) if record.authorization.authorization == AuthorizationId(hold)]
 
 

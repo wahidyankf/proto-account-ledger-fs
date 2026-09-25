@@ -5,12 +5,12 @@ from account_ledger.common.result import Err, Ok
 from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.events import (
     Authorization,
-    Capture,
     Credit,
     Debit,
     Instalments,
     Reversal,
     Settlement,
+    SettlementKind,
     Whole,
 )
 from account_ledger.domain.model.ids import AccountId, AuthorizationId, Day, FeeId, IncomingId, InstalmentCount
@@ -94,7 +94,7 @@ def test_a_valid_stream_parses_to_its_events() -> None:
                 Day(4),
                 AuthorizationId("Auth-A"),
                 Amount(make_aed("185.00")),
-                Capture.FINAL,
+                SettlementKind.FINAL,
             ),
             Reversal(IncomingId("E9"), Day(6), ACC_001, Day(2), IncomingId("E7")),
             Credit(
@@ -128,11 +128,11 @@ def test_a_wrong_header_or_cell_count_is_refused() -> None:
 
 
 def test_an_id_of_the_wrong_form_is_refused() -> None:
-    """An event, account, or hold ID of the wrong form is refused, naming the kind of ID."""
+    """An event, account, or authorization ID of the wrong form is refused, naming the kind of ID."""
     assert find_fault(event="7") == StreamError(2, "line 2: event ID '7' is not valid")
     assert find_fault(account="ACC-1") == StreamError(2, "line 2: account ID 'ACC-1' is not valid")
     assert find_fault(type="AUTHORIZATION", reference="Auth A") == StreamError(
-        2, "line 2: hold ID 'Auth A' is not valid"
+        2, "line 2: authorization ID 'Auth A' is not valid"
     )
 
 
@@ -141,7 +141,7 @@ def test_an_unknown_type_or_account_is_refused() -> None:
     assert find_fault(type="REFUND") == StreamError(
         2, "line 2: type 'REFUND' is not one of CREDIT, DEBIT, AUTHORIZATION, SETTLEMENT, REVERSAL"
     )
-    assert find_fault(account="ACC-009") == StreamError(2, "line 2: account 'ACC-009' is not held by this ledger")
+    assert find_fault(account="ACC-009") == StreamError(2, "line 2: account 'ACC-009' is not a configured account")
 
 
 def test_an_amount_that_is_not_a_valid_amount_is_refused() -> None:
@@ -214,19 +214,19 @@ def test_a_final_cell_other_than_yes_or_no_is_refused() -> None:
     header = ",".join(HEADER)
     settlement = "E5,4,SETTLEMENT,ACC-001,185.00,4,Auth-A,,"
 
-    def parse_capture(cell: str) -> Capture:
-        """The capture a settlement row parses to when its `final` cell is ``cell``."""
+    def parse_settlement_kind(cell: str) -> SettlementKind:
+        """The kind a settlement row parses to when its `final` cell is ``cell``."""
         (event,) = unwrap_ok(parse_stream(f"{header}\n{settlement}{cell}\n", CHALLENGE))
         assert isinstance(event, Settlement)
-        return event.capture
+        return event.kind
 
     assert parse_stream(f"{header}\n{settlement}maybe\n", CHALLENGE) == Err(
         StreamError(2, "line 2: final must be yes or no")
     )
-    assert [parse_capture("yes"), parse_capture(""), parse_capture("no")] == [
-        Capture.FINAL,
-        Capture.FINAL,
-        Capture.PARTIAL,
+    assert [parse_settlement_kind("yes"), parse_settlement_kind(""), parse_settlement_kind("no")] == [
+        SettlementKind.FINAL,
+        SettlementKind.FINAL,
+        SettlementKind.PARTIAL,
     ]
     assert parse_stream(f"{header}\nE1,1,CREDIT,ACC-001,10.00,1,,,no\n", CHALLENGE) == Err(
         StreamError(2, "line 2: column 'final' does not apply to CREDIT")

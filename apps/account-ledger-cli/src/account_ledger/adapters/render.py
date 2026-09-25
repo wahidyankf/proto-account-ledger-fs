@@ -7,7 +7,7 @@ from account_ledger.domain.authorizations import Approved, AuthorizationRecord, 
 from account_ledger.domain.model.event_log import (
     AlreadyReversed,
     AlreadyUndone,
-    Captured,
+    AppliedToHold,
     Duplicate,
     ForcePosted,
     IdReused,
@@ -188,9 +188,9 @@ def _format_settlement(entry: LogEntry) -> str:
 
 
 def _format_kept_hold(entry: LogEntry) -> str:
-    """A partial capture that leaves part of the hold says so (D22)."""
+    """A partial settlement that leaves part of the hold says so (D22)."""
     match entry:
-        case SettlementAccepted(effect=Captured(state_after=PartiallySettled())):
+        case SettlementAccepted(effect=AppliedToHold(state_after=PartiallySettled())):
             return ", hold kept"
         case _:
             return ""
@@ -357,12 +357,12 @@ def _format_state(record: AuthorizationRecord) -> str:
     match state:
         case Approved(hold=amount):
             return f"{hold} approved, hold {_format_amount(amount.money)}"
-        case PartiallySettled(captured_amount=captured_amount, hold=remaining_hold):
-            captured_text, hold_text = _format_amount(captured_amount.money), _format_amount(remaining_hold.money)
-            return f"{hold} partially settled for {captured_text}, hold {hold_text}"
+        case PartiallySettled(settled_amount=settled_amount, hold=remaining_hold):
+            settled_text, hold_text = _format_amount(settled_amount.money), _format_amount(remaining_hold.money)
+            return f"{hold} partially settled for {settled_text}, hold {hold_text}"
         case Declined(requested_amount=amount):
             return f"{hold} declined, {_format_amount(amount.money)}"
-        case Settled(captured_amount=amount):
+        case Settled(settled_amount=amount):
             return f"{hold} settled for {_format_amount(amount.money)}"
         case _:
             assert_never(state)

@@ -46,7 +46,7 @@ class AuthorizationDecided:
 
 
 @dataclass(frozen=True, slots=True)
-class Captured:
+class AppliedToHold:
     """The transition a settlement completed on its authorization: the past-tense event and its audit record."""
 
     state_before: AuthorizationState
@@ -60,11 +60,11 @@ class ForcePosted:
 
 @dataclass(frozen=True, slots=True)
 class SettlementAccepted:
-    """A settlement, always accepted: it captured against its hold, or it was force-posted (AMB-012)."""
+    """A settlement, always accepted: it was applied to its hold, or it was force-posted (AMB-012)."""
 
     event: Settlement
     processed_day: Day
-    effect: Captured | ForcePosted
+    effect: AppliedToHold | ForcePosted
 
 
 @dataclass(frozen=True, slots=True)

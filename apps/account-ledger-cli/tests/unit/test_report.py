@@ -65,7 +65,8 @@ def test_amb_014_a_rejected_event_is_that_days_error(
     errors = unwrap_ok(process_stream(stream, CHALLENGE)).find_report(Day(1)).errors
 
     assert {account_id: tuple(entry.reason for entry in entries) for account_id, entries in errors.items()} == {
-        held_account.id: (reason,) if held_account.id == account else () for held_account in CHALLENGE.accounts
+        configured_account.id: (reason,) if configured_account.id == account else ()
+        for configured_account in CHALLENGE.accounts
     }
 
 

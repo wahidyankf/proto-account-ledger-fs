@@ -7,15 +7,15 @@ from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.model.config import Account
 from account_ledger.domain.model.event_log import (
     Accepted,
+    AppliedToHold,
     AuthorizationDecided,
-    Captured,
     Decision,
     Duplicate,
     Log,
     Rejected,
     SettlementAccepted,
 )
-from account_ledger.domain.model.events import AnyAmount, Authorization, Capture, Settlement
+from account_ledger.domain.model.events import AnyAmount, Authorization, Settlement, SettlementKind
 from account_ledger.domain.model.ids import Day
 from account_ledger.domain.model.money import (
     Aed,
@@ -46,9 +46,9 @@ class Declined:
 
 @dataclass(frozen=True, slots=True)
 class PartiallySettled:
-    """Captured in part, still holding the rest."""
+    """AppliedToHold in part, still holding the rest."""
 
-    captured_amount: AnyAmount
+    settled_amount: AnyAmount
     hold: AnyAmount
 
 
@@ -56,68 +56,71 @@ class PartiallySettled:
 class Settled:
     """Settled; it holds nothing more."""
 
-    captured_amount: AnyAmount
+    settled_amount: AnyAmount
 
 
 type AuthorizationState = Approved | PartiallySettled | Declined | Settled
 
 
 @dataclass(frozen=True, slots=True)
-class SettleFinal:
-    """The trigger a final settlement generates, with its amount."""
+class FinalSettlement:
+    """A final settlement, as the state machine takes it, with its amount."""
 
     amount: AnyAmount
 
 
 @dataclass(frozen=True, slots=True)
-class SettlePartial:
-    """The trigger a settlement followed by more captures generates, with its amount."""
+class PartialSettlement:
+    """A settlement followed by more settlements, as the state machine takes it, with its amount."""
 
     amount: AnyAmount
 
 
-type Trigger = SettleFinal | SettlePartial
+type SettlementInput = FinalSettlement | PartialSettlement
 
 
 @dataclass(frozen=True, slots=True)
-class NoTransition:
-    """The table has no transition from this state for this trigger, so the state stands."""
+class CannotSettle:
+    """The table has no transition from this state for this settlement, so the state stands."""
 
 
-def apply_trigger(
-    state: AuthorizationState, trigger: Trigger
-) -> Result[AuthorizationState, NoTransition | CurrencyMismatch]:
-    """The declared table (tech-docs 001): one case per source, trigger, and guard. The guard, whether the capture
-    falls short of the hold, is decided first, so a mismatch a bug would bring is returned rather than hidden in it."""
-    if isinstance(checked_capture := _is_capture_below_hold(state, trigger), Err):
-        return checked_capture
-    is_short, pair = checked_capture.value, (state, trigger)
+def apply_settlement(
+    state: AuthorizationState, settlement_input: SettlementInput
+) -> Result[AuthorizationState, CannotSettle | CurrencyMismatch]:
+    """The declared table (tech-docs 001): one case per source, settlement input, and guard. The guard, whether the
+    settlement falls short of the hold, is decided first, so a mismatch a bug would bring is returned rather than
+    hidden in it."""
+    if isinstance(checked_settlement := _is_settlement_below_hold(state, settlement_input), Err):
+        return checked_settlement
+    is_short, pair = checked_settlement.value, (state, settlement_input)
     match pair:
-        case Approved(), SettleFinal(amount=amount):
+        case Approved(), FinalSettlement(amount=amount):
             return Ok(Settled(amount))
-        case Approved(hold=hold), SettlePartial(amount=amount) if is_short:
+        case Approved(hold=hold), PartialSettlement(amount=amount) if is_short:
             return _make_partial_settlement(amount, hold, amount)
-        case Approved(), SettlePartial(amount=amount):  # amount >= hold: it reaches the hold, so nothing is left
+        case Approved(), PartialSettlement(amount=amount):  # amount >= hold: it reaches the hold, so nothing is left
             return Ok(Settled(amount))
-        case PartiallySettled(captured_amount=captured_amount), SettleFinal(amount=amount):
-            return sum_amounts(captured_amount, amount).map(Settled)
-        case PartiallySettled(captured_amount=captured_amount, hold=hold), SettlePartial(amount=amount) if is_short:
-            return sum_amounts(captured_amount, amount).flat_map(
-                lambda captured_total: _make_partial_settlement(captured_total, hold, amount)
+        case PartiallySettled(settled_amount=settled_amount), FinalSettlement(amount=amount):
+            return sum_amounts(settled_amount, amount).map(Settled)
+        case PartiallySettled(settled_amount=settled_amount, hold=hold), PartialSettlement(amount=amount) if is_short:
+            return sum_amounts(settled_amount, amount).flat_map(
+                lambda settled_total: _make_partial_settlement(settled_total, hold, amount)
             )
-        case PartiallySettled(captured_amount=captured_amount), SettlePartial(amount=amount):  # amount >= hold
-            return sum_amounts(captured_amount, amount).map(Settled)
+        case PartiallySettled(settled_amount=settled_amount), PartialSettlement(amount=amount):  # amount >= hold
+            return sum_amounts(settled_amount, amount).map(Settled)
         case Settled() | Declined(), _:
-            return Err(NoTransition())
+            return Err(CannotSettle())
         case _:
             assert_never(pair)
 
 
-def _is_capture_below_hold(state: AuthorizationState, trigger: Trigger) -> Result[bool, CurrencyMismatch]:
-    """Whether the trigger's amount is below the hold the state keeps; no hold is kept once settled or declined."""
+def _is_settlement_below_hold(
+    state: AuthorizationState, settlement_input: SettlementInput
+) -> Result[bool, CurrencyMismatch]:
+    """Whether the settlement's amount is below the hold the state keeps; no hold is kept once settled or declined."""
     match state:
         case Approved(hold=hold) | PartiallySettled(hold=hold):
-            return is_below(trigger.amount.money, hold)
+            return is_below(settlement_input.amount.money, hold)
         case Settled() | Declined():
             return Ok(False)
         case _:
@@ -125,30 +128,30 @@ def _is_capture_below_hold(state: AuthorizationState, trigger: Trigger) -> Resul
 
 
 def _make_partial_settlement(
-    captured_amount: AnyAmount, hold: AnyAmount, taken_amount: AnyAmount
+    settled_amount: AnyAmount, hold: AnyAmount, taken_amount: AnyAmount
 ) -> Result[AuthorizationState, CurrencyMismatch]:
-    """Partially settled for the captures so far, keeping what a capture below the hold leaves of it."""
-    return _compute_rest(hold, taken_amount).map(lambda rest: PartiallySettled(captured_amount, rest))
+    """Partially settled for the settlements so far, keeping what a settlement below the hold leaves of it."""
+    return _compute_rest(hold, taken_amount).map(lambda rest: PartiallySettled(settled_amount, rest))
 
 
 def _compute_rest(hold: AnyAmount, taken_amount: AnyAmount) -> Result[AnyAmount, CurrencyMismatch]:
-    """The hold left after a partial capture below it, above zero as every hold is."""
+    """The hold left after a partial settlement below it, above zero as every hold is."""
     if isinstance(rest := compute_rest_of(hold, taken_amount), Err):
         return rest
     rest_amount = make_amount_of(rest.value)
-    assert isinstance(rest_amount, Ok)  # the capture is below the hold, so the rest is above zero
+    assert isinstance(rest_amount, Ok)  # the settlement is below the hold, so the rest is above zero
     return rest_amount
 
 
-def derive_trigger(settlement: Settlement) -> Trigger:
-    """The trigger a settlement generates, from its capture and amount."""
-    match settlement.capture:
-        case Capture.FINAL:
-            return SettleFinal(settlement.amount)
-        case Capture.PARTIAL:
-            return SettlePartial(settlement.amount)
+def derive_settlement_input(settlement: Settlement) -> SettlementInput:
+    """The settlement as the state machine takes it, from its kind and amount."""
+    match settlement.kind:
+        case SettlementKind.FINAL:
+            return FinalSettlement(settlement.amount)
+        case SettlementKind.PARTIAL:
+            return PartialSettlement(settlement.amount)
         case _:
-            assert_never(settlement.capture)
+            assert_never(settlement.kind)
 
 
 @dataclass(frozen=True, slots=True)
@@ -174,7 +177,7 @@ def list_records(log: Log) -> tuple[AuthorizationRecord, ...]:
             case AuthorizationDecided(event=event, decision=decision):
                 state = Approved(event.amount) if decision is Decision.APPROVED else Declined(event.amount)
                 records.append(AuthorizationRecord(event, state))
-            case SettlementAccepted(event=event, effect=Captured(state_after=state_after)):
+            case SettlementAccepted(event=event, effect=AppliedToHold(state_after=state_after)):
                 records = [
                     AuthorizationRecord(record.authorization, state_after) if _is_named_by(record, event) else record
                     for record in records

@@ -46,11 +46,11 @@ def test_account_id_refuses_a_malformed_value() -> None:
 
 
 def test_authorization_id_refuses_a_malformed_value() -> None:
-    """A hold ID is `Auth-` and letters or digits; any other text is a fault."""
-    assert AuthorizationId.parse("Auth-") == Err(IdFault("hold ID", "Auth-"))
-    assert AuthorizationId.parse("Auth-A B") == Err(IdFault("hold ID", "Auth-A B"))
+    """A authorization ID is `Auth-` and letters or digits; any other text is a fault."""
+    assert AuthorizationId.parse("Auth-") == Err(IdFault("authorization ID", "Auth-"))
+    assert AuthorizationId.parse("Auth-A B") == Err(IdFault("authorization ID", "Auth-A B"))
     assert AuthorizationId.parse("Auth-Z") == Ok(AuthorizationId("Auth-Z"))
-    with pytest.raises(ValueError, match="a hold ID is Auth- and letters or digits"):
+    with pytest.raises(ValueError, match="a authorization ID is Auth- and letters or digits"):
         AuthorizationId("Auth-")
 
 

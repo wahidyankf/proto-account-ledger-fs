@@ -1,4 +1,4 @@
-"""The authorization machine: every state and trigger against the table, and the three decision rules."""
+"""The authorization machine: every state and settlement input against the table, and the three decision rules."""
 
 import pytest
 
@@ -6,20 +6,20 @@ from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.authorizations import (
     Approved,
     AuthorizationState,
+    CannotSettle,
     Declined,
-    NoTransition,
+    FinalSettlement,
     PartiallySettled,
+    PartialSettlement,
     Settled,
-    SettleFinal,
-    SettlePartial,
-    Trigger,
-    apply_trigger,
+    SettlementInput,
+    apply_settlement,
     sum_holds,
 )
 from account_ledger.domain.balances import compute_closing
 from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.event_log import ForcePosted, SettlementAccepted
-from account_ledger.domain.model.events import Capture
+from account_ledger.domain.model.events import SettlementKind
 from account_ledger.domain.model.ids import Day
 from account_ledger.domain.model.money import Aed, Amount
 from account_ledger.domain.stream_processing import process_stream
@@ -59,8 +59,8 @@ def test_amb_010_a_hold_counts_from_its_value_date() -> None:
 
 @pytest.mark.parametrize("state", [Settled(Amount(make_aed("185.00"))), Declined(Amount(make_aed("90.00")))])
 def test_an_unconfigured_transition_leaves_the_state_unchanged(state: AuthorizationState) -> None:
-    """A settled or declined authorization has no configured transition for any trigger (tech-docs 001)."""
-    assert apply_trigger(state, SettleFinal(Amount(make_aed("10.00")))) == Err(NoTransition())
+    """A settled or declined authorization has no configured transition for any settlement (tech-docs 001)."""
+    assert apply_settlement(state, FinalSettlement(Amount(make_aed("10.00")))) == Err(CannotSettle())
 
 
 def test_amb_029_a_settlement_against_a_declined_authorization_is_force_posted() -> None:
@@ -94,12 +94,12 @@ def test_amb_029_a_settlement_after_a_final_one_is_force_posted() -> None:
 
 
 def test_amb_013_a_non_final_settlement_keeps_the_rest_of_the_hold() -> None:
-    """AMB-013: a settlement marked as followed by more captures debits its amount and keeps the rest on hold; a final
-    one of the rest then settles the authorization for the captures' sum and releases what is left."""
+    """AMB-013: a settlement marked as followed by more settlements debits its amount and keeps the rest on hold; a
+    final one of the rest then settles the authorization for the settlements' sum and releases what is left."""
     stream = (
         make_credit("E1", 1, "500.00"),
         make_authorization("E2", 1, "Auth-A", "200.00"),
-        make_settlement("E3", 2, "Auth-A", "120.00", capture=Capture.PARTIAL),
+        make_settlement("E3", 2, "Auth-A", "120.00", kind=SettlementKind.PARTIAL),
         make_settlement("E4", 3, "Auth-A", "40.00"),
     )
 
@@ -114,7 +114,7 @@ def test_amb_013_a_non_final_settlement_keeps_the_rest_of_the_hold() -> None:
 
 
 @pytest.mark.parametrize(
-    ("captures", "settled_amount"),
+    ("partial_amounts", "settled_amount"),
     [
         (("200.00",), "200.00"),
         (("250.00",), "250.00"),
@@ -122,12 +122,14 @@ def test_amb_013_a_non_final_settlement_keeps_the_rest_of_the_hold() -> None:
         (("120.00", "95.00"), "215.00"),
     ],
 )
-def test_amb_013_a_partial_capture_reaching_the_hold_settles(captures: tuple[str, ...], settled_amount: str) -> None:
+def test_amb_013_partial_settlements_reaching_the_hold_settle(
+    partial_amounts: tuple[str, ...], settled_amount: str
+) -> None:
     """AMB-013, tech-docs 001: a partial settlement that reaches the remaining hold leaves nothing to keep, so it
-    settles the authorization for the captures' sum, since a partially settled hold is always above zero."""
+    settles the authorization for the settlements' sum, since a partially settled hold is always above zero."""
     parts = tuple(
-        make_settlement(f"E{3 + index}", 2, "Auth-A", amount, capture=Capture.PARTIAL)
-        for index, amount in enumerate(captures)
+        make_settlement(f"E{3 + index}", 2, "Auth-A", amount, kind=SettlementKind.PARTIAL)
+        for index, amount in enumerate(partial_amounts)
     )
     stream = (make_credit("E1", 1, "500.00"), make_authorization("E2", 1, "Auth-A", "200.00"), *parts)
 
@@ -145,51 +147,53 @@ def make_aed_amount(text: str) -> Amount[Aed]:
     return Amount(make_aed(text))
 
 
-TABLE: list[tuple[AuthorizationState, Trigger, Result[AuthorizationState, NoTransition]]] = [
+TABLE: list[tuple[AuthorizationState, SettlementInput, Result[AuthorizationState, CannotSettle]]] = [
     (
         Approved(make_aed_amount("200.00")),
-        SettleFinal(make_aed_amount("185.00")),
+        FinalSettlement(make_aed_amount("185.00")),
         Ok(Settled(make_aed_amount("185.00"))),
     ),
     (
         Approved(make_aed_amount("200.00")),
-        SettlePartial(make_aed_amount("120.00")),
+        PartialSettlement(make_aed_amount("120.00")),
         Ok(PartiallySettled(make_aed_amount("120.00"), make_aed_amount("80.00"))),
     ),
     (
         Approved(make_aed_amount("200.00")),
-        SettlePartial(make_aed_amount("200.00")),
+        PartialSettlement(make_aed_amount("200.00")),
         Ok(Settled(make_aed_amount("200.00"))),
     ),
     (
         PartiallySettled(make_aed_amount("120.00"), make_aed_amount("80.00")),
-        SettleFinal(make_aed_amount("40.00")),
+        FinalSettlement(make_aed_amount("40.00")),
         Ok(Settled(make_aed_amount("160.00"))),
     ),
     (
         PartiallySettled(make_aed_amount("120.00"), make_aed_amount("80.00")),
-        SettlePartial(make_aed_amount("30.00")),
+        PartialSettlement(make_aed_amount("30.00")),
         Ok(PartiallySettled(make_aed_amount("150.00"), make_aed_amount("50.00"))),
     ),
     (
         PartiallySettled(make_aed_amount("120.00"), make_aed_amount("80.00")),
-        SettlePartial(make_aed_amount("80.00")),
+        PartialSettlement(make_aed_amount("80.00")),
         Ok(Settled(make_aed_amount("200.00"))),
     ),
-    (Settled(make_aed_amount("185.00")), SettleFinal(make_aed_amount("10.00")), Err(NoTransition())),
-    (Settled(make_aed_amount("185.00")), SettlePartial(make_aed_amount("10.00")), Err(NoTransition())),
-    (Declined(make_aed_amount("90.00")), SettleFinal(make_aed_amount("10.00")), Err(NoTransition())),
-    (Declined(make_aed_amount("90.00")), SettlePartial(make_aed_amount("10.00")), Err(NoTransition())),
+    (Settled(make_aed_amount("185.00")), FinalSettlement(make_aed_amount("10.00")), Err(CannotSettle())),
+    (Settled(make_aed_amount("185.00")), PartialSettlement(make_aed_amount("10.00")), Err(CannotSettle())),
+    (Declined(make_aed_amount("90.00")), FinalSettlement(make_aed_amount("10.00")), Err(CannotSettle())),
+    (Declined(make_aed_amount("90.00")), PartialSettlement(make_aed_amount("10.00")), Err(CannotSettle())),
 ]
 
 
-@pytest.mark.parametrize(("state", "trigger", "expected_state"), TABLE)
-def test_every_state_and_trigger_pair_follows_the_table(
-    state: AuthorizationState, trigger: Trigger, expected_state: Result[AuthorizationState, NoTransition]
+@pytest.mark.parametrize(("state", "settlement_input", "expected_state"), TABLE)
+def test_every_state_and_settlement_input_pair_follows_the_table(
+    state: AuthorizationState,
+    settlement_input: SettlementInput,
+    expected_state: Result[AuthorizationState, CannotSettle],
 ) -> None:
-    """AMB-012, AMB-013, AMB-029, tech-docs 001: every state meets both triggers, each guard on both sides, and each
-    pair goes where the declared table says."""
-    assert apply_trigger(state, trigger) == expected_state
+    """AMB-012, AMB-013, AMB-029, tech-docs 001: every state meets both settlement inputs, each guard on both sides,
+    and each pair goes where the declared table says."""
+    assert apply_settlement(state, settlement_input) == expected_state
 
 
 def test_amb_030_a_settlement_above_its_hold_debits_in_full() -> None:

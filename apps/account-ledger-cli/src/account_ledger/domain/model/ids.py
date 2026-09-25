@@ -8,7 +8,7 @@ from typing import assert_never
 from account_ledger.common.result import Err, Ok, Result
 
 _ACCOUNT = re.compile(r"ACC-[0-9]{3}")
-_HOLD = re.compile(r"Auth-[A-Za-z0-9]+")
+_AUTHORIZATION = re.compile(r"Auth-[A-Za-z0-9]+")
 _INCOMING = re.compile(r"E[0-9]+")
 MAX_INSTALMENTS = 360  # a monthly plan over thirty years; a split never grows past it (NUMBERS.md)
 
@@ -116,13 +116,13 @@ class AuthorizationId:
     value: str
 
     def __post_init__(self) -> None:
-        if not _HOLD.fullmatch(self.value):
-            raise ValueError(f"a hold ID is Auth- and letters or digits, not {self.value!r}")
+        if not _AUTHORIZATION.fullmatch(self.value):
+            raise ValueError(f"a authorization ID is Auth- and letters or digits, not {self.value!r}")
 
     @staticmethod
     def parse(text: str) -> Result[AuthorizationId, IdFault]:
-        """The hold ID the text holds, or a fault for one not of the form `Auth-A`."""
-        return Ok(AuthorizationId(text)) if _HOLD.fullmatch(text) else Err(IdFault("hold ID", text))
+        """The authorization ID the text holds, or a fault for one not of the form `Auth-A`."""
+        return Ok(AuthorizationId(text)) if _AUTHORIZATION.fullmatch(text) else Err(IdFault("authorization ID", text))
 
 
 @dataclass(frozen=True, slots=True)

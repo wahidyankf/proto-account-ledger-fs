@@ -64,7 +64,7 @@ def test_a_malformed_amount_names_its_line(tmp_path: Path) -> None:
     )
 
 
-def test_an_unheld_account_names_its_line(tmp_path: Path) -> None:
+def test_an_unknown_account_names_its_line(tmp_path: Path) -> None:
     """AC-03: a row naming an account the ledger does not hold is a fault in the input, never a refusal (D21)."""
     stream = tmp_path / "stream.csv"
     stream.write_text(f"{HEADER}\nE1,1,CREDIT,ACC-009,10.00,1,,,\n", encoding="utf-8")
@@ -73,7 +73,7 @@ def test_an_unheld_account_names_its_line(tmp_path: Path) -> None:
 
     assert (completed_process.stdout, completed_process.stderr, completed_process.returncode) == (
         "",
-        "error: line 2: account 'ACC-009' is not held by this ledger\n",
+        "error: line 2: account 'ACC-009' is not a configured account\n",
         2,
     )
 

@@ -401,10 +401,11 @@ was never authorized, and releases no hold. Day 4 closes at 285.00, and no error
 `test_c4_e6_is_force_posted_for_180`.
 
 **Rationale.** In production a settlement can arrive with no authorization in the ledger, such as an offline purchase on
-a flight, a toll, or a capture after its authorization lapsed, and card scheme rules have the issuer post it and pursue
-any dispute through a chargeback rather than refuse it; the model follows production. The cost is accepted: criterion
-4's "must be rejected and the funds must not leave the account" cannot hold, so [REJECTED](REJECTED.md) refuses it, and
-the model has no chargeback, so a force-post that should not have been honoured stays until a later event reverses it.
+a flight, a toll, or a settlement after its authorization lapsed, and card scheme rules have the issuer post it and
+pursue any dispute through a chargeback rather than refuse it; the model follows production. The cost is accepted:
+criterion 4's "must be rejected and the funds must not leave the account" cannot hold, so [REJECTED](REJECTED.md)
+refuses it, and the model has no chargeback, so a force-post that should not have been honoured stays until a later
+event reverses it.
 
 ## AMB-013 — A settlement smaller than its hold
 
@@ -419,21 +420,21 @@ hold. The choice changes ACC-001's available balance from Day 4 onwards.
   no merchant can still claim.
 - The unused 15.00 stays on hold until it lapses (AMB-018).
 - The settlement says whether it is final: a final one releases the whole hold, and one marked as followed by more
-  captures keeps the rest on hold.
+  settlements keeps the rest on hold.
 
 **Status.** Resolved.
 
 **Resolution.** A settlement carries whether it is final. A final settlement debits its amount and releases the whole
-hold; a settlement marked as followed by more captures debits its amount and keeps the rest on hold until a later
-capture or its lapse (AMB-018). A settlement that carries no `final` flag, as every one in the brief, is final, so E5
+hold; a settlement marked as followed by more settlements debits its amount and keeps the rest on hold until a later
+settlement or its lapse (AMB-018). A settlement that carries no `final` flag, as every one in the brief, is final, so E5
 debits 185.00 and releases all 200.00 of Auth-A's hold. _Tests:_
 `test_c3_auth_a_settlement_is_accepted_and_releases_the_hold`,
 `test_amb_013_a_non_final_settlement_keeps_the_rest_of_the_hold`, and
-`test_amb_013_a_partial_capture_reaching_the_hold_settles`.
+`test_amb_013_partial_settlements_reaching_the_hold_settle`.
 
-**Rationale.** It is how card networks settle: most transactions capture once, such as a fuel pump or a hotel bill below
+**Rationale.** It is how card networks settle: most transactions settle once, such as a fuel pump or a hotel bill below
 its deposit, and the unused hold goes back to the customer at once, while a merchant shipping an order in parts marks
-the earlier captures as partial so the rest stays reserved for it. Releasing always would drop a later capture's
+the earlier settlements as partial so the rest stays reserved for it. Releasing always would drop a later settlement's
 reservation, and keeping always would lock funds no merchant claims, behind a lifetime the brief never gives. The
 brief's events carry no `final` flag, so the model adds the field and treats its absence as final, which gives every
 figure in this stream the same value as releasing the whole hold.
@@ -898,8 +899,8 @@ silent on it.
 **Options.**
 
 - Accept, as a force-post, as AMB-012 resolves for an unknown ID. **Recommended**: a merchant claiming against an
-  authorization the ledger knows has at least as good a claim as one the ledger has never seen, as with a second capture
-  for a split shipment; rejecting it while honouring E6 would treat the stronger claim worse.
+  authorization the ledger knows has at least as good a claim as one the ledger has never seen, as with a second
+  settlement for a split shipment; rejecting it while honouring E6 would treat the stronger claim worse.
 - Reject, and debit nothing: without an active hold there are no reserved funds to settle against.
 
 **Status.** Resolved.
@@ -913,7 +914,7 @@ remains (AMB-013). Neither case occurs in this stream, so no figure moves. _Test
 `test_amb_034_a_repeated_reversal_or_settlement_is_a_duplicate`.
 
 **Rationale.** E6 is honoured though the ledger has never seen its authorization, so a merchant whose authorization the
-ledger does know cannot be treated worse; refusing it would give the weaker claim the better outcome. Second captures
+ledger does know cannot be treated worse; refusing it would give the weaker claim the better outcome. Second settlements
 occur in production, as with a split shipment or an offline transaction. The debit can take the balance negative and
 incur the overdraft fee, exactly as E6 could.
 
