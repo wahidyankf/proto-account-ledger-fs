@@ -131,6 +131,8 @@ first.
 - Fresh gate after the leftovers, 07:29–07:31, `--skip-nx-cache`, every command exit 0 (logs `local-tmp/py-1.log` to
   `py-7.log`): test:quick 116 passed, 1 xfailed, coverage 95%; test:integration 2 passed; test:e2e 6 passed;
   check:hygiene, check-md, internal-link, heading-hierarchy, naming, and word-budget 0.
+- Archival (07:34–07:38): the second execution check permitted it; Dev Artifact Clean-Up removed this task's scratch;
+  the plan moved to `plans/done/2026-09-25__in-memory-account-ledger-init/`, and the full validation passed from there.
 
 ## Execution Checkout
 
@@ -2750,13 +2752,36 @@ execution check alone (D11).
     in the Execution Record. Rerun pending after the repairs are committed.
   - Second run, started 07:21 and reported by 07:27: PERMITS ARCHIVAL, no blocking finding; its non-blocking leftovers
     were fixed before archival, as the Execution Record records.
-- [ ] [AI] Run [Dev Artifact Clean-Up](../../../repo-governance/workflows/maintenance/dev-artifact-clean-up.md) and
+- [x] [AI] Run [Dev Artifact Clean-Up](../../../repo-governance/workflows/maintenance/dev-artifact-clean-up.md) and
       record what it removed. Proof: the record.
-- [ ] [AI] Move the plan to `plans/done/YYYY-MM-DD__in-memory-account-ledger-init/` with the completion date; update
+  - Run 07:38 with integration `local-main` and outcome `pass`. Enumerated as this task's: the 133 files in `local-tmp/`
+    last modified from 2026-09-25 04:03 on, when Phase 0 began (gate logs, the `tick.py`, `run.sh`, `check-md.sh`, and
+    `addimport.py` helpers, commit messages, `.bak` copies, the benchmarks, `cli.py.reformatted-0634`, the
+    rules-propagation records, and the task list `todo-plan-docs-full.md`), and the five `__pycache__` directories under
+    the app's `src` and `tests`.
+  - Classified: all scratch. No result lives there, since every result is committed; no evidence file, since each item
+    records its command, exit status, and result lines inline and the plan declared no `evidence/` folder, so the log
+    paths the items cite are the scratch copies those inline results came from.
+  - Left alone as not this task's: the 21 older entries in `local-tmp/` from 2026-09-24's earlier work, among them
+    `archive/`, `plan-python-migration.md`, and five rules-propagation records; the workspace caches `.nx/`, `.venv/`,
+    `.pytest_cache/`, and `.ruff_cache/`, which predate the plan and every run regenerates; and `generated-reports/`,
+    the declared home of reports, whose plan-quality-gate report is a result.
+  - Absence proven at 07:39: a re-listing of the 133 files and 5 directories found none present; `local-tmp/` holds
+    exactly the 21 older entries; `git status` shows only the archive's own changes; after `git fetch --prune`,
+    `git rev-list --left-right --count origin/main...HEAD` printed `0 0`. Result: `clean`.
+- [x] [AI] Move the plan to `plans/done/YYYY-MM-DD__in-memory-account-ledger-init/` with the completion date; update
       `plans/in-progress/README.md`, `plans/done/README.md`, and every live link to the old path; run the full
       validation from the archived state; add the WORKLOG entry; commit as
       `docs(plan): archive the in-memory ledger plan` and push. Command: the command below finds only history. Proof:
       the command's output and the pushed range.
+  - Moved at 07:34 with `/usr/bin/git mv` to `plans/done/2026-09-25__in-memory-account-ledger-init/`, 2026-09-25 being
+    the day its final commit lands. `plans/in-progress/README.md` now reads "No plans in progress.",
+    `plans/done/README.md` lists the plan, and the plan README's Status says it is done and its Context speaks of the
+    scaffold in the past. No live link used the old path: the command below printed only `delivery.md`, whose one hit is
+    that command itself.
+  - Full validation from the archived state, 07:35–07:37, `--skip-nx-cache`, every command exit 0: test:quick (116
+    passed, 1 xfailed; coverage 95%), test:integration (2 passed), test:e2e (6 passed), check:hygiene, check-md,
+    internal-link (1375 links, no findings), heading-hierarchy, naming, and word-budget.
 
 ```bash
 grep -rln --exclude-dir=.git --exclude-dir=.nx --exclude-dir=local-tmp --exclude-dir=node_modules \

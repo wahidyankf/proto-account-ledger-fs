@@ -5,18 +5,21 @@ deliverable documents and the architecture trade-offs document that feeds the Pa
 
 ## Status
 
-In progress. On 2026-09-24 the owner asked for the complete six-document plan, which replaces this folder's earlier
-decision to run as a live iteration without the usual plan documents or decision gates. Both decision gates are closed
-and recorded in the [decision records](tech-docs/005-decision-records.md). The same day the owner ordered execution: the
-quality gate runs once on the committed plan, repairing within its budget, and execution follows it phase by phase;
-archival then needs the execution check only (D11).
+Done on 2026-09-25. Every phase was executed, gated, committed, and pushed to `origin/main`; the execution check's first
+run blocked archival, its findings were repaired, and its second run permitted it, as the
+[Execution Record](delivery.md#execution-record) records. On 2026-09-24 the owner asked for the complete six-document
+plan, which replaces this folder's earlier decision to run as a live iteration without the usual plan documents or
+decision gates. Both decision gates are closed and recorded in the
+[decision records](tech-docs/005-decision-records.md). The same day the owner ordered execution: the quality gate runs
+once on the committed plan, repairing within its budget, and execution follows it phase by phase; archival then needs
+the execution check only (D11).
 
 ## Context
 
 The assessment docs at the repository root already resolve every ambiguity, fix every figure, and decide every criterion
-verdict. No ledger code exists yet: `apps/account-ledger-cli` is a scaffold that prints `Hello, world!` and binds one
-Gherkin scenario at three test layers. This plan builds the ledger those documents describe, and changes the
-repository's rules where the build needs them to change.
+verdict. When the plan began, no ledger code existed: `apps/account-ledger-cli` was a scaffold that printed
+`Hello, world!` and bound one Gherkin scenario at three test layers. This plan builds the ledger those documents
+describe, and changes the repository's rules where the build needs them to change.
 
 ## Scope
 
