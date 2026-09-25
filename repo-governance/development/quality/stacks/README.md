@@ -18,4 +18,4 @@ standard only when it uses that stack, and the stack's programming skill defers 
 - [Python Standards](python-standards.md) — the uv, ruff, strict pyright, and pytest gates, a functional core, Python
   domain shapes, `Decimal` money, and failures
 - [Python Standards Modules](python-standards/README.md) — naming functions by a verb and its object and variables by
-  nouns
+  nouns, and returning failures as Results

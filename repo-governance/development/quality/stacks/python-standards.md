@@ -56,14 +56,14 @@ processes stay in the shell and reach the core as arguments, as
 
 A `match` over a closed set ends with `case _: assert_never(value)`, so pyright reports a newly unhandled case. No type
 may represent an illegal value: its constructor raises on one, which only a bug reaches, and its `parse` or `make`
-returns a typed fault for input. State machines are hand-written: one `match` over the state and trigger unions is the
-table.
+returns `Err` with a typed fault for input. State machines are hand-written: one `match` over the state and trigger
+unions is the table.
 
 ## Failures
 
-This repository records **returned result values**: an expected failure is returned as a named fault type in a union
-with the success value, and exceptions are left for bugs and the shell. Under either option, a failure has a named type,
-never a bare string; an unexpected fault is handled at the shell; and no code uses a bare `except:`.
+This repository records **returned result values**: an expected failure is returned as `Result[T, Fault]`, `Ok` or `Err`
+with a named fault type, and exceptions are left for bugs and the shell's signals, as
+[Failures](python-standards/002-failures.md) holds.
 
 ## Mutation Proofs
 
@@ -79,3 +79,4 @@ failure rules, the variable names, and the mutation-proof step. Test levels and 
 ## Modules
 
 1. [Naming](python-standards/001-naming.md)
+2. [Failures](python-standards/002-failures.md)
