@@ -1,0 +1,202 @@
+# Phase 8 behaviour corpus on the result
+# command: python3 local-tmp/restructure/corpus.py $APP
+# commit: 9827e54; time: 2026-09-25 21:04 +0700
+== brief
+exit 0
+stdout ffa6f57381332e394aede9bd7b18a6c5b6dec604ffc02be504c4ac5f1b13860d 228 lines
+== volume-1000
+exit 0
+stdout 18e42e74a686f3289ce0998eaba60525912e9392e9ea10d80b065ad54d1e1f5b 1517 lines
+== refuse-id-reused
+exit 0
+stdout 9d13b6cd88ec7623ab5993bfd2fe6c53e13b13adacc34615a6d14e78377eaceb 182 lines
+== duplicate-ignored
+exit 0
+stdout fbda44b05681ae65c929cfeef03e61c90a6b1ddcc7871ce61e928ede59999533 182 lines
+== duplicate-other-day
+exit 0
+stdout eadec1e608a17757451ad7d3a347aeafba3e935981659273e684cb61243b866b 185 lines
+== refuse-already-reversed
+exit 0
+stdout 9897a410eeebddd2f20ff355956957457447df732b0b789656a157ea89ba3611 184 lines
+== refuse-reverses-a-reversal
+exit 0
+stdout 249250e5e35cbacc2f39196b4f686df4c3246b5898b65152ea9994386d66ae77 184 lines
+== refuse-unknown-target
+exit 0
+stdout 050bd605f0114888e4271e95c336da19693bb1447ee338cef72b64b4e8bd98db 182 lines
+== refuse-target-other-account
+exit 0
+stdout 3a6ed4f563211c2dcd37416cd8c9d99210e378b8c1797aedbcb28a330bfe5bcc 185 lines
+== refuse-moved-no-money
+exit 0
+stdout cca113e6bda97137b40ee1183a36339fcab1116cd9a62207f65304419fff99e9 183 lines
+== refuse-already-undone
+exit 0
+stdout c7ccc29ef7b1603a39f720c459eac3afac7cb5f05805700b139082f916a81861 186 lines
+== reverse-instalment
+exit 0
+stdout c9a4dfe2998c40cde13887baf0176f05d865154d4b1d39cdb14ebfeea475bfce 190 lines
+== reverse-fee-and-interest
+exit 0
+stdout 42ca63d44cbbb6f22e4b1f616bb226f55c9dfd87d50187576b3d4a1bb44d3866 194 lines
+== partial-below-hold
+exit 0
+stdout 6c01817342e528fa7bcbcaf29b247859fb2b2bec3b5132a659e516dedf240b82 194 lines
+== partial-reaching-hold
+exit 0
+stdout aabeba89d0979ef8c2c742aa97f06be07d3b0f2d6ca352e96f5ec5d93687552c 190 lines
+== partial-past-hold
+exit 0
+stdout 558849bc6c7f50d369cd7ed2469494a9374b612f3b8b4d3ff4875f4270eb4bc1 190 lines
+== final-over-hold
+exit 0
+stdout 1ff0c5cbcfde0630b4d1edc3b8d705924ba1596991d9b1e43d771d13376a163b 186 lines
+== settle-declined
+exit 0
+stdout 7f6dad7302c10070ffb6ac1997498086533970fb9bc2e0ac977a8144564b9232 185 lines
+== settle-unknown
+exit 0
+stdout 5e7b8b114cb1ff9178bede3db1b38d078842b020f4757dbf6351b2fceae5e474 181 lines
+== settle-bhd-partial
+exit 0
+stdout 4c9f053cf2910e0f43539e9b0d1a7edd580ceb7516b5a421b593cf8e4782cb9a 186 lines
+== instalments-bhd
+exit 0
+stdout 4c46757cd6388453ce91802c81f125800fa2f2af6e63711753047a4d5c7adbc4 184 lines
+== instalments-aed
+exit 0
+stdout 0f9203d79ac6330ddaf1952d17bde435694c99d77f96a21ca63f57fec5aa3af1 188 lines
+== instalments-too-fine
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 2: 0.002 cannot be split into 3 instalments
+== negative-fee-refund-capitalize
+exit 0
+stdout 93ac1497bbd56a06f8caff8b1de7afc7aa0b6f6381fe6a2d5a9674b37c2d097f 206 lines
+== late-and-outside
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 4: day '9' is outside the window 1 to 6
+== late-in-window
+exit 0
+stdout 31f0c78d90eb61606d45b84aacae0c151695a637a590c486bc7f1b4af59e6d35 192 lines
+== empty-stream
+exit 0
+stdout a10bc3a8b41f55d1769fb99e292c5d5a73e8e88eeda7a1861f5e336aa352d7e3 177 lines
+== fault-header
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 1: expected the header event,booked,type,account,amount,value_date,reference,instalments,final
+== fault-empty-file
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 1: expected the header event,booked,type,account,amount,value_date,reference,instalments,final
+== fault-short-row
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 2: expected 9 cells, found 8
+== fault-not-decimal
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 2: amount 'abc' is not a decimal number
+== fault-too-many-places
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 2: amount '1.001' has more than 2 places for AED
+== fault-above-limit
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 2: amount '1000000000000.00' must be below 1000000000000
+== fault-not-positive
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 2: amount '0.00' must be above zero
+== fault-negative
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 2: amount '-5.00' must be above zero
+== fault-bad-day
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 2: day 'x' is outside the window 1 to 6
+== fault-day-zero
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 2: day '0' is outside the window 1 to 6
+== fault-bad-event-id
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 2: event ID 'X1' is not valid
+== fault-bad-account
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 2: account ID 'ACC-1' is not valid
+== fault-unknown-account
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 2: account 'ACC-003' is not a configured account
+== fault-bad-kind
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 2: type 'REFUND' is not one of CREDIT, DEBIT, AUTHORIZATION, SETTLEMENT, REVERSAL
+== fault-missing-amount
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 2: column 'amount' is required for CREDIT
+== fault-unexpected-reference
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 2: column 'reference' does not apply to CREDIT
+== fault-unexpected-final
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 2: column 'final' does not apply to DEBIT
+== fault-bad-final
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 2: final must be yes or no
+== fault-bad-instalments
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 2: instalments must be a whole number from 2 to 360
+== fault-many-instalments
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 2: instalments must be a whole number from 2 to 360
+== fault-bad-reference
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 2: reference 'Z9' is not an event ID
+== fault-bad-auth-ref
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 2: authorization ID 'E1' is not valid
+== fault-field-limit
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 2: field larger than field limit (131072)
+== fault-currency-places-bhd
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: line 2: amount '1.0001' has more than 3 places for BHD
+== file-missing
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: cannot read missing.csv: no such file
+== file-not-utf8
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: cannot read s.csv: not UTF-8 text
+== file-directory
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr error: cannot read adir: Is a directory
+== args-none
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr usage: account-ledger-cli <stream.csv>
+== args-two
+exit 2
+stdout e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855 0 lines
+stderr usage: account-ledger-cli <stream.csv>

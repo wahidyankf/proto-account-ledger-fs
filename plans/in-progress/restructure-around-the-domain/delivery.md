@@ -893,9 +893,10 @@ Reads each document against the tree and carries every change the restructure ma
       `./rhino md heading-hierarchy validate`, and `./rhino md naming validate`. Proof: each 0. Acceptance: AC-14. -
       Done 21:03: `GATE PASSED`, exit 0; internal-link exit 0 (1491 links, no findings); heading-hierarchy exit 0;
       naming exit 0.
-- [ ] [AI] Commit as `docs(specs): describe the restructured ledger as built` (and `docs: …` for the READMEs and the
+- [x] [AI] Commit as `docs(specs): describe the restructured ledger as built` (and `docs: …` for the READMEs and the
       trade-offs document), with the WORKLOG entry and the Execution Record line, and push. Proof: the hashes and range.
-      Acceptance: AC-16.
+      Acceptance: AC-16. - Done 21:05: 466eb19 (the architecture) and 9827e54 (the READMEs, the trade-offs document, the
+      WORKLOG entry, and the Phase 7 line), pushed as d592e56..9827e54; every hook passed.
 
 Pause safety: the documents are on `origin/main`. Re-verify with the Phase 7 gate.
 
@@ -903,37 +904,66 @@ Pause safety: the documents are on `origin/main`. Re-verify with the Phase 7 gat
 
 Proves every acceptance criterion against the result and files the evidence.
 
-- [ ] [AI] Run the corpus on the result into `$EV/phase-8-corpus.txt` and compare with Phase 0's. Proof: `diff -I '^#'`
-      empty. Acceptance: AC-02.
-- [ ] [AI] Compare the golden fence: `/usr/bin/git diff 83dfd58 -- OUTPUT_TARGET.md` empty and `test:e2e` passing.
-      Proof: both. Acceptance: AC-01.
-- [ ] [AI] Record `$EV/phase-8-tests.txt` and `$EV/phase-8-literals.txt`, and compare each with Phase 0's. Proof: every
-      baseline name with its count and its literals, five added, one xfail, nothing skipped. Acceptance: AC-03.
-- [ ] [AI] Run `cited_names.py`. Proof: `missing 0`. Acceptance: AC-04.
-- [ ] [AI] Audit the types: `pyright` 0 errors;
+- [x] [AI] Run the corpus on the result into `$EV/phase-8-corpus.txt` and compare with Phase 0's. Proof: `diff -I '^#'`
+      empty. Acceptance: AC-02. - Done: `$EV/phase-8-corpus.txt`, on 9827e54. - Proof: `diff -I '^#'` against
+      `phase-0-corpus.txt` empty.
+- [x] [AI] Compare the golden fence: `/usr/bin/git diff 83dfd58 -- OUTPUT_TARGET.md` empty and `test:e2e` passing.
+      Proof: both. Acceptance: AC-01. - Done: `/usr/bin/git diff 83dfd58 -- OUTPUT_TARGET.md` is 0 lines; `test:e2e`
+      passed in every gate since Phase 1, last at 21:03. - Proof: both.
+- [x] [AI] Record `$EV/phase-8-tests.txt` and `$EV/phase-8-literals.txt`, and compare each with Phase 0's. Proof: every
+      baseline name with its count and its literals, five added, one xfail, nothing skipped. Acceptance: AC-03. - Done:
+      162 cases under 120 names, against 157 under 115; the literals of the 120. - Proof: every baseline name kept with
+      its count and its literals (115 names); five added (`test_a_zero_change_has_no_direction`,
+      `test_an_event_on_an_unconfigured_account_is_an_internal_fault`, `test_an_unknown_account_exits_2_naming_it`,
+      `test_instalments_refuse_parts_whose_number_is_not_the_count`,
+      `test_taking_all_of_a_hold_or_more_leaves_nothing`); 161 passed and 1 xfailed; no `skip`, `skipif`, or
+      `strict=False` under `tests/`.
+- [x] [AI] Run `cited_names.py`. Proof: `missing 0`. Acceptance: AC-04. - Done: `cited 60 defined 120 missing 0`.
+- [x] [AI] Audit the types: `pyright` 0 errors;
       `grep -rnE --include='*.py' "\bassert |\bAny\b|cast\(|type: ignore|noqa" $SRC` prints nothing but `assert_never`.
-      Proof: both. Acceptance: AC-06.
-- [ ] [AI] Audit the operations: `python3 local-tmp/restructure/audit.py --check`, its first list. Proof: exactly the
-      six AC-08 names. Acceptance: AC-08.
-- [ ] [AI] Audit the aggregate and the ledger: `grep -rn --include='*.py' "AccountIn\[" $SRC` shows it as a subject only
+      Proof: both. Acceptance: AC-06. - Done: pyright `0 errors, 0 warnings, 0 informations`; the grep prints nothing,
+      exit 1 (`assert_never` has no space after `assert`). - Proof: both.
+- [x] [AI] Audit the operations: `python3 local-tmp/restructure/audit.py --check`, its first list. Proof: exactly the
+      six AC-08 names. Acceptance: AC-08. - Done: six public module-level functions: `read_file`, `run_cli`, `main`,
+      `apply_settlement`, `is_aed`, `parse_event_id`. - Proof: exactly AC-08's six.
+- [x] [AI] Audit the aggregate and the ledger: `grep -rn --include='*.py' "AccountIn\[" $SRC` shows it as a subject only
       in `account.py`; `grep -rnE --include='*.py' "^def (process_event|close_day|find_history)|^type Log " $SRC` prints
-      nothing. Proof: both. Acceptance: AC-09, AC-10.
-- [ ] [AI] Audit immutability: `python3 local-tmp/restructure/audit.py --check`, its second and third lists. Proof:
+      nothing. Proof: both. Acceptance: AC-09, AC-10. - Done: `AccountIn[` appears only in `account.py`, in the class,
+      `_append_entry`, and the `Account` alias; the second grep prints nothing (exit 1). - Proof: both.
+- [x] [AI] Audit immutability: `python3 local-tmp/restructure/audit.py --check`, its second and third lists. Proof:
       every class frozen and slotted or one of AC-12's exceptions; no module-level `dict`, `list`, or `set` under
-      `$SRC`. Acceptance: AC-12.
-- [ ] [AI] Compare the layout: the sorted `.py` paths under `$SRC` and `$APP/tests` equal the trees in
-      [the target layout](tech-docs/001-target-layout.md). Proof: the diff is empty. Acceptance: AC-13.
-- [ ] [AI] Run the six mutation spot-checks
+      `$SRC`. Acceptance: AC-12. - Done: 94 classes: 84 frozen and slotted, `Ok` and `Err`, four `Enum`s, and four
+      `Protocol`s; 0 module-level mutable bindings; `broken 0`. - Proof: `audit.py --check` exit 0.
+- [x] [AI] Compare the layout: the sorted `.py` paths under `$SRC` and `$APP/tests` equal the trees in
+      [the target layout](tech-docs/001-target-layout.md). Proof: the diff is empty. Acceptance: AC-13. - Done: the 51
+      `.py` paths of 001's two trees, extracted to `local-tmp/restructure/layout-doc.txt`, against
+      `find src/account_ledger tests -name '*.py'`. - Proof: `diff` empty.
+- [x] [AI] Run the six mutation spot-checks
       [behaviour preservation](tech-docs/004-behaviour-preservation-and-tests.md#every-other-proof) lists, each broken,
-      run, and restored, into `$EV/phase-8-mutations.txt`. Proof: each names the test that failed. Acceptance: AC-02.
-- [ ] [AI] Write `$EV/phase-8-timings.txt` with Phase 0's timings and `local-tmp/restructure/timings-result.txt` side by
-      side. Proof: the file. Acceptance: AC-14.
-- [ ] [AI] Run the full gate with `--skip-nx-cache`, the Rhino Markdown checks, and `npm run -s check:hygiene`. Proof:
-      every exit 0; coverage recorded. Acceptance: AC-16.
+      run, and restored, into `$EV/phase-8-mutations.txt`. Proof: each names the test that failed. Acceptance: AC-02. -
+      Done: `local-tmp/restructure/mutate.py` breaks each rule in a fresh scratch copy, runs the whole suite there, and
+      deletes the copy: `take` at zero, 10 failed (among them `test_taking_all_of_a_hold_or_more_leaves_nothing`); the
+      repeated-ID check skipped, 9 (the four AMB-034 tests); `EventLog.select` keeping every account's entries, 83;
+      `ReportedClosings.update` dropping a restatement, 2
+      (`test_amb_022_a_day_restates_each_earlier_closing_it_changed`); the wrong path, 7
+      (`test_a_missing_stream_file_exits_2` among them); no flush, 2 (`test_a_closed_pipe_exits_141_quietly`). - Proof:
+      `$EV/phase-8-mutations.txt`; each mutation names the tests that failed, none survived, and the scratch copy is
+      gone.
+- [x] [AI] Write `$EV/phase-8-timings.txt` with Phase 0's timings and `local-tmp/restructure/timings-result.txt` side by
+      side. Proof: the file. Acceptance: AC-14. - Done: 6, 30, 60, and 120 days and the volume run, baseline beside
+      result: 0.01/0.01, 0.50/0.47, 3.62/3.56, 28.08/27.21, 0.72/0.71 s. - Proof: the file.
+- [x] [AI] Run the full gate with `--skip-nx-cache`, the Rhino Markdown checks, and `npm run -s check:hygiene`. Proof:
+      every exit 0; coverage recorded. Acceptance: AC-16. - Done: `test:quick`, `test:integration`, and `test:e2e` with
+      `--skip-nx-cache` exit 0; internal-link, heading-hierarchy, and naming exit 0; `npm run -s check:hygiene` exit 0.
+      Coverage 94.95% (1624 statements, 82 missed), against 95.12% (1579, 77) at Phase 0: the missed lines added are the
+      early returns that pass on an internal fault only a bug brings, in the layers the restructure added or reshaped,
+      such as `LedgerRun.run`'s `return processed` (`run.py:22`) and `_ProcessingState`'s returns in `stream.py`. -
+      Proof: every exit 0; coverage above.
 
 ### Phase 8 Gate
 
-- [ ] [AI] Run `sh local-tmp/restructure/gate.sh`. Proof: exit 0. Acceptance: AC-01 to AC-16.
+- [x] [AI] Run `sh local-tmp/restructure/gate.sh`. Proof: exit 0. Acceptance: AC-01 to AC-16. - Done 21:13:
+      `GATE PASSED`, exit 0.
 - [ ] [AI] Commit the evidence as `docs(plan): record the restructure's verification`, with the WORKLOG entry and the
       Execution Record line, and push. Proof: the hash and range. Acceptance: AC-16.
 

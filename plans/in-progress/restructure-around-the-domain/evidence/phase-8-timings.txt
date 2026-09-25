@@ -1,0 +1,10 @@
+# Phase 8 timings: Phase 0's, on the baseline copy, beside the result's
+# command: PYTHONPATH=<src> $APP/.venv/bin/python local-tmp/restructure/scale.py 6 30 60 120, then --volume
+# baseline: phase-0-baseline.txt, 2026-09-25 19:08 +0700; result: the code as of d592e56, unchanged since, 2026-09-25 20:57 +0700
+# run        events  baseline s  result s
+6 days          60        0.01      0.01
+30 days        300        0.50      0.47
+60 days        600        3.62      3.56
+120 days      1200       28.08     27.21
+volume        1000        0.72      0.71
+# no figure moves by more than a fifth, so the trade-offs table keeps its recorded figures

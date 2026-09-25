@@ -1,0 +1,117 @@
+# Phase 8 mutation spot-checks, tech-docs 004's six: each rule broken in a scratch copy of the app, the whole
+# suite run there, and the copy deleted; nothing of it is committed. A name listed once may fail in several files.
+# command: python3 local-tmp/restructure/mutate.py
+# commit: 9827e54; time: 2026-09-25 21:06 +0700
+
+## take returns the rest at zero
+# src/account_ledger/domain/model/money.py: 'return Ok(AmountIn(rest) if _is_positive(rest) else None)' -> 'return Ok(AmountIn(rest) if rest.value >= 0 else None)'
+# exit 1: 10 failed, 151 passed, 1 xfailed in 0.93s
+failed: test_amb_013_partial_settlements_reaching_the_hold_settle
+failed: test_amb_029_a_settlement_after_a_final_one_is_force_posted
+failed: test_amb_034_a_repeated_reversal_or_settlement_is_a_duplicate
+failed: test_each_row_prints_its_type_and_detail
+failed: test_every_state_and_settlement_input_pair_follows_the_table
+failed: test_taking_all_of_a_hold_or_more_leaves_nothing
+failed: test_the_brief_stream_prints_output_target
+failed: test_the_texts_beyond_output_target_follow_its_patterns
+
+## Ledger.process_event skips the repeated-ID check
+# src/account_ledger/domain/ledger/ledger.py: 'if known_entry is not None:' -> 'if known_entry is not None and False:'
+# exit 1: 9 failed, 152 passed, 1 xfailed in 0.83s
+failed: test_amb_014_a_rejected_event_is_that_days_error
+failed: test_amb_014_a_rejected_event_prints_its_refusal
+failed: test_amb_034_a_repeated_event_is_logged_as_a_duplicate_with_no_effect
+failed: test_amb_034_a_repeated_reversal_or_settlement_is_a_duplicate
+failed: test_amb_034_a_reused_id_with_different_content_is_refused
+failed: test_amb_034_the_same_event_booked_another_day_is_refused
+failed: test_the_brief_stream_prints_output_target
+failed: test_the_texts_beyond_output_target_follow_its_patterns
+
+## EventLog.select keeps another account's entries
+# src/account_ledger/domain/account/event_log.py: 'if entry.event.account == account_id))' -> 'if entry.event.account == account_id or True))'
+# exit 1: 83 failed, 78 passed, 1 xfailed in 0.87s
+failed: test_a_closed_pipe_exits_141_quietly
+failed: test_a_partially_settled_authorization_prints_its_remaining_hold
+failed: test_a_step_that_generates_nothing_prints_its_note
+failed: test_a_stream_file_prints_its_report_and_exits_0
+failed: test_amb_001_a_day_without_events_still_closes
+failed: test_amb_001_an_event_booked_after_the_window_reaches_no_day
+failed: test_amb_005_a_changed_closing_adjusts_its_interest
+failed: test_amb_005_interest_accrues_on_a_positive_closing
+failed: test_amb_008_a_future_dated_credit_does_not_count_for_an_authorization
+failed: test_amb_009_a_later_credit_the_same_day_does_not_change_a_decline
+failed: test_amb_010_a_hold_counts_from_its_value_date
+failed: test_amb_011_a_day_still_negative_is_not_charged_again
+failed: test_amb_011_a_fee_counts_in_the_closings_after_it
+failed: test_amb_013_a_non_final_settlement_keeps_the_rest_of_the_hold
+failed: test_amb_013_partial_settlements_reaching_the_hold_settle
+failed: test_amb_014_a_rejected_event_is_that_days_error
+failed: test_amb_014_a_rejected_event_prints_its_refusal
+failed: test_amb_015_a_late_event_is_processed_on_the_current_day
+failed: test_amb_019_every_known_authorization_is_listed_with_its_state
+failed: test_amb_022_a_day_restates_each_earlier_closing_it_changed
+failed: test_amb_023_a_days_interest_never_counts_its_own_capitalization
+failed: test_amb_027_a_bhd_account_is_charged_bhd_2_560
+failed: test_amb_028_a_reversal_of_a_reversal_is_refused
+failed: test_amb_028_a_second_reversal_of_the_same_event_is_refused
+failed: test_amb_029_a_settlement_after_a_final_one_is_force_posted
+failed: test_amb_029_a_settlement_against_a_declined_authorization_is_force_posted
+failed: test_amb_030_a_settlement_above_its_hold_debits_in_full
+failed: test_amb_033_a_step_that_generates_nothing_reports_its_row
+failed: test_amb_034_a_repeated_event_is_logged_as_a_duplicate_with_no_effect
+failed: test_amb_034_a_repeated_reversal_or_settlement_is_a_duplicate
+failed: test_amb_034_a_reused_id_with_different_content_is_refused
+failed: test_amb_034_the_same_event_booked_another_day_is_refused
+failed: test_amb_035_a_capitalization_reversed_on_its_own_day_leaves_that_days_interest
+failed: test_amb_035_a_fee_reversed_on_a_negative_day_is_charged_again
+failed: test_amb_035_a_reversal_of_an_event_that_moved_no_money_is_refused
+failed: test_amb_035_a_reversal_of_an_unknown_event_is_refused
+failed: test_amb_035_a_reversal_undoes_what_its_target_moved
+failed: test_amb_035_a_reversed_capitalization_returns_its_interest_to_accrued
+failed: test_amb_035_a_reversed_instalment_stays_reversed
+failed: test_amb_035_a_reversed_interest_event_is_generated_again
+failed: test_amb_035_a_reversed_refund_puts_its_fee_back_in_force
+failed: test_amb_035_a_reversed_settlement_leaves_its_authorization_settled
+failed: test_amb_035_money_already_undone_cannot_be_undone_again
+failed: test_amb_035_reversing_a_credit_in_instalments_undoes_every_instalment
+failed: test_amb_036_a_reversal_of_another_accounts_event_is_refused
+failed: test_amounts_print_in_their_currencys_format
+failed: test_authorization_states_print_as_output_target_shows
+failed: test_c1_day_2_closes_at_minus_370_at_end_of_day_5_before_fees
+failed: test_c2_e7_causes_three_fees_all_value_dated_day_5
+failed: test_c3_auth_a_settlement_is_accepted_and_releases_the_hold
+failed: test_c4_e6_is_force_posted_for_180
+failed: test_c5_a_hold_reduces_available_balance_but_not_ledger_balance
+failed: test_c5_auth_b_is_declined
+failed: test_c6_day_6_closes_at_285_76_not_285_79
+failed: test_c6_e9_restores_days_2_to_4_and_refunds_the_fees
+failed: test_c7_e10_posts_3_333_3_333_3_334
+failed: test_c8_capitalization_equals_the_sum_of_interest_events
+failed: test_capitalization_names_the_days_it_accrued
+failed: test_each_row_prints_its_type_and_detail
+failed: test_instalment_counts_print_as_words
+failed: test_main_reads_a_real_file_and_reports_a_missing_one
+failed: test_the_brief_stream_prints_output_target
+failed: test_the_texts_beyond_output_target_follow_its_patterns
+
+## ReportedClosings.update drops a restatement
+# src/account_ledger/application/report.py: 'for restatement in report.restatements:' -> 'for restatement in report.restatements[:0]:'
+# exit 1: 2 failed, 159 passed, 1 xfailed in 0.81s
+failed: test_amb_022_a_day_restates_each_earlier_closing_it_changed
+failed: test_the_brief_stream_prints_output_target
+
+## CsvFileSource reports the wrong path
+# src/account_ledger/adapters/csv_file.py: 'f"cannot read {self.path}:' -> 'f"cannot read {self.path}.bak:'
+# exit 1: 7 failed, 154 passed, 1 xfailed in 0.80s
+failed: test_a_missing_stream_file_exits_2
+failed: test_an_unreadable_file_exits_2
+failed: test_main_reads_a_real_file_and_reports_a_missing_one
+failed: test_main_reports_a_file_that_is_not_utf_8
+failed: test_the_brief_stream_prints_output_target
+
+## TextReportSink.publish does not flush
+# src/account_ledger/adapters/text_report.py: 'self.out.flush()' -> 'pass'
+# exit 1: 2 failed, 159 passed, 1 xfailed in 0.80s
+failed: test_a_closed_pipe_exits_141_quietly
+failed: test_the_brief_stream_prints_output_target
+
