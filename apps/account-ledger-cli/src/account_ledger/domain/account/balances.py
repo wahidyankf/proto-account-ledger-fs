@@ -12,10 +12,7 @@ from account_ledger.domain.account.domain_events import (
 from account_ledger.domain.account.history import (
     AccountHistory,
     AccountHistoryIn,
-    find_first_entry,
     is_aed_history,
-    list_counted_events,
-    list_instalments,
 )
 from account_ledger.domain.model.events import (
     Authorization,
@@ -39,7 +36,7 @@ from account_ledger.domain.model.money import Aed, Bhd, CurrencyMismatch, Money,
 def _list_effects[M: (Aed, Bhd)](history: AccountHistoryIn[M]) -> list[tuple[Day, Money]]:
     """Each counted entry's value date and signed effect on the account's ledger balance."""
     effects: list[tuple[Day, Money]] = []
-    for event in list_counted_events(history):
+    for event in history.list_counted_events():
         effects.extend((event.value_date, amount) for amount in _list_moved_amounts(history, event))
     return effects
 
@@ -64,7 +61,7 @@ def _list_moved_amounts[M: (Aed, Bhd)](history: AccountHistoryIn[M], event: Logg
         case InterestAccrual() | InterestAdjustment():
             return ()  # interest moves accrued interest, never the ledger balance, until capitalized (AMB-007)
         case Reversal(target=reverses):
-            target = find_first_entry(history.entries, reverses)
+            target = history.find_entry(reverses)
             undone_amounts = () if target is None else _list_undone_amounts(history, target.event)
             return tuple(-amount for amount in undone_amounts)  # counted from the reversal's own value date
         case _:
@@ -76,7 +73,7 @@ def _list_undone_amounts[M: (Aed, Bhd)](history: AccountHistoryIn[M], target: Lo
     match target:
         case Credit(posting=Instalments()):
             amounts: list[Money] = []
-            for part in list_instalments(history, target.id):
+            for part in history.list_instalments(target.id):
                 amounts.extend(_list_moved_amounts(history, part))
             return tuple(amounts)
         case _:

@@ -17,9 +17,6 @@ from account_ledger.domain.account.domain_events import (
 )
 from account_ledger.domain.account.history import (
     AccountHistoryIn,
-    find_first_entry,
-    list_counted_events,
-    list_instalments,
 )
 from account_ledger.domain.model.events import Credit, Fee, FeeRefund, Instalment, Instalments, Reversal
 from account_ledger.domain.model.ids import Day, EventId, FeeId, IncomingId, RefundId
@@ -29,7 +26,7 @@ from account_ledger.domain.model.money import Aed, Bhd
 def check_reversal[M: (Aed, Bhd)](history: AccountHistoryIn[M], target_id: EventId) -> Result[None, Rejection]:
     """Nothing when a reversal of the target on the account may proceed, or why it is refused, checked in tech-docs
     002's order (AMB-028, AMB-035); a target on another account is refused before the account sees it (AMB-036)."""
-    target = find_first_entry(history.entries, target_id)
+    target = history.find_entry(target_id)
     if target is None:
         return Err(UnknownTarget(target_id))
     if isinstance(target.event, Reversal):
@@ -60,7 +57,7 @@ def list_reversed_targets[M: (Aed, Bhd)](
     value-dated by then."""
     return frozenset(
         event.target
-        for event in list_counted_events(history)
+        for event in history.list_counted_events()
         if isinstance(event, Reversal) and (cutoff_day is None or event.value_date <= cutoff_day)
     )
 
@@ -76,7 +73,7 @@ def _check_undoing[M: (Aed, Bhd)](history: AccountHistoryIn[M], target: LoggedEv
             refund = _find_refund(history, fee)
             return Ok(None) if refund is None else Err(AlreadyUndone(fee, refund))
         case Credit(posting=Instalments()):
-            for part in list_instalments(history, target.id):
+            for part in history.list_instalments(target.id):
                 undoing_id = find_reversal_id(history, part.id)
                 if undoing_id is not None:
                     return Err(AlreadyUndone(part.id, undoing_id))

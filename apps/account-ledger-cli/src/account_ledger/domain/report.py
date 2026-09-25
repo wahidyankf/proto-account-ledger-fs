@@ -22,7 +22,6 @@ from account_ledger.domain.account.domain_events import (
 )
 from account_ledger.domain.account.history import (
     AccountHistory,
-    list_instalments_of,
 )
 from account_ledger.domain.account.interest import (
     list_accrued_days_of,
@@ -185,9 +184,7 @@ def _list_processed_events(log: Log, histories: Mapping[AccountId, AccountHistor
     for entry in log:
         event = _select_incoming_event(entry)
         if event is not None and entry.processed_day == day:
-            instalments = (
-                list_instalments_of(histories[event.account], event.id) if isinstance(entry, CreditPosted) else ()
-            )
+            instalments = histories[event.account].list_instalments(event.id) if isinstance(entry, CreditPosted) else ()
             processed_events.append(Processed(event, entry, instalments))
     return tuple(processed_events)
 

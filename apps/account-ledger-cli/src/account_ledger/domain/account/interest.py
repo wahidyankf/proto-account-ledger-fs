@@ -17,7 +17,6 @@ from account_ledger.domain.account.history import (
     AccountHistory,
     AccountHistoryIn,
     is_aed_history,
-    list_counted_events,
 )
 from account_ledger.domain.account.reversals import (
     list_reversed_targets,
@@ -119,7 +118,7 @@ def compute_accrued[M: (Aed, Bhd)](history: AccountHistoryIn[M]) -> Result[M, Cu
     (AMB-007, AMB-035)."""
     undone_ids = list_reversed_targets(history)
     changes: list[Money] = []
-    for event in list_counted_events(history):
+    for event in history.list_counted_events():
         match event:
             case InterestAccrual() | InterestAdjustment() if event.id not in undone_ids:
                 changes.append(_sign_interest(event))
@@ -151,7 +150,7 @@ def _map_interest_since_capitalization[M: (Aed, Bhd)](
     """Each day's signed interest events generated since the capitalization before this one, up to this one."""
     undone_ids = list_reversed_targets(history)
     interest_by_day: dict[Day, list[Money]] = {}
-    for event in list_counted_events(history):
+    for event in history.list_counted_events():
         match event:
             case Capitalization(id=capitalization_id) if capitalization_id == capitalization:
                 break
@@ -178,7 +177,7 @@ def compute_interest_base[M: (Aed, Bhd)](history: AccountHistoryIn[M], day: Day)
     whose reversal that closing already counts is out of it already (AMB-035)."""
     undone_ids = list_reversed_targets(history, cutoff_day=day)
     capitalized_values: list[Money] = []
-    for event in list_counted_events(history):
+    for event in history.list_counted_events():
         match event:
             case Capitalization(id=capitalization_id, value_date=value_date, amount=amount) if (
                 value_date == day and capitalization_id not in undone_ids
@@ -194,7 +193,7 @@ def sum_interest_generated[M: (Aed, Bhd)](history: AccountHistoryIn[M], day: Day
     undone_ids = list_reversed_targets(history)
     generated_values = [
         _sign_interest(event)
-        for event in list_counted_events(history)
+        for event in history.list_counted_events()
         if isinstance(event, InterestAccrual | InterestAdjustment)
         and event.id.for_day == day
         and event.id not in undone_ids
