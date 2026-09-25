@@ -18,7 +18,7 @@ close therefore costs days × entries, and processing D days costs about D³ onc
 also a tuple, so each append copies it. Measured on 2026-09-25, on a laptop, once the rules had moved onto one account's
 entries, with a scratch stream of ten alternating credits and debits a day on one account, each value-dated on its
 booking day, and interest capitalized every thirtieth day; measured again after the code was restructured into layers,
-no figure moved by more than a fifth:
+and again after its last two fixes, no figure moved by more than a fifth:
 
 | Window   | Events | Processing time |
 | -------- | ------ | --------------- |
@@ -43,15 +43,19 @@ flowchart LR
   P -.-> C
 ```
 
-Doubling the window multiplies the time by seven to eight. Volume alone is not the problem: a hundred times the brief's
-events inside the same six days, each repeated under new IDs, is processed in 0.71 s. A hundred times the days is.
+**What breaks first at 100× volume is the day's close, in processing time, well before memory.** A hundred times the
+brief's events inside its six days, each repeated under new IDs, is processed in 0.71 s. A hundred times its daily
+volume, 170 events a day, takes 10.1 s over 30 days and 69.2 s over 60, at a peak of 31 MB and then 41 MB: doubling the
+window multiplies the time by about seven but the memory by a third. A bank runs its close against a deadline, so the
+close misses it first; extrapolated at that rate, a year of days would run for hours.
 
 The state grows without bound in three places:
 
 - **The log.** It holds every entry since the first day, and every query reads all of its account's entries.
 - **The window.** Fees and interest are re-judged for every day since the first, so each close does more work than the
   last, forever.
-- **The snapshots.** Processing keeps the log as it stood at every day's close, so memory grows with days × entries.
+- **The snapshots.** Processing keeps the log as it stood at every day's close; the entries are shared, but each
+  snapshot's references grow with days × entries.
 
 The cheapest structural change that defers this is a projection: a running total of each account's movements by value
 day, updated on every append, with each closing read as a prefix sum over it. It belongs to the Account aggregate, kept
@@ -60,8 +64,8 @@ It changes no rule's logic and no output; a close still re-judges every day, but
 than a scan, which takes processing from about D³ to about D². The log stays the source of truth, and the projection can
 be rebuilt from it at any time. What it does not fix is the ever-growing window. That needs a business decision, not a
 data structure: a period close after which a day is sealed, and a backdated event older than the seal posts its effect
-into the open period instead of reopening old days. That changes what the ledger reports, so it belongs with the
-controls below, not in the code alone.
+into the open period instead of reopening old days. That changes what the ledger reports, so finance and compliance
+decide it, not the code alone.
 
 ## Value-dated entries in production
 
@@ -95,10 +99,10 @@ The regulatory surface, for a bank the Central Bank of the UAE licenses and supe
   the entry that moved it. It records what happened, but not who did it or on whose authority.
 
 **The one control to add before going live: maker-checker approval for any value date earlier than the booking day.**
-The first person enters the backdated event with a reason code; a second, authorized person approves it before it
-reaches the log; and nothing may be value-dated before the last sealed period at all. The log then records who made and
-who approved every entry that restates the past, which answers the audit, consumer-protection, and financial-crime
-questions together, and the seal bounds the window the first section could not.
+The first person enters the backdated event with a reason code, and a second, authorized person approves it before it
+reaches the log. The log then records who made and who approved every entry that restates the past, which answers the
+audit, consumer-protection, and financial-crime questions together, and a backdated fee or restated statement can be
+explained to the customer from the reason code.
 
 ```mermaid
 flowchart LR
@@ -144,7 +148,8 @@ stateDiagram-v2
 
 | Ends by                        | In the model                                                                |
 | ------------------------------ | --------------------------------------------------------------------------- |
-| declined on arrival            | the hold would take the available balance below zero; no hold is placed     |
+| declined on arrival            | its hold does not fit the available balance; nothing is held                |
+| refused for a reused ID        | an authorization under an ID already used is refused on arrival (AMB-038)   |
 | settled for less than the hold | a final settlement debits its amount and releases the whole hold (AMB-013)  |
 | settled for more than the hold | the full amount is debited, and the balance may go negative (AMB-030)       |
 | partial settlements            | each keeps the rest on hold; one reaching the hold, or a final one, settles |
@@ -158,6 +163,9 @@ For each, what it represents and what the bank should mandate:
 - **Declined on arrival.** A card payment refused for lack of funds. Mandate: record the decline and its reason, and
   treat any later clearing against it as a force-post that goes to a dispute queue, since the bank may have a right to
   charge it back.
+- **Refused for a reused ID.** A clearing system that re-sends an authorization under a new message, or a short
+  authorization code that repeats across merchants. Mandate: key every hold by the card network's unique transaction
+  identifier, never the short code, and route a clash to review, since a merchant may still clear against it.
 - **Settled for less.** A fuel pump or restaurant pre-authorization cleared for the actual bill. Mandate: release the
   remainder at once, as the model does; a customer should never wait for money the merchant did not take.
 - **Settled for more.** A tip or a hotel's incidentals. Mandate: accept an overage within the card network's tolerance
@@ -194,6 +202,8 @@ risk.
 | a calendar: days are integers          | no weekends, holidays, or day-count convention for interest               |
 | product configuration                  | every fee or rate change is a release, and no rate has an effective date  |
 | two currencies, no exchange            | a card spend in another currency cannot be posted                         |
+| one fixed rate for the BHD fee         | the BHD 2.560 fee (AMB-027) drifts from AED 25.00 if either rate moves    |
+| an overdraft limit                     | any debit or settlement posts however far below zero; fees are the brake  |
 | one process, one ordered stream        | no ordering or locking across sources posting to one account at once      |
 | a machine-readable report              | downstream systems would parse text meant for people                      |
 | operator identity                      | a reversal or backdated entry cannot be traced to the person who made it  |
