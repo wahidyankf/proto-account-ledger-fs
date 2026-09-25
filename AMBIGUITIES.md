@@ -1152,3 +1152,38 @@ _Tests:_ `test_amb_036_a_reversal_of_another_accounts_event_is_refused`.
 on the account that holds that money, or the account's own history no longer explains its balance. Refusing as an
 unknown target would tell the operator that E7 is missing when it is not, and applying the reversal elsewhere would let
 a row's account column be wrong without anyone seeing it; a named refusal points at the one field to correct.
+
+## AMB-037 — A reversal value-dated apart from its target
+
+**Where.** "E9 — Day 6 — REVERSAL — ACC-001 reverses E7 — value_date Day 2". E9 carries its own value date, and it is
+E7's, so the two coincide in this stream.
+
+**Why it is problematic.** The brief does not say what a reversal's value date does when it differs from its target's.
+Counted from its own value date, a reversal dated before its target credits the money back on days the target never
+debited: a reversal dated Day 2 of a debit dated Day 3 would restate Day 2 above anything the account ever held. Dated
+after it, the target's effect stands on the days between. Ignoring the reversal's date always undoes the target in full,
+but leaves a column of the row meaning nothing.
+
+**Options.**
+
+- Refuse a reversal dated before its target; one on or after its target's value date undoes it from its own date.
+  **Recommended**: no day is ever credited with money its target never moved, and a later-dated correction stays
+  possible, as when a bank corrects an entry only from the day the error is found.
+- Count every reversal from its target's value date, whatever its own row says.
+- Count every reversal from its own value date, as the row gives it.
+
+**Status.** Resolved.
+
+**Resolution.** A reversal value-dated before its target is refused. It is checked once the target is known to be in the
+log, to have moved money, and to be neither a reversal nor already reversed (AMB-028, AMB-035), and before any part of
+it is found already undone. The refusal is recorded with its outcome (AMB-014), moves no balance, and prints as that
+day's error, `E12 refused: E7 is value-dated later, Day 3`. A reversal dated on or after its target's value date is
+posted and undoes the target from its own value date, so the days between keep the target's effect. E9 is dated Day 2,
+as E7 is, so no figure in this stream moves. _Tests:_ `test_amb_037_a_reversal_value_dated_before_its_target_is_refused`
+and `test_amb_037_a_reversal_value_dated_after_its_target_undoes_it_from_its_own_date`.
+
+**Rationale.** A reversal undoes what its target moved, so it cannot take effect before the target moved anything;
+counted from an earlier date, it would put money into closings, fees, and interest that no event explains. Taking the
+target's date for every reversal would hide a mistyped value date instead of showing it, and would take away a
+correction dated from the day an error is found, which leaves the past days as they were reported. A named refusal
+points at the one field to correct.

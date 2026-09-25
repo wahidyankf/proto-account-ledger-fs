@@ -182,7 +182,8 @@ account/domain_events
             | EventRejected(+ reason) | DuplicateIgnored
 account/rejections
           EventRejected.reason: Rejection = IdReused | AlreadyReversed | ReversesAReversal | UnknownTarget
-                                            | TargetOnAnotherAccount | MovedNoMoney | AlreadyUndone
+                                            | TargetOnAnotherAccount | MovedNoMoney | DatedBeforeTarget
+                                            | AlreadyUndone
 account/event_log
           EventLog = entries: LogEntry...   append(*entries), find_first_entry(event_id), select(account_id),
             list_processed_on(day)
@@ -309,8 +310,8 @@ account:
   above zero (AMB-008, AMB-009);
 - a settlement moves its authorization only as the state machine in L4 allows (D8), and is force-posted otherwise
   (AMB-012);
-- a target is reversed at most once, a reversal is never reversed, and one that undoes nothing is refused (AMB-028,
-  AMB-035);
+- a target is reversed at most once, a reversal is never reversed, and one that undoes nothing or is value-dated before
+  its target is refused (AMB-028, AMB-035, AMB-037);
 - a day closing negative carries one fee at most, refunded once that day recovers (AMB-002, AMB-004);
 - a day's interest is accrued once and adjusted when its closing changes, then capitalized on a capitalization day.
 

@@ -3,7 +3,7 @@ target, and by the Account aggregate for the rest."""
 
 from dataclasses import dataclass
 
-from account_ledger.domain.model.ids import AccountId, EventId, IncomingId
+from account_ledger.domain.model.ids import AccountId, Day, EventId, IncomingId
 
 
 @dataclass(frozen=True, slots=True)
@@ -49,6 +49,15 @@ class MovedNoMoney:
 
 
 @dataclass(frozen=True, slots=True)
+class DatedBeforeTarget:
+    """The reversal is value-dated before its target, the day given, so it would undo money on days the target never
+    moved (AMB-037)."""
+
+    target: EventId
+    target_value_date: Day
+
+
+@dataclass(frozen=True, slots=True)
 class AlreadyUndone:
     """A part of the target's money is already undone another way, by the event named (AMB-035)."""
 
@@ -63,5 +72,6 @@ type Rejection = (
     | UnknownTarget
     | TargetOnAnotherAccount
     | MovedNoMoney
+    | DatedBeforeTarget
     | AlreadyUndone
 )

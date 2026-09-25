@@ -3,6 +3,7 @@
 from account_ledger.domain.account.rejections import (
     AlreadyReversed,
     AlreadyUndone,
+    DatedBeforeTarget,
     IdReused,
     MovedNoMoney,
     Rejection,
@@ -11,7 +12,7 @@ from account_ledger.domain.account.rejections import (
     UnknownTarget,
 )
 from account_ledger.domain.model.events import IncomingEvent
-from account_ledger.domain.model.ids import AccountId, IncomingId, InstalmentId
+from account_ledger.domain.model.ids import AccountId, Day, IncomingId, InstalmentId
 from support.streams import ACC_001_OPENING, ACC_002_OPENING, make_authorization, make_credit, make_debit, make_reversal
 
 type Refusal = tuple[tuple[IncomingEvent, ...], AccountId, Rejection, str]
@@ -70,6 +71,16 @@ REFUSALS: dict[str, Refusal] = {
         ACC_001_OPENING.id,
         MovedNoMoney(IncomingId("E8")),
         "E12 refused: E8 moved no money",
+    ),
+    "DatedBeforeTarget": (
+        (
+            make_credit("E1", 1, "1000.00"),
+            make_debit("E7", 1, "620.00", value=3),
+            make_reversal("E12", 1, "E7", value=2),
+        ),
+        ACC_001_OPENING.id,
+        DatedBeforeTarget(IncomingId("E7"), Day(3)),
+        "E12 refused: E7 is value-dated later, Day 3",
     ),
     "AlreadyUndone": (
         (

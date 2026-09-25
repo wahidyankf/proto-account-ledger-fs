@@ -14,6 +14,7 @@ from account_ledger.domain.account.domain_events import EventRejected, FeeCharge
 from account_ledger.domain.account.rejections import (
     AlreadyReversed,
     AlreadyUndone,
+    DatedBeforeTarget,
     MovedNoMoney,
     ReversesAReversal,
     UnknownTarget,
@@ -268,6 +269,52 @@ def test_amb_035_a_reversal_of_an_event_that_moved_no_money_is_refused(target: s
 
     assert list_entries(log, "E12") == [EventRejected(undoing_reversal, Day(2), MovedNoMoney(IncomingId(target)))]
     assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001_OPENING).compute_closing(Day(2))) == make_aed("100.00")
+
+
+def test_amb_037_a_reversal_value_dated_before_its_target_is_refused() -> None:
+    """AMB-037: a reversal value-dated Day 2 would credit E7's 620.00 back on a day E7 never debited, so it is refused
+    and every closing stays as it was."""
+
+    early_reversal = make_reversal("E9", 4, "E7", value=2)
+
+    stream = (
+        make_credit("E1", 1, "1000.00"),
+        make_debit("E7", 3, "620.00"),
+        early_reversal,
+    )
+
+    log = unwrap_ok(IncomingStream(stream).process(CHALLENGE)).find_log(Day(4))
+
+    assert list_entries(log, "E9") == [
+        EventRejected(early_reversal, Day(4), DatedBeforeTarget(IncomingId("E7"), Day(3)))
+    ]
+    assert [
+        unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001_OPENING).compute_closing(Day(day))) for day in (2, 3, 4)
+    ] == [
+        make_aed("1000.00"),
+        make_aed("380.00"),
+        make_aed("380.00"),
+    ]
+
+
+def test_amb_037_a_reversal_value_dated_after_its_target_undoes_it_from_its_own_date() -> None:
+    """AMB-037: a reversal value-dated Day 4 undoes E7's Day 2 debit from Day 4 on, so Days 2 and 3 keep the debit."""
+
+    stream = (
+        make_credit("E1", 1, "1000.00"),
+        make_debit("E7", 2, "620.00"),
+        make_reversal("E9", 4, "E7"),
+    )
+
+    log = unwrap_ok(IncomingStream(stream).process(CHALLENGE)).find_log(Day(4))
+
+    assert [
+        unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001_OPENING).compute_closing(Day(day))) for day in (2, 3, 4)
+    ] == [
+        make_aed("380.00"),
+        make_aed("380.00"),
+        make_aed("1000.00"),
+    ]
 
 
 def test_amb_035_reversing_a_credit_in_instalments_undoes_every_instalment() -> None:

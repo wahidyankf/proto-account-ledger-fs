@@ -38,6 +38,7 @@ from account_ledger.domain.account.event_log import EventLog
 from account_ledger.domain.account.rejections import (
     AlreadyReversed,
     AlreadyUndone,
+    DatedBeforeTarget,
     MovedNoMoney,
     Rejection,
     ReversesAReversal,
@@ -306,16 +307,18 @@ class AccountIn[M: (Aed, Bhd)]:
     def _decide_reversal(self, reversal: Reversal, today: Day) -> ReversalPosted | EventRejected:
         """A reversal, posted unless a check refuses it."""
 
-        match self._check_reversal(reversal.target):
+        match self._check_reversal(reversal):
             case Ok():
                 return ReversalPosted(reversal, today)
             case Err(rejection):
                 return EventRejected(reversal, today, rejection)
 
-    def _check_reversal(self, target_id: EventId) -> Result[None, Rejection]:
-        """Nothing when a reversal of the target on the account may proceed, or why it is refused, checked in tech-docs
-        002's order (AMB-028, AMB-035); a target on another account is refused before the account sees it (AMB-036)."""
+    def _check_reversal(self, reversal: Reversal) -> Result[None, Rejection]:
+        """Nothing when the reversal of its target on the account may proceed, or why it is refused, checked in
+        tech-docs 002's order with its value date just before the target's parts (AMB-028, AMB-035, AMB-037); a target
+        on another account is refused before the account sees it (AMB-036)."""
 
+        target_id = reversal.target
         target = self._find_entry(target_id)
 
         if target is None:
@@ -331,6 +334,9 @@ class AccountIn[M: (Aed, Bhd)]:
 
         if reversal_id is not None:
             return Err(AlreadyReversed(target_id, reversal_id))
+
+        if reversal.value_date < target.event.value_date:
+            return Err(DatedBeforeTarget(target_id, target.event.value_date))
 
         return self._check_undoing(target.event)
 

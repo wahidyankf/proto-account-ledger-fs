@@ -33,6 +33,7 @@ from account_ledger.domain.account.domain_events import (
 from account_ledger.domain.account.rejections import (
     AlreadyReversed,
     AlreadyUndone,
+    DatedBeforeTarget,
     IdReused,
     MovedNoMoney,
     Rejection,
@@ -439,6 +440,8 @@ def _format_reason(reason: Rejection, account: AccountId) -> str:
             return f"{target.format()} is on {target_account.value}, not {account.value}"
         case MovedNoMoney(target=target):
             return f"{target.format()} moved no money"
+        case DatedBeforeTarget(target=target, target_value_date=target_value_date):
+            return f"{target.format()} is value-dated later, {_format_day_cell(target_value_date)}"
         case AlreadyUndone(part=part, undoing_id=undoing_id):
             return f"{part.format()} is already undone by {undoing_id.format()}"
         case _:
