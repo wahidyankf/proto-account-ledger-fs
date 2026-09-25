@@ -8,6 +8,9 @@ earlier work is claimed.
 
 | When                   | What                                                                                        |
 | ---------------------- | ------------------------------------------------------------------------------------------- |
+| 2026-09-25 16:05–17:10 | Operations on their types: aggregate methods, money and ID methods, shared bases, the rule  |
+| 2026-09-25 15:41–16:00 | Currency naming: generics end in In, unions take the plain noun; README lists the tools     |
+| 2026-09-25 15:03–15:40 | DDD layout: log entries named for facts, rules on one account's history, specs in DDD terms |
 | 2026-09-25 14:57–15:02 | DDD: a reversal of another account's event refused (AMB-036)                                |
 | 2026-09-25 13:49–14:12 | Neutral terms: processed, generated, settled, value date, plain names; brief quotes kept    |
 | 2026-09-25 13:02–13:06 | Instalment limit: a credit takes 2 to 360 instalments; NUMBERS and AMB-014 record it        |
