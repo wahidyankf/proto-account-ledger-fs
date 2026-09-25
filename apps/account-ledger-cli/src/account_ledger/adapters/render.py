@@ -65,11 +65,19 @@ def render(reports: Sequence[DayReport]) -> str:
 def _day(report: DayReport) -> str:
     banner = f"{RULE}\nDay {report.day.number}\n{RULE}"
     blocks = (
-        _block("Events processed", _table(EVENTS, [row for each in report.processed for row in _processed(each)])),
+        _block("Events processed", _table(EVENTS, _events(report))),
         _block("EOD applied", _table(APPLIED, [_applied(row) for row in report.end_of_day])),
         _block("Closing summary", _table(_summary_header(report), _summary(report))),
     )
     return "\n\n".join((banner, *blocks))
+
+
+def _events(report: DayReport) -> list[Row]:
+    """A row per event the day processed, each followed by the rows of the instalments it fired."""
+    rows: list[Row] = []
+    for processed in report.processed:
+        rows.extend(_processed(processed))
+    return rows
 
 
 def _block(title: str, body: list[str]) -> str:
@@ -81,7 +89,7 @@ def _table(header: Row, rows: Sequence[Row]) -> list[str]:
     """A box of `+`, `-`, and `|`, every column left-aligned and as wide as its widest cell, header included."""
     if not rows:
         return []
-    widths = [max(len(row[n]) for row in (header, *rows)) for n in range(len(header))]
+    widths = [max(len(cell) for cell in column) for column in zip(header, *rows, strict=True)]
     border = "+" + "+".join("-" * (width + 2) for width in widths) + "+"
 
     def line(row: Row) -> str:
@@ -259,8 +267,13 @@ def _summary(report: DayReport) -> list[Row]:
         ("Closing ledger balance", *(_amount(report.closing[account]) for account in accounts)),
         ("Available balance", *(_amount(report.available[account]) for account in accounts)),
         ("Authorizations", *(_authorizations(report.authorizations, account) for account in accounts)),
-        ("Errors", *("; ".join(_refusal(entry) for entry in report.errors[account]) or "none" for account in accounts)),
+        ("Errors", *(_errors(report.errors[account]) for account in accounts)),
     ]
+
+
+def _errors(entries: tuple[Rejected, ...]) -> str:
+    """The day's refusals for one account, joined by `; `, or `none` (AMB-014)."""
+    return "; ".join(_refusal(entry) for entry in entries) or "none"
 
 
 def _authorizations(known: Sequence[AuthorizationRecord], account: AccountId) -> str:
@@ -319,7 +332,8 @@ def _amount(money: Money) -> str:
     """Its currency's places, a comma every three digits, and `−` for a negative (tech-docs 003)."""
     text = digits(money)
     whole, places = text.removeprefix("-").split(".")
-    return f"{MINUS if text.startswith('-') else ''}{int(whole):,}.{places}"
+    sign = MINUS if text.startswith("-") else ""
+    return f"{sign}{int(whole):,}.{places}"
 
 
 def _or_dash(money: Money | None) -> str:

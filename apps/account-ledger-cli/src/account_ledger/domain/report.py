@@ -119,6 +119,7 @@ def report(log: Log, day: Day, config: LedgerConfig, reported: Reported) -> DayR
     differs from the one last reported for it (AMB-022)."""
     closings: dict[AccountId, Money] = {account.id: closing_of(log, account, day) for account in config.accounts}
     availables: dict[AccountId, Money] = {account.id: available_of(log, account, day) for account in config.accounts}
+    applied = _end_of_day(log, day, config) if day >= config.first_day else ()  # Day 0 is the opening, never closed
     return DayReport(
         day,
         _processed(log, day),
@@ -127,7 +128,7 @@ def report(log: Log, day: Day, config: LedgerConfig, reported: Reported) -> DayR
         _restated(log, day, config, reported),
         records(log),  # every authorization known by the day's end, with its state then (AMB-019, AMB-025)
         MappingProxyType({account.id: _errors(log, day, account.id) for account in config.accounts}),
-        _end_of_day(log, day, config) if day >= config.first_day else (),  # Day 0 is the opening, never closed
+        applied,
     )
 
 

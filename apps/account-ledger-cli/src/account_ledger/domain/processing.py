@@ -48,10 +48,12 @@ def process(log: Log, event: IncomingEvent, today: Day, config: LedgerConfig) ->
     """The log with the event's entry appended; ``today`` is the day it is processed on (AMB-015)."""
     known = first(log, event.id)  # the event ID is the idempotency key (AMB-034)
     if known is not None:
-        return append(log, Duplicate(event, today) if known.event == event else Rejected(event, today, IdReused()))
+        if known.event == event:
+            return append(log, Duplicate(event, today))
+        return append(log, Rejected(event, today, IdReused()))
     match event:
         case Credit(posting=Instalments(count=count)):
-            return (*append(log, Accepted(event, today)), *_instalments(event, count, today))
+            return append(log, Accepted(event, today)) + _instalments(event, count, today)
         case Credit() | Debit():
             return append(log, Accepted(event, today))
         case Reversal():

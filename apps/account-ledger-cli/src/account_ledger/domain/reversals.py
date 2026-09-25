@@ -66,10 +66,11 @@ def _undone_by(log: Log, target: LoggedEvent) -> AlreadyUndone | None:
             refund = _refund_of(log, fee)
             return None if refund is None else AlreadyUndone(fee, refund)
         case Credit(posting=Instalments()):
-            parts = instalments_of(log, target.id)
-            return next(
-                (AlreadyUndone(part.id, by) for part in parts if (by := reversed_by(log, part.id)) is not None), None
-            )
+            for part in instalments_of(log, target.id):
+                by = reversed_by(log, part.id)
+                if by is not None:
+                    return AlreadyUndone(part.id, by)
+            return None
         case _:
             return None
 

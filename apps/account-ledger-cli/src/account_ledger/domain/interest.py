@@ -36,8 +36,10 @@ def _changed[M: (Aed, Bhd)](log: Log, account: Account[M], today: Day, first: Da
 
 
 def _interest_event(account: AccountId, day: Day, today: Day, change: Money) -> InterestAccrual | InterestAdjustment:
-    direction = Direction.UP if change.value > 0 else Direction.DOWN
-    amount = amount_of(change if direction is Direction.UP else -change)
+    if change.value > 0:
+        direction, amount = Direction.UP, amount_of(change)
+    else:
+        direction, amount = Direction.DOWN, amount_of(-change)
     assert not isinstance(amount, NotPositive)  # a change is never zero
     marker = InterestId(account, day, today)
     if day == today:  # nothing is fired for today before its close, so today's change is its first, positive accrual

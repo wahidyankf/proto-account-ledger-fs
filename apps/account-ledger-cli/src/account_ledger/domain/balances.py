@@ -26,7 +26,10 @@ from account_ledger.domain.model.money import Aed, Bhd, Money, same
 
 def _effects(log: Log, account_id: AccountId) -> list[tuple[Day, Money]]:
     """Each counted entry's value day and signed effect on the account's ledger balance."""
-    return [(event.value_day, moved) for event in counted(log, account_id) for moved in _moved(log, event)]
+    effects: list[tuple[Day, Money]] = []
+    for event in counted(log, account_id):
+        effects.extend((event.value_day, moved) for moved in _moved(log, event))
+    return effects
 
 
 def _moved(log: Log, event: LoggedEvent) -> tuple[Money, ...]:
@@ -60,7 +63,10 @@ def _undone(log: Log, target: LoggedEvent) -> tuple[Money, ...]:
     """What reversing the target takes out: what it moved, and for a credit in instalments, every instalment."""
     match target:
         case Credit(posting=Instalments()):
-            return tuple(moved for part in instalments_of(log, target.id) for moved in _moved(log, part))
+            moved: list[Money] = []
+            for part in instalments_of(log, target.id):
+                moved.extend(_moved(log, part))
+            return tuple(moved)
         case _:
             return _moved(log, target)
 
