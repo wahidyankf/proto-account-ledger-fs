@@ -131,7 +131,7 @@ apps/account-ledger-cli/tests/
 
 ```text
 plans/in-progress/restructure-around-the-domain/
-├── README.md                                  [N] status, scope, navigation
+├── README.md                                  [N] status, scope, navigation; maps evidence/
 ├── brd.md                                     [N] business goal, outcomes, risks
 ├── prd.md                                     [N] personas, stories, acceptance criteria
 ├── delivery.md                                [N] execution record, phases, gates
@@ -145,6 +145,7 @@ plans/in-progress/restructure-around-the-domain/
 ├── tech-docs/006-migration-inventory.md       [N]
 ├── tech-docs/007-decision-records.md          [N]
 ├── tech-docs/008-file-impact.md               [N]
+├── evidence/README.md                        [N] the evidence folder's map, which the directory-map gate requires
 ├── evidence/phase-0-baseline.txt              [N] gates, counts, and the baseline manifest
 ├── evidence/phase-0-corpus.txt                [N] the behaviour corpus on the baseline
 ├── evidence/phase-0-tests.txt                 [N] the test inventory on the baseline

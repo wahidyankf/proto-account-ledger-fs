@@ -52,3 +52,4 @@ cited-name check ([004](tech-docs/004-behaviour-preservation-and-tests.md)).
 - [tech-docs/](tech-docs/README.md) — the final layout, the design, the proofs, the decisions, and the file impact.
 - [delivery.md](delivery.md) — the execution record, the phases, and their gates.
 - [learnings.md](learnings.md) — what execution discovers, held until it is routed.
+- [evidence/](evidence/README.md) — the gates' records: baseline, corpus, inventory, literals, and the final proofs.

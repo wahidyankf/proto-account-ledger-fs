@@ -1,0 +1,261 @@
+# Phase 0 baseline — gates, counts, and the baseline manifest
+# commit: cbee806 (application code identical to 83dfd58)
+# time: 2026-09-25 19:01 +0700
+
+## npx nx run account-ledger-cli:test:quick --skip-nx-cache  (via local-tmp/run.sh)
+exit 0
+0 errors, 0 warnings, 0 informations
+All checks passed!
+TOTAL                                                  1579     77    95%
+Required test coverage of 80% reached. Total coverage: 95.12%
+======================== 147 passed, 1 xfailed in 0.63s ========================
+
+## npx nx run account-ledger-cli:test:integration --skip-nx-cache  (via local-tmp/run.sh)
+exit 0
+============================== 3 passed in 0.08s ===============================
+
+## npx nx run account-ledger-cli:test:e2e --skip-nx-cache  (via local-tmp/run.sh)
+exit 0
+============================== 6 passed in 0.41s ===============================
+
+## npm run -s check:hygiene
+# first run exit 1: directory-map wanted evidence/README.md (learnings, 19:03); after the README:
+exit 0
+[gate] public-safety-tree passed
+[gate] public-safety-tests passed
+[gate] repo-config passed
+[gate] word-budget passed
+[gate] directory-map passed
+[gate] metadata passed
+[gate] naming passed
+[gate] heading-hierarchy passed
+[gate] harness-adapters passed
+[gate] internal-link passed
+
+## baseline copy
+# command: /usr/bin/git archive 83dfd58 apps/account-ledger-cli | tar -x -C local-tmp/restructure/baseline
+commit 83dfd58
+source modules: 31
+test modules: 26
+manifest (sha256 of every file, sorted):
+922fe0c3de073b01988e23348ea184456161678c5e329e6f34be89be24383f93  apps/account-ledger-cli/.python-version
+be28a9377276513863fe7d1bc2d6950ce94e1690b0fe77c16699702317bc8fc2  apps/account-ledger-cli/project.json
+4bcc72d69c370e8ad73a94ac4a2bfa7f39c87a56277849d21a6c0b45a68b154c  apps/account-ledger-cli/pyproject.toml
+7c82a7d5f6c309b61349d3a75726bff4bb70200f57c983cec2cd5ad8dc0148dc  apps/account-ledger-cli/README.md
+3c7bc92665df5a2535c9d98573b66785ae3c3f0b3bfa67c8785e8e988bfb4853  apps/account-ledger-cli/src/account_ledger/__init__.py
+c31d0e38dbb9c0fa87e6b368d35c8b9794b3e7ae93272b33cfdefdd39a121bc4  apps/account-ledger-cli/src/account_ledger/__main__.py
+cbdd6e636d18dba006b8cdf329e29b81157883ba2e91ab79df227f0720526779  apps/account-ledger-cli/src/account_ledger/adapters/__init__.py
+116ac6944c1e0f59f9e984857db1a2bea6cc960b6d07c0d9b61faebb42e05645  apps/account-ledger-cli/src/account_ledger/adapters/render.py
+643c55013f4cffec0f2f8cd77bde0e62b4d241e09505246e1425ef2dd477bb70  apps/account-ledger-cli/src/account_ledger/adapters/stream_csv.py
+906ea78a3ca93df0d645163dc709668c12cd343e6f675b897d0e7c22e1f68cab  apps/account-ledger-cli/src/account_ledger/cli.py
+c63b2d77678250747bd45d414bfc7ddc3ede086c5b0c267ab58c7bc35e0000d5  apps/account-ledger-cli/src/account_ledger/common/__init__.py
+52bce43b5535a491ad9f25bdb5c525621c519b9a8b99444ff35bb54ae9fdadee  apps/account-ledger-cli/src/account_ledger/common/result.py
+50219acd6ff44ba6a7ff8e2014f4c4b2003e57fc1e34779c18a959bba707b838  apps/account-ledger-cli/src/account_ledger/common/ruff.toml
+bdb92bbe06e00e3415d6bf24f735f25b4c7b6d7f384a8a0a881c16f43d2a7849  apps/account-ledger-cli/src/account_ledger/domain/__init__.py
+285ba235cd91b5f87ec707a964495271b01048fb786e478e7902d92bd2561fe8  apps/account-ledger-cli/src/account_ledger/domain/account/__init__.py
+78e2b9111472ef767d61373e43a8fb7fdfb4ba9cd82cb7cd1e8199ff1c5ffa1e  apps/account-ledger-cli/src/account_ledger/domain/account/aggregate.py
+92803eb26bb3a95bdce416c04bf697b30b4aaab696d45d077b244109e05ebcae  apps/account-ledger-cli/src/account_ledger/domain/account/authorizations.py
+8d07abb466c742cf187d575fc4a685a49004b1b60812232e59cd6e3e69c93b2a  apps/account-ledger-cli/src/account_ledger/domain/account/balances.py
+c289371bafd487e37223253ae1d56391f4ca6571f9656bf7f466b2ab4b60bc4a  apps/account-ledger-cli/src/account_ledger/domain/account/decisions.py
+25da2a7f22c9cce46c25f5eb1caece0695363a3887b639fbd98ce49ca3f9771c  apps/account-ledger-cli/src/account_ledger/domain/account/domain_events.py
+ed51b64af6bf0ebe968d43845071cfc155661841a492f3b8f71c7ce59cffbc3b  apps/account-ledger-cli/src/account_ledger/domain/account/fees.py
+e221aa86a8c2ea69847607232899ce9e4a660b4172f25ca4a33b6e2a39e6baba  apps/account-ledger-cli/src/account_ledger/domain/account/history.py
+500e47b21b7105cc2807e239ca72e85778d58347a3d76e66cf28ea95f0c37b27  apps/account-ledger-cli/src/account_ledger/domain/account/interest.py
+cbb6b1b564be90118a6fe2064a04bead1bc0efbe46ad191798cefa0486901a36  apps/account-ledger-cli/src/account_ledger/domain/account/reversals.py
+4f1d0b08f4bc49385cedddf33aeffc1b0544127b668ba5be7156548b56f829e1  apps/account-ledger-cli/src/account_ledger/domain/account/ruff.toml
+6bf0fc5746dcdc4203ffd626e4d5d1474fc58914ed9b34156d214e58dfa4868b  apps/account-ledger-cli/src/account_ledger/domain/account/states.py
+61c41423678c768d80dbe4623c1b96914a79686f22879e56e0626b813d3e113c  apps/account-ledger-cli/src/account_ledger/domain/ledger/__init__.py
+1d9321b861b4010fd04d72ea4a57b79d07da9864f134e3832c1632ec7ef347f3  apps/account-ledger-cli/src/account_ledger/domain/ledger/end_of_day.py
+a8971a7ca3a3eb447effc66079663f0f27492b7bbaebd3d7cb5bcda6f2b110a3  apps/account-ledger-cli/src/account_ledger/domain/ledger/event_log.py
+172ed6d52b2cddb076437bdb4e26c86c6456714a8ff9dd0e2650574b3eb78ef6  apps/account-ledger-cli/src/account_ledger/domain/ledger/processing.py
+230cd4e070f7ea5cbdb755fd2b58eb9bf766330b9ca5e7bd0ce2b3d814f91f43  apps/account-ledger-cli/src/account_ledger/domain/ledger/ruff.toml
+70ae78df460dfe3225fa8ac9c6c3c22d49fe2c47d464d626ce805a5b02e5ffa3  apps/account-ledger-cli/src/account_ledger/domain/model/__init__.py
+ae68aea0892d951217f942fef8cf573d86f86c8a48296d14fabef54ae29e49b6  apps/account-ledger-cli/src/account_ledger/domain/model/config.py
+3595a025f3372b2e1a83ee52c179f1010ddda6fe353ed6070a6b195263e71c60  apps/account-ledger-cli/src/account_ledger/domain/model/events.py
+06e8ab386068de64879e2a82a674572b22a53e87051ee524be412e674d3c83c6  apps/account-ledger-cli/src/account_ledger/domain/model/ids.py
+e2d68701ce7906c7fcfa4e3a134301b0d83274b78e87fb0c9cbf791648845d1d  apps/account-ledger-cli/src/account_ledger/domain/model/money.py
+964ddf51673e41aa4c45366db85d7a1454241d2e076e551967c13df15abe924f  apps/account-ledger-cli/src/account_ledger/domain/model/ruff.toml
+cab506ef7fff792158d6f2d04fa1ba4814357b6997b47eb2fe76d5f57df5cfa0  apps/account-ledger-cli/src/account_ledger/domain/report.py
+dfd540b8b93fbc4295c33523cf45f79d194e7fffda7e0092490d48e99d5aec4c  apps/account-ledger-cli/src/account_ledger/domain/ruff.toml
+53eb9eaa52353a476ac0fb8b47db310c1bb1d6d90889aa4ed8a7cfe56e144adf  apps/account-ledger-cli/src/account_ledger/domain/stream_processing.py
+6a3e1dfd8eff4c405689f550276f3a6349615f4370d677d43cd68d5e844b6a57  apps/account-ledger-cli/streams/challenge.csv
+848905152a5ac588f80f0cb75f0d565b1c5ab61d180cc6077784396872664925  apps/account-ledger-cli/tests/e2e/test_program.py
+aaa2a5e01408495ad3c68cd8afeb9d9bb62219ece1affa494a9437f4e3804187  apps/account-ledger-cli/tests/integration/test_main.py
+face1e4a44a599a5b3357263e0e67935b2d629b692f46ffa0fbb02fe933cfe8b  apps/account-ledger-cli/tests/integration/test_stream_file.py
+dbc2acd82daaf93b917e67a8f23766d42a60a30911a85f3117de1f01c0eff0a5  apps/account-ledger-cli/tests/support/brief_stream.py
+7a01bd2d21759a67fc629aa614df913fd7fb45aa147fb576a463867b6b718024  apps/account-ledger-cli/tests/support/output_target.py
+6a1f73c0039754e4f5d1f89f44976289d64bb240a3ccc7f9bc2041fa9c8e667d  apps/account-ledger-cli/tests/support/refusals.py
+25527864aa20b134c295c3be22f23b3fa179d6356f23c8c4578807a1ab15f53f  apps/account-ledger-cli/tests/support/results.py
+721a4f97421c700c039c276e19787a840cbf3697a7ee749a03beefa96230eca0  apps/account-ledger-cli/tests/support/states.py
+76c7ace29c8a83bf54a6cd0db5f1759d2f44ad63dda46f7f28524c919e8d1b23  apps/account-ledger-cli/tests/support/streams.py
+86e196fb6b776c90420c89cd9688ece1c5bb7a8edd5d1e37681fbc4dfe7a7884  apps/account-ledger-cli/tests/support/values.py
+072882de98ea466fbff086bc3159267c9b6841da0011f08cf679c7060f450a64  apps/account-ledger-cli/tests/unit/test_authorizations.py
+09f8c0df22a2c74a48e4192adb9c1f4e71fa55a9721497f62de46a7bd3ef425d  apps/account-ledger-cli/tests/unit/test_cli.py
+a1d02dd5f9eb65becd0bab905fbdb7e07346ad4c3e3a543ee088e5c4b9c8414f  apps/account-ledger-cli/tests/unit/test_config.py
+934207d9f102823b190fc594a1baaf09c83a07df7ef171765dd23d5506c73a32  apps/account-ledger-cli/tests/unit/test_criteria.py
+eac9b340f7966a7c3617031e5f7c26f86c40068b8d9985ee9f68b81cbd6c040c  apps/account-ledger-cli/tests/unit/test_fees.py
+7257d84238f0ba25c4dc07a14b9a63ab6309f464685e1cffe7f153b28d9e0d60  apps/account-ledger-cli/tests/unit/test_ids.py
+bd525e6e5081048f340ca1d0510e4b917a28562ce66a46b35b207f7d65546f8e  apps/account-ledger-cli/tests/unit/test_interest.py
+63f918447d41e5ca2833fce794609d60fcf4922c7b534f1be550576d12634dc1  apps/account-ledger-cli/tests/unit/test_known_weakness.py
+35a8fdc5e2dcedf584b6c5dce805c70cc046946813dfef72a735fbb3bcd88588  apps/account-ledger-cli/tests/unit/test_money.py
+de29fbc389eaa46283c101afd6e01d0a5d2728a4a5b60db6d6f2a73b52c07831  apps/account-ledger-cli/tests/unit/test_processing.py
+34ccab07e5fe4361d710a2e01f506de963b1b4e2c12a7494e5e037f1b4938486  apps/account-ledger-cli/tests/unit/test_render.py
+f78864bbb23f168f9cc4baef181197eeaabcdd517e9666731fd9528843e37865  apps/account-ledger-cli/tests/unit/test_report.py
+c9c4b463efdc0ef6c3d04d406ababca6b0efd93855d708d7c4c9eb7383de278a  apps/account-ledger-cli/tests/unit/test_result.py
+7883bbd0577b4274b799a563966661be98587c557184f977b6c3858ba5eb982b  apps/account-ledger-cli/tests/unit/test_reversals.py
+f3b4f9b3e56e761533d74718eff264d21e361ca79d958783504be86bc8e537d6  apps/account-ledger-cli/tests/unit/test_stream_csv.py
+31c120726f28389b923ee295fa069e6cb2e7655c282104c26e44bd43c2afb06e  apps/account-ledger-cli/tests/unit/test_stream_processing.py
+01d77ae531ccd3563d9a853be7e156d748fba412a7f333183378587d3cb03d34  apps/account-ledger-cli/uv.lock
+
+## timings on the baseline copy, 2026-09-25 19:08 +0700
+# command: PYTHONPATH=$BASE/src $APP/.venv/bin/python local-tmp/restructure/scale.py 6 30 60 120, then --volume
+# days events seconds
+6 60 0.01
+30 300 0.50
+60 600 3.62
+120 1200 28.08
+volume 1000 0.72
+
+## doc sweep, the documents describing the application
+# command: python3 local-tmp/restructure/doc_sweep.py
+# allowed generic references: specs/README.md 'behaviours/' and 'architecture.md', which name a tree shape, not this code
+DOCS 18
+== missing identifiers
+== missing paths
+== bad links
+exit 0
+
+## structural audit (AC-08, AC-12) on the baseline
+# command: python3 local-tmp/restructure/audit.py --check
+== public module-level functions (33)
+BAD adapters/render.py: render_reports
+BAD adapters/stream_csv.py: parse_stream
+   cli.py: run_cli
+   cli.py: main
+   domain/account/authorizations.py: apply_settlement
+BAD domain/account/authorizations.py: derive_settlement_input
+BAD domain/account/authorizations.py: decide_authorization
+BAD domain/account/authorizations.py: list_records
+BAD domain/account/authorizations.py: find_record
+BAD domain/account/authorizations.py: sum_holds
+BAD domain/account/balances.py: compute_closing
+BAD domain/account/balances.py: compute_available
+BAD domain/account/decisions.py: decide_event
+BAD domain/account/fees.py: assess_fees
+BAD domain/account/history.py: find_first_entry
+BAD domain/account/interest.py: accrue_interest
+BAD domain/account/interest.py: capitalize_interest
+BAD domain/account/interest.py: list_accrued_days
+BAD domain/account/reversals.py: check_reversal
+BAD domain/account/reversals.py: list_reversed_targets
+BAD domain/ledger/end_of_day.py: close_day
+BAD domain/ledger/event_log.py: append_entry
+BAD domain/ledger/event_log.py: find_history
+BAD domain/ledger/event_log.py: find_history_of
+BAD domain/ledger/processing.py: process_event
+   domain/model/config.py: is_aed
+   domain/model/ids.py: parse_event_id
+BAD domain/model/money.py: require_same_currency
+BAD domain/model/money.py: sum_money
+BAD domain/model/money.py: compute_daily_interest
+BAD domain/report.py: build_report
+BAD domain/report.py: update_reported
+BAD domain/stream_processing.py: process_stream
+== classes (91)
+   adapters/stream_csv.py: StreamError [frozen, slotted]
+   adapters/stream_csv.py: RowFault [frozen, slotted]
+   common/result.py: Ok [Ok/Err]
+   common/result.py: Err [Ok/Err]
+BAD domain/account/aggregate.py: AccountAggregateIn [frozen, slotted; derives from AccountHistoryIn]
+   domain/account/authorizations.py: _SettlementInputBase [frozen, slotted]
+BAD domain/account/authorizations.py: FinalSettlement [frozen, slotted; derives from _SettlementInputBase]
+BAD domain/account/authorizations.py: PartialSettlement [frozen, slotted; derives from _SettlementInputBase]
+   domain/account/authorizations.py: CannotSettle [frozen, slotted]
+   domain/account/authorizations.py: AuthorizationRecord [frozen, slotted]
+   domain/account/domain_events.py: _DomainEventBase [frozen, slotted]
+BAD domain/account/domain_events.py: CreditPosted [frozen, slotted; derives from _DomainEventBase]
+BAD domain/account/domain_events.py: DebitPosted [frozen, slotted; derives from _DomainEventBase]
+BAD domain/account/domain_events.py: ReversalPosted [frozen, slotted; derives from _DomainEventBase]
+BAD domain/account/domain_events.py: InstalmentPosted [frozen, slotted; derives from _DomainEventBase]
+BAD domain/account/domain_events.py: FeeCharged [frozen, slotted; derives from _DomainEventBase]
+BAD domain/account/domain_events.py: FeeRefunded [frozen, slotted; derives from _DomainEventBase]
+BAD domain/account/domain_events.py: InterestAccrued [frozen, slotted; derives from _DomainEventBase]
+BAD domain/account/domain_events.py: InterestAdjusted [frozen, slotted; derives from _DomainEventBase]
+BAD domain/account/domain_events.py: InterestCapitalized [frozen, slotted; derives from _DomainEventBase]
+BAD domain/account/domain_events.py: AuthorizationApproved [frozen, slotted; derives from _DomainEventBase]
+BAD domain/account/domain_events.py: AuthorizationDeclined [frozen, slotted; derives from _DomainEventBase]
+BAD domain/account/domain_events.py: SettlementApplied [frozen, slotted; derives from _DomainEventBase]
+BAD domain/account/domain_events.py: SettlementForcePosted [frozen, slotted; derives from _DomainEventBase]
+   domain/account/domain_events.py: AlreadyReversed [frozen, slotted]
+   domain/account/domain_events.py: ReversesAReversal [frozen, slotted]
+   domain/account/domain_events.py: UnknownTarget [frozen, slotted]
+   domain/account/domain_events.py: TargetOnAnotherAccount [frozen, slotted]
+   domain/account/domain_events.py: MovedNoMoney [frozen, slotted]
+   domain/account/domain_events.py: AlreadyUndone [frozen, slotted]
+   domain/account/domain_events.py: IdReused [frozen, slotted]
+BAD domain/account/domain_events.py: EventRejected [frozen, slotted; derives from _DomainEventBase]
+BAD domain/account/domain_events.py: DuplicateIgnored [frozen, slotted; derives from _DomainEventBase]
+   domain/account/history.py: AccountHistoryIn [frozen, slotted]
+   domain/account/states.py: Approved [frozen, slotted]
+   domain/account/states.py: Declined [frozen, slotted]
+   domain/account/states.py: PartiallySettled [frozen, slotted]
+   domain/account/states.py: Settled [frozen, slotted]
+   domain/model/config.py: AccountIn [frozen, slotted]
+   domain/model/config.py: ConfigFault [frozen, slotted]
+   domain/model/config.py: LedgerConfig [frozen, slotted]
+   domain/model/events.py: SettlementKind [Enum]
+   domain/model/events.py: Whole [frozen, slotted]
+   domain/model/events.py: Instalments [frozen, slotted]
+   domain/model/events.py: _IncomingEventBase [frozen, slotted]
+   domain/model/events.py: _GeneratedEventBase [frozen, slotted]
+BAD domain/model/events.py: Credit [frozen, slotted; derives from _IncomingEventBase]
+BAD domain/model/events.py: Debit [frozen, slotted; derives from _IncomingEventBase]
+BAD domain/model/events.py: Authorization [frozen, slotted; derives from _IncomingEventBase]
+BAD domain/model/events.py: Settlement [frozen, slotted; derives from _IncomingEventBase]
+BAD domain/model/events.py: Reversal [frozen, slotted; derives from _IncomingEventBase]
+BAD domain/model/events.py: Instalment [frozen, slotted; derives from _GeneratedEventBase]
+BAD domain/model/events.py: Fee [frozen, slotted; derives from _GeneratedEventBase]
+BAD domain/model/events.py: FeeRefund [frozen, slotted; derives from _GeneratedEventBase]
+BAD domain/model/events.py: InterestAccrual [frozen, slotted; derives from _GeneratedEventBase]
+BAD domain/model/events.py: InterestAdjustment [frozen, slotted; derives from _GeneratedEventBase]
+BAD domain/model/events.py: Capitalization [frozen, slotted; derives from _GeneratedEventBase]
+   domain/model/ids.py: InstalmentCount [frozen, slotted]
+   domain/model/ids.py: IdFault [frozen, slotted]
+   domain/model/ids.py: Day [frozen, slotted]
+   domain/model/ids.py: _TextIdBase [frozen, slotted]
+BAD domain/model/ids.py: AccountId [frozen, slotted; derives from _TextIdBase]
+BAD domain/model/ids.py: AuthorizationId [frozen, slotted; derives from _TextIdBase]
+BAD domain/model/ids.py: IncomingId [frozen, slotted; derives from _TextIdBase]
+   domain/model/ids.py: InstalmentId [frozen, slotted]
+   domain/model/ids.py: _DayEventIdBase [frozen, slotted]
+BAD domain/model/ids.py: FeeId [frozen, slotted; derives from _DayEventIdBase]
+BAD domain/model/ids.py: RefundId [frozen, slotted; derives from _DayEventIdBase]
+BAD domain/model/ids.py: InterestId [frozen, slotted; derives from _DayEventIdBase]
+   domain/model/ids.py: CapitalizationId [frozen, slotted]
+   domain/model/money.py: NotADecimal [frozen, slotted]
+   domain/model/money.py: TooManyPlaces [frozen, slotted]
+   domain/model/money.py: AboveLimit [frozen, slotted]
+   domain/model/money.py: _MoneyBase [frozen, slotted]
+BAD domain/model/money.py: Aed [frozen, slotted; derives from _MoneyBase]
+BAD domain/model/money.py: Bhd [frozen, slotted; derives from _MoneyBase]
+   domain/model/money.py: NotPositive [frozen, slotted]
+   domain/model/money.py: AmountIn [frozen, slotted]
+   domain/model/money.py: Direction [Enum]
+   domain/model/money.py: CurrencyMismatch [frozen, slotted]
+   domain/model/money.py: TooManyInstalments [frozen, slotted]
+   domain/report.py: Restatement [frozen, slotted]
+   domain/report.py: Step [Enum]
+   domain/report.py: Note [Enum]
+   domain/report.py: Generated [frozen, slotted]
+   domain/report.py: Capitalized [frozen, slotted]
+   domain/report.py: NothingGenerated [frozen, slotted]
+   domain/report.py: Processed [frozen, slotted]
+   domain/report.py: DayReport [frozen, slotted]
+   domain/stream_processing.py: ProcessedStream [frozen, slotted]
+   domain/stream_processing.py: _ProcessingState [frozen, slotted]
+== module-level mutable bindings (3)
+BAD adapters/render.py:183
+BAD adapters/stream_csv.py:52
+BAD adapters/stream_csv.py:59
+broken 68
+exit 1

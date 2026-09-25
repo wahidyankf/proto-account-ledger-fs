@@ -14,6 +14,11 @@ first, above all [the target layout](tech-docs/001-target-layout.md) and
   R22 was added at the owner's request for a consistent, natural layout. Verdict file:
   `generated-reports/restructure-around-the-domain-2026-09-25-plan-quality-gate.md`, which is gitignored. Last gate
   passed: none yet. Next item: Phase 0, the first. No budget partly spent.
+- **2026-09-25 19:18, Phase 0.** The baseline is recorded in `evidence/`: the gates (147 passed, 1 xfailed, 95.12%; 3
+  integration; 6 end-to-end), the manifest of 31 source and 26 test modules, the corpus of 56 inputs, 157 cases under
+  115 names with their literals, the timings, and the audits (68 broken, as expected). `gate.sh` passes on the baseline
+  tree. One surprise: the directory-map gate wanted `evidence/README.md`, now added. Last gate passed: Phase 0. Next
+  item: Phase 1, the first. No budget partly spent.
 
 ## Execution Checkout
 
@@ -88,84 +93,101 @@ Every node is serial, and the concurrency limit is one executor in one checkout,
 Records the state every later gate is compared with, and writes the scratch tools the gates run. No application file
 changes.
 
-- [ ] [AI] Confirm the checkout: on `main`, level with `origin/main`, nothing uncommitted but ignored scratch. Command:
-      `/usr/bin/git fetch origin && /usr/bin/git status -sb`. Proof: the output. Acceptance: AC-16.
-- [ ] [AI] Install the toolchain. Command: `npm install && (cd $APP && uv sync --locked)`. Proof: exit 0. Acceptance:
-      AC-16.
-- [ ] [AI] Write `local-tmp/run.sh`, which deletes every `__pycache__` under `$APP/src` and `$APP/tests` and then runs
+- [x] [AI] Confirm the checkout: on `main`, level with `origin/main`, nothing uncommitted but ignored scratch. Command:
+      `/usr/bin/git fetch origin && /usr/bin/git status -sb`. Proof: the output. Acceptance: AC-16. - Result:
+      `## main...origin/main` at cbee806, level with `origin/main`; the one untracked file,
+      `scripts/build-architecture-pdf.py`, is the Part 2 PDF work outside this plan.
+- [x] [AI] Install the toolchain. Command: `npm install && (cd $APP && uv sync --locked)`. Proof: exit 0. Acceptance:
+      AC-16. - Result: `npm install` and `uv sync --locked` exit 0; nothing to change.
+- [x] [AI] Write `local-tmp/run.sh`, which deletes every `__pycache__` under `$APP/src` and `$APP/tests` and then runs
       its arguments, and `local-tmp/check-md.sh`, which runs Prettier on every changed or untracked Markdown file and
       fails on a line past 120 outside `repo-governance/` and the harness directories. Command:
-      `sh local-tmp/check-md.sh`. Proof: exit 0 on the clean checkout. Acceptance: AC-16.
-- [ ] [AI] Record the baseline gates with `--skip-nx-cache`: `test:quick`, `test:integration`, `test:e2e`, and
+      `sh local-tmp/check-md.sh`. Proof: exit 0 on the clean checkout. Acceptance: AC-16. - Result: both written;
+      `sh local-tmp/check-md.sh` exit 0.
+- [x] [AI] Record the baseline gates with `--skip-nx-cache`: `test:quick`, `test:integration`, `test:e2e`, and
       `npm run -s check:hygiene`, with the unit counts and the coverage figure, into `$EV/phase-0-baseline.txt`, headed
       by the commands, the commit, and the time. Proof: every exit 0; a failure is fixed at its cause here and recorded
-      as pre-existing. Acceptance: AC-16.
-- [ ] [AI] Extract the baseline copy: `mkdir -p local-tmp/restructure/baseline` and
+      as pre-existing. Acceptance: AC-16. - Result: in `$EV/phase-0-baseline.txt`. test:quick exit 0, pyright 0 errors,
+      ruff clean, 147 passed and 1 xfailed, coverage 95.12%; test:integration 3 passed; test:e2e 6 passed. - Surprise:
+      the first `check:hygiene` failed on directory-map, which wants `evidence/README.md` mapping every file; added,
+      then exit 0 ([learnings](learnings.md)).
+- [x] [AI] Extract the baseline copy: `mkdir -p local-tmp/restructure/baseline` and
       `/usr/bin/git archive 83dfd58 apps/account-ledger-cli | tar -x -C local-tmp/restructure/baseline`; append the
       manifest, the commit and the command, and `find ... -name '*.py' | wc -l` of the copy, to
-      `$EV/phase-0-baseline.txt`. Proof: 31 source and 26 test modules in the copy. Acceptance: AC-02.
-- [ ] [AI] Write `local-tmp/restructure/corpus.py` with every input group
+      `$EV/phase-0-baseline.txt`. Proof: 31 source and 26 test modules in the copy. Acceptance: AC-02. - Result: 31
+      source and 26 test modules; the manifest, a SHA-256 per file, appended to `$EV/phase-0-baseline.txt`.
+- [x] [AI] Write `local-tmp/restructure/corpus.py` with every input group
       [behaviour preservation](tech-docs/004-behaviour-preservation-and-tests.md#the-behaviour-corpus) lists. It takes
       the application directory, writes each input into a fresh temporary directory, runs the working tree's
       interpreter, `$APP/.venv/bin/python -m account_ledger <relative path>`, there with `PYTHONPATH=<app>/src`, so the
       baseline copy, which has no `.venv`, runs its own code on the same interpreter, and prints one block per input:
       name, exit code, standard error, standard output's SHA-256 and line count. Command:
       `python3 local-tmp/restructure/corpus.py $BASE`. Proof: every group present; the brief's block shows exit 0 and
-      the golden fence's hash. Acceptance: AC-02.
-- [ ] [AI] Record the corpus on the baseline into `$EV/phase-0-corpus.txt`, then run it on the working tree and compare,
+      the golden fence's hash. Acceptance: AC-02. - Result: 56 inputs, every group present; `== brief` shows exit 0 and
+      `ffa6f573…`, the golden fence's SHA-256, 228 lines.
+- [x] [AI] Record the corpus on the baseline into `$EV/phase-0-corpus.txt`, then run it on the working tree and compare,
       proving the script deterministic. Command: the two commands in
       [the corpus section](tech-docs/004-behaviour-preservation-and-tests.md#the-behaviour-corpus). Proof:
-      `diff -I '^#'` prints nothing. Acceptance: AC-02.
-- [ ] [AI] Write `local-tmp/restructure/inventory.py`, which runs `pytest --collect-only -q` over `$APP/tests` and
+      `diff -I '^#'` prints nothing. Acceptance: AC-02. - Result: `$EV/phase-0-corpus.txt`; the working tree's run
+      compared with `diff -I '^#'` prints nothing.
+- [x] [AI] Write `local-tmp/restructure/inventory.py`, which runs `pytest --collect-only -q` over `$APP/tests` and
       prints each test function's name and case count, sorted, and a `--compare BASELINE` mode that fails if a baseline
       name is missing or has another count, and lists every added name. Record `$EV/phase-0-tests.txt`. Proof: 157
-      cases, 115 names. Acceptance: AC-03.
-- [ ] [AI] Write `local-tmp/restructure/test_literals.py`, which walks every `test_…` function under a tests directory
+      cases, 115 names. Acceptance: AC-03. - Result: `# 157 cases, 115 names` in `$EV/phase-0-tests.txt`; `--compare` on
+      the tree: every name kept, 0 added.
+- [x] [AI] Write `local-tmp/restructure/test_literals.py`, which walks every `test_…` function under a tests directory
       with `ast` and prints, per name, the sorted literal constants of its decorators, its body, and any upper-case
       module-level case table a decorator names, leaving out every docstring inside it, the attribute name a
       `monkeypatch.setattr` patches, and the argument names a `pytest.mark.parametrize` declares; `--compare FILE` exits
       1 when a name in `FILE` is missing or its literals differ. Record `$EV/phase-0-literals.txt` from `$BASE/tests`.
       Command: `python3 local-tmp/restructure/test_literals.py $BASE/tests`. Proof: 115 names; the same run on
-      `$APP/tests` compares equal. Acceptance: AC-03.
-- [ ] [AI] Write `local-tmp/restructure/cited_names.py`, which collects every `test_…` name in the five assessment docs
+      `$APP/tests` compares equal. Acceptance: AC-03. - Result: `# 115 names` in `$EV/phase-0-literals.txt`; the tree
+      compares equal.
+- [x] [AI] Write `local-tmp/restructure/cited_names.py`, which collects every `test_…` name in the five assessment docs
       AC-04 lists and every `def test_…` under `$APP/tests`, prints `cited N defined N missing N` and each missing name,
       and exits 1 when one is missing. Command: `python3 local-tmp/restructure/cited_names.py`. Proof:
-      `cited 60 defined 115 missing 0`. Acceptance: AC-04.
-- [ ] [AI] Write `local-tmp/restructure/scale.py`. For each day count given, it builds ten alternating credits of AED
+      `cited 60 defined 115 missing 0`. Acceptance: AC-04. - Result: `cited 60 defined 115 missing 0`.
+- [x] [AI] Write `local-tmp/restructure/scale.py`. For each day count given, it builds ten alternating credits of AED
       100.00 and debits of AED 90.00 a day on ACC-001, each value-dated on its booking day, over a window of that many
       days with interest capitalized every thirtieth day, and times the processing alone, printing
       `days events seconds`. With `--volume` it times the brief's events a hundred times under new IDs inside the
       brief's six days, printing `volume events seconds`. `PYTHONPATH` chooses the application. Command:
       `PYTHONPATH=$BASE/src $APP/.venv/bin/python local-tmp/restructure/scale.py 6 30 60 120`, then the same with
       `--volume`; append both to `$EV/phase-0-baseline.txt`. Proof: four window lines and one volume line. Acceptance:
-      AC-14.
-- [ ] [AI] Write `local-tmp/restructure/doc_sweep.py`, which reads the documents that describe the application, the root
+      AC-14. - Result: 6 d, 60 events, 0.01 s; 30 d, 300, 0.50 s; 60 d, 600, 3.62 s; 120 d, 1,200, 28.08 s; volume,
+      1,000 events, 0.72 s. Each is within a fifth of the trade-offs document's figures.
+- [x] [AI] Write `local-tmp/restructure/doc_sweep.py`, which reads the documents that describe the application, the root
       and application READMEs, `docs/`, `specs/`, and the five assessment docs AC-04 lists, and lists every backticked
       identifier and path in them that no tracked code file or path holds, and every relative link that does not
       resolve; it exits 1 on any hit, save the generic references it names as allowed, today `behaviours/` and
       `architecture.md` in `specs/README.md`, each recorded. Command: `python3 local-tmp/restructure/doc_sweep.py`.
-      Proof: its output appended to `$EV/phase-0-baseline.txt`, each hit today named as pre-existing. Acceptance: AC-14.
-- [ ] [AI] Write `local-tmp/restructure/audit.py`, the structural audits: every public module-level function under
+      Proof: its output appended to `$EV/phase-0-baseline.txt`, each hit today named as pre-existing. Acceptance:
+      AC-14. - Result: 18 documents, no hit, exit 0; the two allowed references recorded.
+- [x] [AI] Write `local-tmp/restructure/audit.py`, the structural audits: every public module-level function under
       `$SRC` (AC-08); every class under `$SRC`, and whether it is `@dataclass(frozen=True, slots=True)`, an `Enum`, a
       `Protocol`, `Ok`, or `Err` (AC-12); every module-level binding under `$SRC` to a `dict`, `list`, or `set`, literal
       or call (AC-12). It prints the three lists; `--check` exits 1 when an entry breaks its criterion. Command:
       `python3 local-tmp/restructure/audit.py`. Proof: today's lists appended to `$EV/phase-0-baseline.txt`; `--check`
-      fails on the baseline, naming the functions AC-08 does not allow. Acceptance: AC-08, AC-12.
-- [ ] [AI] Write `local-tmp/restructure/gate.sh`, the bundle every phase gate runs, which sets the four exports and
+      fails on the baseline, naming the functions AC-08 does not allow. Acceptance: AC-08, AC-12. - Result: 33 public
+      functions, 91 classes, 3 module-level containers; `--check` exits 1 with 68 broken, as the baseline should.
+- [x] [AI] Write `local-tmp/restructure/gate.sh`, the bundle every phase gate runs, which sets the four exports and
       runs, in this order, stopping at the first failure:
       `sh local-tmp/run.sh npx nx run account-ledger-cli:test:quick --skip-nx-cache`, the same for `test:integration`
       and `test:e2e`, the corpus compared with `$EV/phase-0-corpus.txt`, `inventory.py --compare $EV/phase-0-tests.txt`,
       `test_literals.py $APP/tests --compare $EV/phase-0-literals.txt`, `cited_names.py`, `sh local-tmp/check-md.sh`,
       and `npm run -s check:hygiene`. Command: `sh local-tmp/restructure/gate.sh`. Proof: exit 0 on the baseline tree.
-      Acceptance: AC-16.
+      Acceptance: AC-16. - Result: `GATE PASSED`, every step exit 0.
 
 ### Phase 0 Gate
 
-- [ ] [AI] Run `sh local-tmp/restructure/gate.sh`, `./rhino md internal-link validate`,
-      `./rhino md heading-hierarchy validate`, and `./rhino md naming validate`. Proof: each exit 0. Acceptance: AC-16.
-- [ ] [AI] Add the `WORKLOG.md` entry, record this phase's Execution Record line, and commit `$EV/phase-0-*.txt`, this
+- [x] [AI] Run `sh local-tmp/restructure/gate.sh`, `./rhino md internal-link validate`,
+      `./rhino md heading-hierarchy validate`, and `./rhino md naming validate`. Proof: each exit 0. Acceptance:
+      AC-16. - Result: `GATE PASSED`; internal-link, heading-hierarchy, and naming each exit 0.
+- [x] [AI] Add the `WORKLOG.md` entry, record this phase's Execution Record line, and commit `$EV/phase-0-*.txt`, this
       file, and `WORKLOG.md` as `docs(plan): record the restructure's baseline`; push. Command:
-      `/usr/bin/git push origin main`. Proof: the hash and the pushed range. Acceptance: AC-16.
+      `/usr/bin/git push origin main`. Proof: the hash and the pushed range. Acceptance: AC-16. - Result: the entry and
+      the line added; committed as `docs(plan): record the restructure's baseline` with `evidence/`, and pushed; the
+      hash is in the Phase 1 line.
 
 Pause safety: the baseline is on `origin/main`. Re-verify with `sh local-tmp/restructure/gate.sh`.
 
