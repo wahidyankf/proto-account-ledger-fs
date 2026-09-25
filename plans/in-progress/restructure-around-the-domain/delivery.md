@@ -983,37 +983,55 @@ Pause safety: every criterion is proven on `origin/main`. Re-verify with `sh loc
 
 Each stays dormant until its trigger fires, and closes with one terminal disposition.
 
-- [ ] [AI] RC1 — a behaviour differs. Trigger: the corpus compare, the inventory compare, or a suite fails after a
+- [x] [AI] RC1 — a behaviour differs. Trigger: the corpus compare, the inventory compare, or a suite fails after a
       refactor item. Owner: the executor. Procedure: stop the phase; diff the failing block against the baseline; find
       the item whose change made it by rerunning the corpus after reverting each of the phase's uncommitted file changes
       in turn from a saved patch in `local-tmp/restructure/`; fix the cause so the corpus matches; never edit the Phase
-      0 record. Proof: the compare equal again, recorded under the item. Acceptance: AC-02.
-- [ ] [AI] RC2 — a cited or baseline test cannot keep its name or cases. Trigger: `inventory.py --compare` or
+      0 record. Proof: the compare equal again, recorded under the item. Acceptance: AC-02. - Disposition 2026-09-25
+      21:17: not triggered. The corpus and inventory compares passed at every phase gate from Phase 1 to Phase 8, and no
+      suite failed after a refactor item.
+- [x] [AI] RC2 — a cited or baseline test cannot keep its name or cases. Trigger: `inventory.py --compare` or
       `cited_names.py` fails and the test cannot be carried as it is. Owner: the owner, since an assessment doc cites
       it. Procedure: keep the test as it is in a file of its own beside its target, amend the test tree in
       [the target layout](tech-docs/001-target-layout.md) to list that file, log the change in the Execution Record, and
       record why in learnings; never rename it and never edit an assessment doc. Proof: both scripts pass, and AC-13's
-      compare with the amended tree. Acceptance: AC-03, AC-04, AC-13.
-- [ ] [AI] RC3 — a pushed phase proves wrong. Trigger: a later phase finds a defect a pushed phase made that a forward
+      compare with the amended tree. Acceptance: AC-03, AC-04, AC-13. - Disposition 2026-09-25 21:17: not triggered.
+      Every cited and baseline test kept its name and cases (`cited 60 ... missing 0`; every baseline name kept with its
+      count), so the target layout was never amended.
+- [x] [AI] RC3 — a pushed phase proves wrong. Trigger: a later phase finds a defect a pushed phase made that a forward
       fix cannot reach before submission. Owner: the executor. Procedure: `/usr/bin/git revert` of that phase's commits,
       newest first, as new commits, pushed; the phase then reruns. Proof: the gate passes on the reverted tree.
-      Acceptance: AC-16.
-- [ ] [AI] RC4 — a hook fails a commit or a push. Trigger: the pre-commit or pre-push hook exits non-zero. Owner: the
+      Acceptance: AC-16. - Disposition 2026-09-25 21:17: not triggered. No pushed phase proved wrong; the Phase 8 record
+      line left out of 26f2e12 was a forward fix, 9305a7b, not a defect in a phase's work, so nothing was reverted.
+- [x] [AI] RC4 — a hook fails a commit or a push. Trigger: the pre-commit or pre-push hook exits non-zero. Owner: the
       executor. Procedure: read its output, fix the cause, and commit again; never `--no-verify`. Proof: the hook
-      passes. Acceptance: AC-16.
+      passes. Acceptance: AC-16. - Disposition 2026-09-25 21:17: not triggered. Every pre-commit and pre-push hook
+      passed on the first run, and none was bypassed.
 
 ## Archival
 
 After every substantive phase is terminal. The completion gate is the execution check alone.
 
-- [ ] [AI] Give each dormant recovery item its dated disposition. Proof: every item carries one. Acceptance: AC-16.
-- [ ] [AI] Triage `learnings.md`: route each entry to one owner or discard it with a reason, or record that the log is
-      empty. Proof: no entry unresolved. Acceptance: AC-16.
+- [x] [AI] Give each dormant recovery item its dated disposition. Proof: every item carries one. Acceptance: AC-16. -
+      Done 21:17: RC1 to RC4 each not triggered, with the reason under it.
+- [x] [AI] Triage `learnings.md`: route each entry to one owner or discard it with a reason, or record that the log is
+      empty. Proof: no entry unresolved. Acceptance: AC-16. - Done 21:19: four entries, each failing the keep test and
+      discarded with its reason under it: the evidence README, which the directory-map gate already catches; two
+      scratch-script faults, which no durable rule owns; and the Phase 8 record line, closed in 9305a7b and audited by
+      the execution check. None held a secret or belonged to another repository.
 - [ ] [AI] Run [Execution Check](../../../repo-governance/workflows/plan/plan-execution-check.md) and record its
       terminal verdict; archival needs a permitting one. Proof: the verdict. Acceptance: AC-16.
-- [ ] [AI] Run [Dev Artifact Clean-Up](../../../repo-governance/workflows/maintenance/dev-artifact-clean-up.md) over
+- [x] [AI] Run [Dev Artifact Clean-Up](../../../repo-governance/workflows/maintenance/dev-artifact-clean-up.md) over
       this task's scratch in `local-tmp/`, including `local-tmp/restructure/baseline/`. Proof: the record of what it
-      removed. Acceptance: AC-16.
+      removed. Acceptance: AC-16. - Done 21:21, integration `local-main`, outcome `pass`, before the execution check,
+      whose fifth step reads the cleanup as done: removed `local-tmp/restructure/` (221 files: the baseline copy, the
+      probes, the backups, and every scratch script, `gate.sh`, `tick.py`, `corpus.py`, `mutate.py`, and `scale.py`
+      among them), `local-tmp/check-md.sh`, `local-tmp/run.sh`, `local-tmp/arch.bak`, the closed
+      `local-tmp/rules-propagation-no-inheritance.md`, and eight commit-message drafts. - Retained: `local-tmp/pdf/`,
+      the owner's architecture PDF work, which is not this plan's; and `local-tmp/todo-restructure.md`, the owner's live
+      task list, still in use. No worktree or task branch was made. - Proof: each removed path re-listed and absent;
+      `local-tmp/` holds only `.gitkeep`, `pdf/`, and the task list; after `git fetch --prune`, `main...origin/main`
+      diverges `0 0`. Result: `retained`, for the two items above.
 - [ ] [AI] Move the plan to `plans/done/YYYY-MM-DD__restructure-around-the-domain/` with `/usr/bin/git mv`; update
       `plans/in-progress/README.md`, `plans/done/README.md`, and every live link to the old path; run the full
       validation from the archived state; add the WORKLOG entry; commit as `docs(plan): archive the restructure plan`
