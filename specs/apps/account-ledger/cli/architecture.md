@@ -173,7 +173,7 @@ events    IncomingEvent = Credit | Debit | Authorization | Settlement | Reversal
           _GeneratedEventBase[I] (id: I, account, value_date), I its own ID kind
 config    AccountIn[M] = id + opening M   LedgerConfig = accounts, first_day, last_day, capitalization_days
 account/domain_events
-          LogEntry = the domain events, one kind per fact, each holding its event and processed_day:
+          LogEntry = the domain events, one kind per fact, each a _DomainEventBase[E]: event: E + processed_day:
             CreditPosted | DebitPosted | ReversalPosted | InstalmentPosted | FeeCharged | FeeRefunded
             | InterestAccrued | InterestAdjusted | InterestCapitalized
             | AuthorizationApproved | AuthorizationDeclined

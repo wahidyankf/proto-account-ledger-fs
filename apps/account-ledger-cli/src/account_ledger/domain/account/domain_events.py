@@ -22,109 +22,79 @@ from account_ledger.domain.model.ids import AccountId, Day, EventId, IncomingId
 
 
 @dataclass(frozen=True, slots=True)
-class CreditPosted:
+class _DomainEventBase[E: LoggedEvent]:
+    """What every domain event holds: the event it records, of its kind's own type, and the day it was processed."""
+
+    event: E
+    processed_day: Day
+
+
+@dataclass(frozen=True, slots=True)
+class CreditPosted(_DomainEventBase[Credit]):
     """A credit the ledger posted; one in instalments posts through the instalments it generates (AMB-017)."""
 
-    event: Credit
-    processed_day: Day
-
 
 @dataclass(frozen=True, slots=True)
-class DebitPosted:
+class DebitPosted(_DomainEventBase[Debit]):
     """A debit the ledger posted."""
 
-    event: Debit
-    processed_day: Day
-
 
 @dataclass(frozen=True, slots=True)
-class ReversalPosted:
+class ReversalPosted(_DomainEventBase[Reversal]):
     """A reversal the ledger posted: it undoes what its target moved, from its own value date (AMB-035)."""
 
-    event: Reversal
-    processed_day: Day
-
 
 @dataclass(frozen=True, slots=True)
-class InstalmentPosted:
+class InstalmentPosted(_DomainEventBase[Instalment]):
     """An instalment of a credit, posted when the credit is processed (AMB-017, AMB-020)."""
 
-    event: Instalment
-    processed_day: Day
-
 
 @dataclass(frozen=True, slots=True)
-class FeeCharged:
+class FeeCharged(_DomainEventBase[Fee]):
     """An overdraft fee charged at a close (AMB-002)."""
 
-    event: Fee
-    processed_day: Day
-
 
 @dataclass(frozen=True, slots=True)
-class FeeRefunded:
+class FeeRefunded(_DomainEventBase[FeeRefund]):
     """A fee refunded at a close, once its day closes at or above zero again (AMB-004)."""
 
-    event: FeeRefund
-    processed_day: Day
-
 
 @dataclass(frozen=True, slots=True)
-class InterestAccrued:
+class InterestAccrued(_DomainEventBase[InterestAccrual]):
     """A day's interest, accrued at its own close (AMB-005)."""
 
-    event: InterestAccrual
-    processed_day: Day
-
 
 @dataclass(frozen=True, slots=True)
-class InterestAdjusted:
+class InterestAdjusted(_DomainEventBase[InterestAdjustment]):
     """An earlier day's interest, adjusted at a close once its closing changed (AMB-005)."""
 
-    event: InterestAdjustment
-    processed_day: Day
-
 
 @dataclass(frozen=True, slots=True)
-class InterestCapitalized:
+class InterestCapitalized(_DomainEventBase[Capitalization]):
     """The accrued interest, capitalized into the ledger balance on a capitalization day (AMB-007)."""
 
-    event: Capitalization
-    processed_day: Day
-
 
 @dataclass(frozen=True, slots=True)
-class AuthorizationApproved:
+class AuthorizationApproved(_DomainEventBase[Authorization]):
     """An authorization approved on arrival; it holds its amount (AMB-008, AMB-009)."""
 
-    event: Authorization
-    processed_day: Day
-
 
 @dataclass(frozen=True, slots=True)
-class AuthorizationDeclined:
+class AuthorizationDeclined(_DomainEventBase[Authorization]):
     """An authorization declined on arrival; the decision is final, and it holds nothing (AMB-009)."""
 
-    event: Authorization
-    processed_day: Day
-
 
 @dataclass(frozen=True, slots=True)
-class SettlementApplied:
+class SettlementApplied(_DomainEventBase[Settlement]):
     """A settlement applied to its authorization's hold, with the states it moved the authorization between."""
 
-    event: Settlement
-    processed_day: Day
     state_before: AuthorizationState
     state_after: AuthorizationState
 
 
 @dataclass(frozen=True, slots=True)
-class SettlementForcePosted:
+class SettlementForcePosted(_DomainEventBase[Settlement]):
     """A settlement with no transition to apply: it debits its amount and releases no hold (AMB-012, AMB-029)."""
-
-    event: Settlement
-    processed_day: Day
 
 
 @dataclass(frozen=True, slots=True)
@@ -189,20 +159,15 @@ type Rejection = (
 
 
 @dataclass(frozen=True, slots=True)
-class EventRejected:
+class EventRejected(_DomainEventBase[IncomingEvent]):
     """An event the ledger refused, with the reason; it moves no balance (AMB-014)."""
 
-    event: IncomingEvent
-    processed_day: Day
     reason: Rejection
 
 
 @dataclass(frozen=True, slots=True)
-class DuplicateIgnored:
+class DuplicateIgnored(_DomainEventBase[IncomingEvent]):
     """An event delivered again, equal to the first with its ID; a retry, not an error, with no effect (AMB-034)."""
-
-    event: IncomingEvent
-    processed_day: Day
 
 
 type LogEntry = (
