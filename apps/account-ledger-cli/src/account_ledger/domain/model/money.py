@@ -283,7 +283,7 @@ def compute_overdraft_fee[M: (Aed, Bhd)](sample: M) -> AmountIn[M]:
 
 
 def split_amount_of(
-    amount: AmountIn[Aed] | AmountIn[Bhd], count: InstalmentCount
+    amount: Amount, count: InstalmentCount
 ) -> Result[tuple[AmountIn[Aed], ...] | tuple[AmountIn[Bhd], ...], TooManyInstalments]:
     """``split_amount`` for an amount whose currency is known only at run time."""
     match amount.money:
@@ -293,7 +293,7 @@ def split_amount_of(
             return split_amount(AmountIn(money), count)
 
 
-def compute_overdraft_fee_of(sample: Money) -> AmountIn[Aed] | AmountIn[Bhd]:
+def compute_overdraft_fee_of(sample: Money) -> Amount:
     """``compute_overdraft_fee`` for a currency known only at run time."""
     match sample:
         case Aed():
@@ -302,7 +302,7 @@ def compute_overdraft_fee_of(sample: Money) -> AmountIn[Aed] | AmountIn[Bhd]:
             return compute_overdraft_fee(sample)
 
 
-def make_amount_of(money: Money) -> Result[AmountIn[Aed] | AmountIn[Bhd], NotPositive]:
+def make_amount_of(money: Money) -> Result[Amount, NotPositive]:
     """``AmountIn.make`` for a currency known only at run time."""
     match money:
         case Aed():
@@ -311,9 +311,7 @@ def make_amount_of(money: Money) -> Result[AmountIn[Aed] | AmountIn[Bhd], NotPos
             return AmountIn.make(money)
 
 
-def compute_rest_of(
-    hold: AmountIn[Aed] | AmountIn[Bhd], taken_amount: AmountIn[Aed] | AmountIn[Bhd]
-) -> Result[Money, CurrencyMismatch]:
+def compute_rest_of(hold: Amount, taken_amount: Amount) -> Result[Money, CurrencyMismatch]:
     """What a hold keeps once an amount of its own currency is taken, or the mismatch a bug would bring."""
     match (hold.money, taken_amount.money):
         case (Aed() as hold_money, Aed() as taken_money):
@@ -324,9 +322,7 @@ def compute_rest_of(
             return Err(_make_mismatch(hold.money, taken_amount.money))
 
 
-def sum_amounts(
-    first_amount: AmountIn[Aed] | AmountIn[Bhd], second_amount: AmountIn[Aed] | AmountIn[Bhd]
-) -> Result[AmountIn[Aed] | AmountIn[Bhd], CurrencyMismatch]:
+def sum_amounts(first_amount: Amount, second_amount: Amount) -> Result[Amount, CurrencyMismatch]:
     """Two amounts of one currency added, above zero as both are, or the mismatch a bug would bring."""
     match (first_amount.money, second_amount.money):
         case (Aed() as first_money, Aed() as second_money):
