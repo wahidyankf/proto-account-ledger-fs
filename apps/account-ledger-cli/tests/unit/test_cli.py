@@ -9,7 +9,7 @@ from account_ledger.adapters.render import render_reports
 from account_ledger.cli import run_cli
 from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.money import CurrencyMismatch
-from account_ledger.domain.model.result import Err
+from account_ledger.domain.model.result import Err, Ok, Result
 from account_ledger.domain.replay import replay_stream
 from support.brief_stream import BRIEF_CSV, build_brief_stream
 from support.results import unwrap_ok
@@ -20,7 +20,7 @@ def test_a_stream_file_prints_its_report_and_exits_0() -> None:
     end-to-end golden run compares that report with OUTPUT_TARGET."""
     out, err = io.StringIO(), io.StringIO()
 
-    exit_code = run_cli(["streams/challenge.csv"], {"streams/challenge.csv": BRIEF_CSV}.__getitem__, out, err)
+    exit_code = run_cli(["streams/challenge.csv"], {"streams/challenge.csv": Ok(BRIEF_CSV)}.__getitem__, out, err)
 
     assert (out.getvalue(), err.getvalue(), exit_code) == (
         render_reports(unwrap_ok(replay_stream(build_brief_stream(), CHALLENGE)).reports),
@@ -32,9 +32,9 @@ def test_a_stream_file_prints_its_report_and_exits_0() -> None:
 USAGE = "usage: account-ledger-cli <stream.csv>\n"
 
 
-def read_brief(path: str) -> str:
+def read_brief(path: str) -> Result[str, OSError]:
     """A reader that holds only the brief's stream, at any path."""
-    return BRIEF_CSV
+    return Ok(BRIEF_CSV)
 
 
 @pytest.mark.parametrize("argv", [[], ["a.csv", "b.csv"]])
@@ -59,9 +59,9 @@ def test_an_unreadable_file_exits_2(fault: OSError, reason: str) -> None:
     for a missing file, and the operating system's message otherwise (tech-docs 003)."""
     out, err = io.StringIO(), io.StringIO()
 
-    def fail_read(path: str) -> str:
+    def fail_read(path: str) -> Result[str, OSError]:
         """A reader that fails as the operating system would."""
-        raise fault
+        return Err(fault)
 
     exit_code = run_cli(["streams/missing.csv"], fail_read, out, err)
 
@@ -73,7 +73,7 @@ def test_a_malformed_stream_exits_2_naming_the_line() -> None:
     out, err = io.StringIO(), io.StringIO()
     malformed_csv = BRIEF_CSV.replace("E2,1,DEBIT,ACC-001,950.00,", "E2,1,DEBIT,ACC-001,950.00x,")
 
-    exit_code = run_cli(["stream.csv"], lambda path: malformed_csv, out, err)
+    exit_code = run_cli(["stream.csv"], lambda path: Ok(malformed_csv), out, err)
 
     assert (out.getvalue(), err.getvalue(), exit_code) == (
         "",
@@ -134,7 +134,7 @@ def test_an_interrupt_exits_130() -> None:
     """AC-36: an interrupt ends the run quietly with 130, as a shell reports SIGINT (D13)."""
     out, err = io.StringIO(), io.StringIO()
 
-    def interrupt_read(path: str) -> str:
+    def interrupt_read(path: str) -> Result[str, OSError]:
         """A reader interrupted by Ctrl-C."""
         raise KeyboardInterrupt
 

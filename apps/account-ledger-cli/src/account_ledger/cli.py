@@ -10,7 +10,7 @@ from typing import TextIO
 from account_ledger.adapters.render import render_reports
 from account_ledger.adapters.stream_csv import parse_stream
 from account_ledger.domain.model.config import CHALLENGE
-from account_ledger.domain.model.result import Err
+from account_ledger.domain.model.result import Err, Ok, Result
 from account_ledger.domain.replay import replay_stream
 
 USAGE = "usage: account-ledger-cli <stream.csv>"
@@ -18,7 +18,10 @@ CLOSED_PIPE = 141  # the reader has gone, as a shell reports SIGPIPE: 128 + 13
 INTERRUPTED = 130  # as a shell reports SIGINT: 128 + 2
 
 
-def run_cli(argv: Sequence[str], read_text: Callable[[str], str], out: TextIO, err: TextIO) -> int:
+type Reader = Callable[[str], Result[str, OSError]]
+
+
+def run_cli(argv: Sequence[str], read_text: Reader, out: TextIO, err: TextIO) -> int:
     """Read the one named stream, replay it, and write its report to ``out``; return the process exit code (D13)."""
     try:
         return _replay_file(argv, read_text, out, err)
@@ -31,18 +34,17 @@ def run_cli(argv: Sequence[str], read_text: Callable[[str], str], out: TextIO, e
         return 2
 
 
-def _replay_file(argv: Sequence[str], read_text: Callable[[str], str], out: TextIO, err: TextIO) -> int:
+def _replay_file(argv: Sequence[str], read_text: Reader, out: TextIO, err: TextIO) -> int:
     """The exit code: 0 for a written report, 2 for a wrong argument count, an unreadable file, or a bad stream."""
     if len(argv) != 1:
         err.write(f"{USAGE}\n")
         return 2
     path = argv[0]
-    try:
-        text = read_text(path)
-    except OSError as fault:
-        err.write(f"error: cannot read {path}: {_describe_fault(fault)}\n")
+    text = read_text(path)
+    if isinstance(text, Err):
+        err.write(f"error: cannot read {path}: {_describe_fault(text.error)}\n")
         return 2
-    events = parse_stream(text, CHALLENGE)
+    events = parse_stream(text.value, CHALLENGE)
     if isinstance(events, Err):
         err.write(f"error: {events.error.message}\n")
         return 2
@@ -72,6 +74,10 @@ def main() -> int:
     return status
 
 
-def _read_file(path: str) -> str:
-    """The stream file's text, read as UTF-8."""
-    return Path(path).read_text(encoding="utf-8")
+def _read_file(path: str) -> Result[str, OSError]:
+    """The stream file's text, read as UTF-8, or the operating system's refusal; ``read_text`` refuses by raising, so
+    the refusal is caught here and returned."""
+    try:
+        return Ok(Path(path).read_text(encoding="utf-8"))
+    except OSError as fault:
+        return Err(fault)

@@ -64,7 +64,7 @@ nothing.
 
 ```text
   shell      +--------------------------------------------------------------------------------+
-  cli.py     | cli: run(argv, read_text, out, err) -> exit code; main binds the real effects   |
+  cli.py     | cli: run_cli(argv, read_text, out, err) -> exit code; main binds real effects   |
              +--------------------------------------------------------------------------------+
                   | text                   | events                 | reports
                   v                        |                        v
