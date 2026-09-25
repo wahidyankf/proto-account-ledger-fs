@@ -34,8 +34,7 @@ def check_reversal(log: Log, target_id: EventId) -> Result[None, Rejection]:
     reverser_id = find_reverser(log, target_id)
     if reverser_id is not None:
         return Err(AlreadyReversed(target_id, reverser_id))
-    undoing = _find_undoing(log, target.event)
-    return Ok(None) if undoing is None else Err(undoing)
+    return _check_undoing(log, target.event)
 
 
 def find_reverser(log: Log, target_id: EventId) -> IncomingId | None:
@@ -58,24 +57,24 @@ def list_reversed_targets(log: Log, account_id: AccountId, cutoff_day: Day | Non
     )
 
 
-def _find_undoing(log: Log, target: LoggedEvent) -> AlreadyUndone | None:
-    """The part of the target's money already undone another way: a fee refunded, or a credit or one of its
-    instalments reversed."""
+def _check_undoing(log: Log, target: LoggedEvent) -> Result[None, AlreadyUndone]:
+    """Nothing when none of the target's money is undone another way, or the part that is: a fee refunded, or a credit
+    or one of its instalments reversed."""
     match target:
         case Instalment(id=part):
             undoing_id = find_reverser(log, part.parent)
-            return None if undoing_id is None else AlreadyUndone(part, undoing_id)
+            return Ok(None) if undoing_id is None else Err(AlreadyUndone(part, undoing_id))
         case Fee(id=fee):
             refund = _find_refund(log, fee)
-            return None if refund is None else AlreadyUndone(fee, refund)
+            return Ok(None) if refund is None else Err(AlreadyUndone(fee, refund))
         case Credit(posting=Instalments()):
             for part in list_instalments(log, target.id):
                 undoing_id = find_reverser(log, part.id)
                 if undoing_id is not None:
-                    return AlreadyUndone(part.id, undoing_id)
-            return None
+                    return Err(AlreadyUndone(part.id, undoing_id))
+            return Ok(None)
         case _:
-            return None
+            return Ok(None)
 
 
 def _find_refund(log: Log, fee: FeeId) -> RefundId | None:
