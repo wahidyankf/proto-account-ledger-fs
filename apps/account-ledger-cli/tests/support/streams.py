@@ -10,9 +10,8 @@ from account_ledger.domain.account.domain_events import (
 from account_ledger.domain.ledger.event_log import (
     Log,
 )
-from account_ledger.domain.model.config import Account
+from account_ledger.domain.model.config import AccountIn
 from account_ledger.domain.model.events import (
-    AnyAmount,
     Authorization,
     Credit,
     Debit,
@@ -34,14 +33,14 @@ from account_ledger.domain.model.ids import (
     format_id,
     parse_event_id,
 )
-from account_ledger.domain.model.money import Aed, Amount, Bhd, Direction, Money
+from account_ledger.domain.model.money import Aed, Amount, AmountIn, Bhd, Direction, Money
 from support.results import unwrap_ok
 from support.values import make_aed, make_bhd
 
 HEADER = ("event", "booked", "type", "account", "amount", "value_date", "reference", "instalments", "final")
 
-ACC_001: Account[Aed] = Account(AccountId("ACC-001"), Aed.make_zero())
-ACC_002: Account[Bhd] = Account(AccountId("ACC-002"), Bhd.make_zero())
+ACC_001: AccountIn[Aed] = AccountIn(AccountId("ACC-001"), Aed.make_zero())
+ACC_002: AccountIn[Bhd] = AccountIn(AccountId("ACC-002"), Bhd.make_zero())
 
 
 def format_csv(rows: list[dict[str, str]]) -> str:
@@ -56,9 +55,9 @@ def take_through(stream: tuple[IncomingEvent, ...], event_id: str) -> tuple[Inco
     return stream[: ids.index(event_id) + 1]
 
 
-def _make_amount(account: str, text: str) -> AnyAmount:
+def _make_amount(account: str, text: str) -> Amount:
     """An amount in the account's currency: AED for ACC-001, BHD otherwise."""
-    return Amount(make_aed(text)) if account == "ACC-001" else Amount(make_bhd(text))
+    return AmountIn(make_aed(text)) if account == "ACC-001" else AmountIn(make_bhd(text))
 
 
 def make_credit(

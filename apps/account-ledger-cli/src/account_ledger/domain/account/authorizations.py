@@ -23,14 +23,15 @@ from account_ledger.domain.account.domain_events import (
 )
 from account_ledger.domain.account.history import (
     AccountHistory,
-    AnyHistory,
+    AccountHistoryIn,
     is_aed_history,
 )
 from account_ledger.domain.account.states import Approved, AuthorizationState, Declined, PartiallySettled, Settled
-from account_ledger.domain.model.events import AnyAmount, Authorization, Settlement, SettlementKind
+from account_ledger.domain.model.events import Authorization, Settlement, SettlementKind
 from account_ledger.domain.model.ids import Day
 from account_ledger.domain.model.money import (
     Aed,
+    Amount,
     Bhd,
     CurrencyMismatch,
     Money,
@@ -46,14 +47,14 @@ from account_ledger.domain.model.money import (
 class FinalSettlement:
     """A final settlement, as the state machine takes it, with its amount."""
 
-    amount: AnyAmount
+    amount: Amount
 
 
 @dataclass(frozen=True, slots=True)
 class PartialSettlement:
     """A settlement followed by more settlements, as the state machine takes it, with its amount."""
 
-    amount: AnyAmount
+    amount: Amount
 
 
 type SettlementInput = FinalSettlement | PartialSettlement
@@ -108,13 +109,13 @@ def _is_settlement_below_hold(
 
 
 def _make_partial_settlement(
-    settled_amount: AnyAmount, hold: AnyAmount, taken_amount: AnyAmount
+    settled_amount: Amount, hold: Amount, taken_amount: Amount
 ) -> Result[AuthorizationState, CurrencyMismatch]:
     """Partially settled for the settlements so far, keeping what a settlement below the hold leaves of it."""
     return _compute_rest(hold, taken_amount).map(lambda rest: PartiallySettled(settled_amount, rest))
 
 
-def _compute_rest(hold: AnyAmount, taken_amount: AnyAmount) -> Result[AnyAmount, CurrencyMismatch]:
+def _compute_rest(hold: Amount, taken_amount: Amount) -> Result[Amount, CurrencyMismatch]:
     """The hold left after a partial settlement below it, above zero as every hold is."""
     if isinstance(rest := compute_rest_of(hold, taken_amount), Err):
         return rest
@@ -153,7 +154,7 @@ def decide_authorization(
     )
 
 
-def list_records[M: (Aed, Bhd)](history: AccountHistory[M]) -> tuple[AuthorizationRecord, ...]:
+def list_records[M: (Aed, Bhd)](history: AccountHistoryIn[M]) -> tuple[AuthorizationRecord, ...]:
     """Every authorization known to the account's history, in the order first seen, with its state."""
     records: list[AuthorizationRecord] = []
     for entry in history.entries:
@@ -189,14 +190,14 @@ def list_records[M: (Aed, Bhd)](history: AccountHistory[M]) -> tuple[Authorizati
     return tuple(records)
 
 
-def list_records_of(history: AnyHistory) -> tuple[AuthorizationRecord, ...]:
+def list_records_of(history: AccountHistory) -> tuple[AuthorizationRecord, ...]:
     """``list_records`` for an account whose currency is known only at run time."""
     if is_aed_history(history):
         return list_records(history)
     return list_records(history)
 
 
-def find_record[M: (Aed, Bhd)](history: AccountHistory[M], settlement: Settlement) -> AuthorizationRecord | None:
+def find_record[M: (Aed, Bhd)](history: AccountHistoryIn[M], settlement: Settlement) -> AuthorizationRecord | None:
     """The authorization a settlement names, if the account's history knows it."""
     return next((record for record in list_records(history) if _is_referenced_by(record, settlement)), None)
 
@@ -207,7 +208,7 @@ def _is_referenced_by(record: AuthorizationRecord, settlement: Settlement) -> bo
     return authorization.authorization == settlement.authorization and authorization.account == settlement.account
 
 
-def sum_holds[M: (Aed, Bhd)](history: AccountHistory[M], day: Day) -> Result[M, CurrencyMismatch]:
+def sum_holds[M: (Aed, Bhd)](history: AccountHistoryIn[M], day: Day) -> Result[M, CurrencyMismatch]:
     """The hold of every approved or partially settled authorization on the account whose value date is <= day
     (AMB-010, AMB-013)."""
     holds: list[Money] = []

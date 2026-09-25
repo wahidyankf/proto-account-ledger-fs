@@ -139,12 +139,12 @@ own `ruff.toml` refuses any import of the other three.
 | `account/balances`       | closing and available, each recomputed over the account's history                         |
 | `account/authorizations` | `decide_authorization`, `apply_settlement`, holds, and records rebuilt from the history   |
 | `account/reversals`      | why a reversal is refused, in tech-docs 002's order, and which events one undid           |
-| `account/history`        | `AccountHistory`: one account and its own entries, all that an account rule may read      |
+| `account/history`        | `AccountHistoryIn[M]`: one account and its own entries, all that an account rule may read |
 | `account/domain_events`  | the domain events, one kind per fact the ledger records, and every `Rejection`            |
 | `account/states`         | the authorization states, one frozen dataclass each                                       |
 | `model/events`           | incoming event kinds, in `IncomingEvent`, and generated kinds, in `GeneratedEvent`        |
 | `model/config`           | the accounts, each typed by its currency, the window of days, and the capitalization days |
-| `model/money`            | `Aed` and `Bhd`, one type per currency; `Amount` above zero; split, fee, daily interest   |
+| `model/money`            | `Aed` and `Bhd`, one type per currency; `AmountIn` above zero; split, fee, daily interest |
 | `model/ids`              | days, account and authorization IDs, incoming and generated IDs, instalment counts        |
 | `result`                 | `Ok` and `Err`, so every failure a caller can meet is a value; it knows no ledger         |
 
@@ -158,12 +158,13 @@ or an enum, and each constructor refuses an illegal value, so none can be built.
 
 ```text
 result    Result[T, E] = Ok[T] | Err[E]      every parse, make, check, or sum that can fail returns one
-money     Aed | Bhd = Money             Amount[M: (Aed, Bhd)], above zero      Direction: UP | DOWN
+money     Aed | Bhd = Money             AmountIn[M: (Aed, Bhd)], above zero    Direction: UP | DOWN
+          Amount = AmountIn[Aed] | AmountIn[Bhd]
 ids       Day   AccountId   AuthorizationId   IncomingId   InstalmentCount
           EventId = IncomingId | InstalmentId | FeeId | RefundId | InterestId | CapitalizationId
 events    IncomingEvent = Credit | Debit | Authorization | Settlement | Reversal     each holds an Amount
           GeneratedEvent = Instalment | Fee | FeeRefund | InterestAccrual | InterestAdjustment | Capitalization
-config    Account[M] = id + opening M     LedgerConfig = accounts, first_day, last_day, capitalization_days
+config    AccountIn[M] = id + opening M   LedgerConfig = accounts, first_day, last_day, capitalization_days
 account/domain_events
           LogEntry = the domain events, one kind per fact, each holding its event and processed_day:
             CreditPosted | DebitPosted | ReversalPosted | InstalmentPosted | FeeCharged | FeeRefunded
@@ -174,10 +175,10 @@ account/domain_events
           EventRejected.reason: Rejection = IdReused | AlreadyReversed | ReversesAReversal | UnknownTarget
                                             | TargetOnAnotherAccount | MovedNoMoney | AlreadyUndone
 account/history
-          AccountHistory[M: (Aed, Bhd)] = account: Account[M] + entries: LogEntry...   one account's own entries
-          every account rule takes one; a rule generic over M is reached through one dispatch, AnyHistory
+          AccountHistoryIn[M: (Aed, Bhd)] = account: AccountIn[M] + entries: LogEntry...   one account's own entries
+          every account rule takes one; a rule generic over M is reached through one dispatch, AccountHistory
 ledger/event_log
-          Log = tuple[LogEntry, ...]     find_history(log, account) -> AccountHistory[M]
+          Log = tuple[LogEntry, ...]     find_history(log, account) -> AccountHistoryIn[M]
 account/states, account/authorizations
           AuthorizationState = Approved(hold) | PartiallySettled(settled_amount, hold)
                                  | Declined(requested_amount) | Settled(settled_amount)
@@ -250,7 +251,7 @@ type in `domain/` belongs to it, and none outside `domain/` holds a ledger rule.
 
 | The brief says                     | The code has                                                                  |
 | ---------------------------------- | ----------------------------------------------------------------------------- |
-| an account, in its currency        | `Account[M]`, with `M` either `Aed` or `Bhd`, and its `AccountId`             |
+| an account, in its currency        | `AccountIn[M]`, with `M` either `Aed` or `Bhd`, and its `AccountId`           |
 | an event in the stream             | `IncomingEvent`: `Credit`, `Debit`, `Authorization`, `Settlement`, `Reversal` |
 | the ledger, append-only            | `Log`, the one tuple of every account's domain events                         |
 | a hold                             | the `hold` of an `Approved` or a `PartiallySettled` authorization             |
@@ -259,7 +260,12 @@ type in `domain/` belongs to it, and none outside `domain/` holds a ledger rule.
 | interest, and its capitalization   | `InterestAccrual`, `InterestAdjustment`, and `Capitalization`                 |
 | a credit paid in instalments       | `Instalment`, one per `InstalmentCount`, recorded as `InstalmentPosted`       |
 
-**The Account aggregate** is one account and its own entries in the log, `AccountHistory[M]`. Every rule in
+A type generic over the currency ends in `In`, as in `AccountIn[Aed]`, an account in AED; the plain noun is the union of
+its currencies, as `Money` is `Aed | Bhd`, so `Account` is `AccountIn[Aed] | AccountIn[Bhd]`. Each rule inside the
+aggregate is generic, and is reached from outside through a function ending in `_of` that takes the plain noun, such as
+`compute_closing_of(history: AccountHistory, day)`.
+
+**The Account aggregate** is one account and its own entries in the log, `AccountHistoryIn[M]`. Every rule in
 `domain/account/` takes one history and never the log, so pyright refuses a rule that reads another account. The
 aggregate guards the invariants that concern one account:
 

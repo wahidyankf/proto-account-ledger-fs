@@ -28,7 +28,6 @@ from account_ledger.domain.account.states import (
     Settled,
 )
 from account_ledger.domain.model.events import (
-    AnyAmount,
     Authorization,
     Credit,
     Debit,
@@ -45,7 +44,7 @@ from account_ledger.domain.model.events import (
     Whole,
 )
 from account_ledger.domain.model.ids import AccountId, Day, format_id
-from account_ledger.domain.model.money import Direction, Money, format_digits, get_currency
+from account_ledger.domain.model.money import Amount, Direction, Money, format_digits, get_currency
 from account_ledger.domain.report import (
     Capitalized,
     DayReport,
@@ -383,7 +382,7 @@ def _format_state(record: AuthorizationRecord) -> str:
 MINUS = "\u2212"
 
 
-def _format_money(amount: AnyAmount) -> str:
+def _format_money(amount: Amount) -> str:
     """An amount with its currency code, as a Detail cell prints it."""
     return f"{get_currency(amount.money)} {_format_amount(amount.money)}"
 

@@ -16,7 +16,7 @@ from account_ledger.domain.account.domain_events import (
     UnknownTarget,
 )
 from account_ledger.domain.account.history import (
-    AccountHistory,
+    AccountHistoryIn,
     find_first_entry,
     list_counted_events,
     list_instalments,
@@ -26,7 +26,7 @@ from account_ledger.domain.model.ids import Day, EventId, FeeId, IncomingId, Ref
 from account_ledger.domain.model.money import Aed, Bhd
 
 
-def check_reversal[M: (Aed, Bhd)](history: AccountHistory[M], target_id: EventId) -> Result[None, Rejection]:
+def check_reversal[M: (Aed, Bhd)](history: AccountHistoryIn[M], target_id: EventId) -> Result[None, Rejection]:
     """Nothing when a reversal of the target on the account may proceed, or why it is refused, checked in tech-docs
     002's order (AMB-028, AMB-035); a target on another account is refused before the account sees it (AMB-036)."""
     target = find_first_entry(history.entries, target_id)
@@ -42,7 +42,7 @@ def check_reversal[M: (Aed, Bhd)](history: AccountHistory[M], target_id: EventId
     return _check_undoing(history, target.event)
 
 
-def find_reversal_id[M: (Aed, Bhd)](history: AccountHistory[M], target_id: EventId) -> IncomingId | None:
+def find_reversal_id[M: (Aed, Bhd)](history: AccountHistoryIn[M], target_id: EventId) -> IncomingId | None:
     """The posted reversal of the target, if there is one."""
     for entry in history.entries:
         match entry:
@@ -54,7 +54,7 @@ def find_reversal_id[M: (Aed, Bhd)](history: AccountHistory[M], target_id: Event
 
 
 def list_reversed_targets[M: (Aed, Bhd)](
-    history: AccountHistory[M], cutoff_day: Day | None = None
+    history: AccountHistoryIn[M], cutoff_day: Day | None = None
 ) -> frozenset[EventId]:
     """The events a posted reversal on the account undid (AMB-035); with ``cutoff_day``, only reversals
     value-dated by then."""
@@ -65,7 +65,7 @@ def list_reversed_targets[M: (Aed, Bhd)](
     )
 
 
-def _check_undoing[M: (Aed, Bhd)](history: AccountHistory[M], target: LoggedEvent) -> Result[None, AlreadyUndone]:
+def _check_undoing[M: (Aed, Bhd)](history: AccountHistoryIn[M], target: LoggedEvent) -> Result[None, AlreadyUndone]:
     """Nothing when none of the target's money is undone another way, or the part that is: a fee refunded, or a credit
     or one of its instalments reversed."""
     match target:
@@ -85,7 +85,7 @@ def _check_undoing[M: (Aed, Bhd)](history: AccountHistory[M], target: LoggedEven
             return Ok(None)
 
 
-def _find_refund[M: (Aed, Bhd)](history: AccountHistory[M], fee: FeeId) -> RefundId | None:
+def _find_refund[M: (Aed, Bhd)](history: AccountHistoryIn[M], fee: FeeId) -> RefundId | None:
     """The refund in effect for the fee: one that names it and is not itself reversed (AMB-004, AMB-035)."""
     for entry in history.entries:
         match entry:

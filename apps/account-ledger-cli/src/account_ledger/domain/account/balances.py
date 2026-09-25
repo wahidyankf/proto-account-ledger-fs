@@ -11,7 +11,7 @@ from account_ledger.domain.account.domain_events import (
 )
 from account_ledger.domain.account.history import (
     AccountHistory,
-    AnyHistory,
+    AccountHistoryIn,
     find_first_entry,
     is_aed_history,
     list_counted_events,
@@ -36,7 +36,7 @@ from account_ledger.domain.model.ids import Day
 from account_ledger.domain.model.money import Aed, Bhd, CurrencyMismatch, Money, sum_money
 
 
-def _list_effects[M: (Aed, Bhd)](history: AccountHistory[M]) -> list[tuple[Day, Money]]:
+def _list_effects[M: (Aed, Bhd)](history: AccountHistoryIn[M]) -> list[tuple[Day, Money]]:
     """Each counted entry's value date and signed effect on the account's ledger balance."""
     effects: list[tuple[Day, Money]] = []
     for event in list_counted_events(history):
@@ -44,7 +44,7 @@ def _list_effects[M: (Aed, Bhd)](history: AccountHistory[M]) -> list[tuple[Day, 
     return effects
 
 
-def _list_moved_amounts[M: (Aed, Bhd)](history: AccountHistory[M], event: LoggedEvent) -> tuple[Money, ...]:
+def _list_moved_amounts[M: (Aed, Bhd)](history: AccountHistoryIn[M], event: LoggedEvent) -> tuple[Money, ...]:
     """The signed amounts an event moves on the ledger balance; none for an event that moves nothing."""
     match event:
         case Credit():
@@ -71,7 +71,7 @@ def _list_moved_amounts[M: (Aed, Bhd)](history: AccountHistory[M], event: Logged
             assert_never(event)
 
 
-def _list_undone_amounts[M: (Aed, Bhd)](history: AccountHistory[M], target: LoggedEvent) -> tuple[Money, ...]:
+def _list_undone_amounts[M: (Aed, Bhd)](history: AccountHistoryIn[M], target: LoggedEvent) -> tuple[Money, ...]:
     """What reversing the target takes out: what it moved, and for a credit in instalments, every instalment."""
     match target:
         case Credit(posting=Instalments()):
@@ -83,27 +83,27 @@ def _list_undone_amounts[M: (Aed, Bhd)](history: AccountHistory[M], target: Logg
             return _list_moved_amounts(history, target)
 
 
-def compute_closing[M: (Aed, Bhd)](history: AccountHistory[M], day: Day) -> Result[M, CurrencyMismatch]:
+def compute_closing[M: (Aed, Bhd)](history: AccountHistoryIn[M], day: Day) -> Result[M, CurrencyMismatch]:
     """The opening plus the effect of every counted entry with value date <= day."""
     effects = [effect for value_date, effect in _list_effects(history) if value_date <= day]
     return sum_money(history.account.opening, effects)
 
 
-def compute_available[M: (Aed, Bhd)](history: AccountHistory[M], day: Day) -> Result[M, CurrencyMismatch]:
+def compute_available[M: (Aed, Bhd)](history: AccountHistoryIn[M], day: Day) -> Result[M, CurrencyMismatch]:
     """The closing less the holds."""
     if isinstance(closing := compute_closing(history, day), Err):
         return closing
     return sum_holds(history, day).map(lambda holds: closing.value - holds)
 
 
-def compute_available_of(history: AnyHistory, day: Day) -> Result[Money, CurrencyMismatch]:
+def compute_available_of(history: AccountHistory, day: Day) -> Result[Money, CurrencyMismatch]:
     """``compute_available`` for an account whose currency is known only at run time."""
     if is_aed_history(history):
         return compute_available(history, day)
     return compute_available(history, day)
 
 
-def compute_closing_of(history: AnyHistory, day: Day) -> Result[Money, CurrencyMismatch]:
+def compute_closing_of(history: AccountHistory, day: Day) -> Result[Money, CurrencyMismatch]:
     """``compute_closing`` for an account whose currency is known only at run time."""
     # The branches read alike, but pyright binds M to Aed in the first and to Bhd in the second.
     if is_aed_history(history):

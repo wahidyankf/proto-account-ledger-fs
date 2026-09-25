@@ -12,7 +12,7 @@ from account_ledger.domain.model.events import (
     Whole,
 )
 from account_ledger.domain.model.ids import AccountId, AuthorizationId, Day, IncomingId, InstalmentCount
-from account_ledger.domain.model.money import Amount
+from account_ledger.domain.model.money import AmountIn
 from support.values import make_aed, make_bhd
 
 ACC_001, ACC_002 = AccountId("ACC-001"), AccountId("ACC-002")
@@ -21,17 +21,19 @@ ACC_001, ACC_002 = AccountId("ACC-001"), AccountId("ACC-002")
 def build_brief_stream() -> tuple[IncomingEvent, ...]:
     """E1 to E10 in the order the brief lists them."""
     return (
-        Credit(IncomingId("E1"), Day(1), ACC_001, Day(1), Amount(make_aed("1200.00")), Whole()),
-        Debit(IncomingId("E2"), Day(1), ACC_001, Day(1), Amount(make_aed("950.00"))),
-        Authorization(IncomingId("E3"), Day(2), ACC_001, Day(2), AuthorizationId("Auth-A"), Amount(make_aed("200.00"))),
-        Credit(IncomingId("E4"), Day(3), ACC_001, Day(3), Amount(make_aed("400.00")), Whole()),
+        Credit(IncomingId("E1"), Day(1), ACC_001, Day(1), AmountIn(make_aed("1200.00")), Whole()),
+        Debit(IncomingId("E2"), Day(1), ACC_001, Day(1), AmountIn(make_aed("950.00"))),
+        Authorization(
+            IncomingId("E3"), Day(2), ACC_001, Day(2), AuthorizationId("Auth-A"), AmountIn(make_aed("200.00"))
+        ),
+        Credit(IncomingId("E4"), Day(3), ACC_001, Day(3), AmountIn(make_aed("400.00")), Whole()),
         Settlement(
             IncomingId("E5"),
             Day(4),
             ACC_001,
             Day(4),
             AuthorizationId("Auth-A"),
-            Amount(make_aed("185.00")),
+            AmountIn(make_aed("185.00")),
             SettlementKind.FINAL,
         ),
         Settlement(
@@ -40,13 +42,17 @@ def build_brief_stream() -> tuple[IncomingEvent, ...]:
             ACC_001,
             Day(4),
             AuthorizationId("Auth-Z"),
-            Amount(make_aed("180.00")),
+            AmountIn(make_aed("180.00")),
             SettlementKind.FINAL,
         ),
-        Debit(IncomingId("E7"), Day(5), ACC_001, Day(2), Amount(make_aed("620.00"))),
-        Authorization(IncomingId("E8"), Day(5), ACC_001, Day(5), AuthorizationId("Auth-B"), Amount(make_aed("90.00"))),
+        Debit(IncomingId("E7"), Day(5), ACC_001, Day(2), AmountIn(make_aed("620.00"))),
+        Authorization(
+            IncomingId("E8"), Day(5), ACC_001, Day(5), AuthorizationId("Auth-B"), AmountIn(make_aed("90.00"))
+        ),
         Reversal(IncomingId("E9"), Day(6), ACC_001, Day(2), IncomingId("E7")),
-        Credit(IncomingId("E10"), Day(5), ACC_002, Day(5), Amount(make_bhd("10.000")), Instalments(InstalmentCount(3))),
+        Credit(
+            IncomingId("E10"), Day(5), ACC_002, Day(5), AmountIn(make_bhd("10.000")), Instalments(InstalmentCount(3))
+        ),
     )
 
 

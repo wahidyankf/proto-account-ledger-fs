@@ -14,7 +14,7 @@ from account_ledger.domain.model.events import (
     Whole,
 )
 from account_ledger.domain.model.ids import AccountId, AuthorizationId, Day, FeeId, IncomingId, InstalmentCount
-from account_ledger.domain.model.money import Amount
+from account_ledger.domain.model.money import AmountIn
 from support.results import unwrap_ok
 from support.streams import HEADER, format_csv
 from support.values import make_aed, make_bhd
@@ -82,10 +82,10 @@ def test_a_valid_stream_parses_to_its_events() -> None:
 
     assert parse_stream(text, CHALLENGE) == Ok(
         (
-            Credit(IncomingId("E1"), Day(1), ACC_001, Day(1), Amount(make_aed("1200.00")), Whole()),
-            Debit(IncomingId("E2"), Day(1), ACC_001, Day(1), Amount(make_aed("950.00"))),
+            Credit(IncomingId("E1"), Day(1), ACC_001, Day(1), AmountIn(make_aed("1200.00")), Whole()),
+            Debit(IncomingId("E2"), Day(1), ACC_001, Day(1), AmountIn(make_aed("950.00"))),
             Authorization(
-                IncomingId("E3"), Day(2), ACC_001, Day(2), AuthorizationId("Auth-A"), Amount(make_aed("200.00"))
+                IncomingId("E3"), Day(2), ACC_001, Day(2), AuthorizationId("Auth-A"), AmountIn(make_aed("200.00"))
             ),
             Settlement(
                 IncomingId("E5"),
@@ -93,12 +93,17 @@ def test_a_valid_stream_parses_to_its_events() -> None:
                 ACC_001,
                 Day(4),
                 AuthorizationId("Auth-A"),
-                Amount(make_aed("185.00")),
+                AmountIn(make_aed("185.00")),
                 SettlementKind.FINAL,
             ),
             Reversal(IncomingId("E9"), Day(6), ACC_001, Day(2), IncomingId("E7")),
             Credit(
-                IncomingId("E10"), Day(5), ACC_002, Day(5), Amount(make_bhd("10.000")), Instalments(InstalmentCount(3))
+                IncomingId("E10"),
+                Day(5),
+                ACC_002,
+                Day(5),
+                AmountIn(make_bhd("10.000")),
+                Instalments(InstalmentCount(3)),
             ),
         )
     )

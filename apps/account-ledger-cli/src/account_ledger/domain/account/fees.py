@@ -13,7 +13,7 @@ from account_ledger.domain.account.domain_events import (
 )
 from account_ledger.domain.account.history import (
     AccountHistory,
-    AnyHistory,
+    AccountHistoryIn,
     is_aed_history,
 )
 from account_ledger.domain.model.events import Fee, FeeRefund, Reversal
@@ -22,7 +22,7 @@ from account_ledger.domain.model.money import Aed, Bhd, CurrencyMismatch, comput
 
 
 def assess_fees[M: (Aed, Bhd)](
-    history: AccountHistory[M], today: Day, first_day: Day
+    history: AccountHistoryIn[M], today: Day, first_day: Day
 ) -> Result[tuple[LogEntry, ...], CurrencyMismatch]:
     """For each day so far, in order: a fee, value-dated today, for a day that closes negative with no fee in force,
     and a refund of the fee in force for a day that closes at or above zero (AMB-002, AMB-004). Each closing is read
@@ -48,7 +48,9 @@ def assess_fees[M: (Aed, Bhd)](
     return Ok(tuple(entries))
 
 
-def assess_fees_of(history: AnyHistory, today: Day, first_day: Day) -> Result[tuple[LogEntry, ...], CurrencyMismatch]:
+def assess_fees_of(
+    history: AccountHistory, today: Day, first_day: Day
+) -> Result[tuple[LogEntry, ...], CurrencyMismatch]:
     """``assess_fees`` for an account whose currency is known only at run time."""
     # Both branches read alike; each gives the generic call a history of one known currency.
     if is_aed_history(history):
@@ -56,7 +58,7 @@ def assess_fees_of(history: AnyHistory, today: Day, first_day: Day) -> Result[tu
     return assess_fees(history, today, first_day)
 
 
-def _map_fees_in_force[M: (Aed, Bhd)](history: AccountHistory[M]) -> dict[Day, Fee]:
+def _map_fees_in_force[M: (Aed, Bhd)](history: AccountHistoryIn[M]) -> dict[Day, Fee]:
     """The account's fee in force for each day: one per day per account, until a refund names it or a reversal
     undoes it, and again once a reversal undoes that refund (AMB-002, AMB-004, AMB-035)."""
     fees: dict[Day, Fee] = {}
@@ -83,7 +85,7 @@ def _map_fees_in_force[M: (Aed, Bhd)](history: AccountHistory[M]) -> dict[Day, F
     return fees
 
 
-def _is_closing_below_zero[M: (Aed, Bhd)](history: AccountHistory[M], day: Day) -> Result[bool, CurrencyMismatch]:
+def _is_closing_below_zero[M: (Aed, Bhd)](history: AccountHistoryIn[M], day: Day) -> Result[bool, CurrencyMismatch]:
     """Whether the account's closing on the day is below zero, in its own currency."""
     zero = type(history.account.opening).make_zero()
     return compute_closing(history, day).map(lambda closing: closing < zero)

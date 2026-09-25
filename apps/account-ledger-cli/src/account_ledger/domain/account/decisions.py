@@ -27,7 +27,7 @@ from account_ledger.domain.account.domain_events import (
 )
 from account_ledger.domain.account.history import (
     AccountHistory,
-    AnyHistory,
+    AccountHistoryIn,
     is_aed_history,
 )
 from account_ledger.domain.account.reversals import (
@@ -51,7 +51,7 @@ from account_ledger.domain.model.money import Aed, Bhd, CurrencyMismatch, split_
 
 
 def decide_event_of(
-    history: AnyHistory, event: IncomingEvent, today: Day
+    history: AccountHistory, event: IncomingEvent, today: Day
 ) -> Result[tuple[LogEntry, ...], CurrencyMismatch]:
     """``_decide_event`` for an account whose currency is known only at run time."""
     # Both branches read alike; each gives the generic call a history of one known currency.
@@ -61,7 +61,7 @@ def decide_event_of(
 
 
 def _decide_event[M: (Aed, Bhd)](
-    history: AccountHistory[M], event: IncomingEvent, today: Day
+    history: AccountHistoryIn[M], event: IncomingEvent, today: Day
 ) -> Result[tuple[LogEntry, ...], CurrencyMismatch]:
     """The entries the event's account records for it, plus the instalments a credit generates."""
     match event:
@@ -82,7 +82,7 @@ def _decide_event[M: (Aed, Bhd)](
 
 
 def _decide_authorization_entry[M: (Aed, Bhd)](
-    history: AccountHistory[M], authorization: Authorization, today: Day
+    history: AccountHistoryIn[M], authorization: Authorization, today: Day
 ) -> Result[AuthorizationApproved | AuthorizationDeclined, CurrencyMismatch]:
     """The authorization's decision, from the account's available balance when it arrives (AMB-008, AMB-009)."""
     return compute_available(history, today).flat_map(
@@ -91,7 +91,7 @@ def _decide_authorization_entry[M: (Aed, Bhd)](
 
 
 def _decide_settlement_entry[M: (Aed, Bhd)](
-    history: AccountHistory[M], settlement: Settlement, today: Day
+    history: AccountHistoryIn[M], settlement: Settlement, today: Day
 ) -> Result[SettlementApplied | SettlementForcePosted, CurrencyMismatch]:
     """The settlement, settling against the authorization it names, or force-posted when there is none (AMB-012)."""
     record = find_record(history, settlement)
@@ -123,7 +123,7 @@ def _generate_instalments(credit: Credit, count: InstalmentCount, today: Day) ->
 
 
 def _decide_reversal[M: (Aed, Bhd)](
-    history: AccountHistory[M], reversal: Reversal, today: Day
+    history: AccountHistoryIn[M], reversal: Reversal, today: Day
 ) -> ReversalPosted | EventRejected:
     """A reversal, posted unless a check refuses it."""
     match check_reversal(history, reversal.target):

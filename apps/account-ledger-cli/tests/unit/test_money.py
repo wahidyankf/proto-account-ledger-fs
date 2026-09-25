@@ -9,7 +9,7 @@ from account_ledger.domain.model.ids import InstalmentCount
 from account_ledger.domain.model.money import (
     AboveLimit,
     Aed,
-    Amount,
+    AmountIn,
     Bhd,
     CurrencyMismatch,
     Money,
@@ -57,11 +57,11 @@ def test_an_amount_at_the_limit_or_beyond_is_refused() -> None:
 
 def test_an_amount_must_be_above_zero() -> None:
     """An amount is money above zero; zero or below is a fault."""
-    assert Amount.make(make_aed("0.00")) == Err(NotPositive("0.00"))
-    assert Amount.make(make_aed("-400.00")) == Err(NotPositive("-400.00"))
-    assert Amount.make(make_aed("0.01")) == Ok(Amount(make_aed("0.01")))
+    assert AmountIn.make(make_aed("0.00")) == Err(NotPositive("0.00"))
+    assert AmountIn.make(make_aed("-400.00")) == Err(NotPositive("-400.00"))
+    assert AmountIn.make(make_aed("0.01")) == Ok(AmountIn(make_aed("0.01")))
     with pytest.raises(ValueError, match="an amount is above zero"):
-        Amount(make_aed("0.00"))
+        AmountIn(make_aed("0.00"))
 
 
 def test_aed_and_bhd_values_never_combine() -> None:
@@ -88,14 +88,14 @@ def test_a_sum_or_comparison_across_currencies_returns_the_mismatch() -> None:
     """Every sum, rest, and comparison of money known only at run time returns a mismatch, never a wrong total; only
     a bug could bring one, since the reader keeps every effect in its account's currency."""
     aed_to_bhd = Err(CurrencyMismatch(expected_currency="AED", found_currency="BHD"))
-    aed_amount, bhd_amount = Amount(make_aed("5.00")), Amount(make_bhd("1.000"))
+    aed_amount, bhd_amount = AmountIn(make_aed("5.00")), AmountIn(make_bhd("1.000"))
     assert sum_money(make_aed("1.00"), [make_aed("2.00"), make_aed("0.50")]) == Ok(make_aed("3.50"))
     assert sum_money(make_aed("1.00"), [make_aed("2.00"), make_bhd("1.000")]) == aed_to_bhd
     assert sum_amounts(aed_amount, bhd_amount) == aed_to_bhd
     assert compute_rest_of(aed_amount, bhd_amount) == aed_to_bhd
     assert is_below(make_aed("1.00"), bhd_amount) == aed_to_bhd
     assert (sum_amounts(aed_amount, aed_amount), is_below(make_aed("1.00"), aed_amount)) == (
-        Ok(Amount(make_aed("10.00"))),
+        Ok(AmountIn(make_aed("10.00"))),
         Ok(True),
     )
 
@@ -112,16 +112,16 @@ def test_amb_006_daily_interest_rounds_half_even() -> None:
 
 def test_amb_020_ten_bhd_splits_3_333_3_333_3_334() -> None:
     """AMB-020: a split gives the remainder to the last part, and refuses more parts than minor units."""
-    assert split_amount(Amount(make_bhd("10.000")), InstalmentCount(3)) == Ok(
-        (Amount(make_bhd("3.333")), Amount(make_bhd("3.333")), Amount(make_bhd("3.334")))
+    assert split_amount(AmountIn(make_bhd("10.000")), InstalmentCount(3)) == Ok(
+        (AmountIn(make_bhd("3.333")), AmountIn(make_bhd("3.333")), AmountIn(make_bhd("3.334")))
     )
-    assert split_amount(Amount(make_aed("100.00")), InstalmentCount(4)) == Ok(
-        tuple(Amount(make_aed("25.00")) for _ in range(4))
+    assert split_amount(AmountIn(make_aed("100.00")), InstalmentCount(4)) == Ok(
+        tuple(AmountIn(make_aed("25.00")) for _ in range(4))
     )
-    assert split_amount(Amount(make_bhd("0.002")), InstalmentCount(3)) == Err(TooManyInstalments("0.002", count=3))
+    assert split_amount(AmountIn(make_bhd("0.002")), InstalmentCount(3)) == Err(TooManyInstalments("0.002", count=3))
 
 
 def test_amb_027_the_bhd_fee_is_2_560() -> None:
     """AMB-027: the overdraft fee is AED 25.00, and BHD 2.560 at the configured rate."""
-    assert compute_overdraft_fee(make_aed("0.00")) == Amount(make_aed("25.00"))
-    assert compute_overdraft_fee(make_bhd("0.000")) == Amount(make_bhd("2.560"))
+    assert compute_overdraft_fee(make_aed("0.00")) == AmountIn(make_aed("25.00"))
+    assert compute_overdraft_fee(make_bhd("0.000")) == AmountIn(make_bhd("2.560"))

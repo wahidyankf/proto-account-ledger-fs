@@ -16,9 +16,7 @@ from account_ledger.domain.model.ids import (
     InterestId,
     RefundId,
 )
-from account_ledger.domain.model.money import Aed, Amount, Bhd, Direction
-
-type AnyAmount = Amount[Aed] | Amount[Bhd]
+from account_ledger.domain.model.money import Amount, Direction
 
 
 class SettlementKind(Enum):
@@ -51,7 +49,7 @@ class Credit:
     booked: Day
     account: AccountId
     value_date: Day
-    amount: AnyAmount
+    amount: Amount
     posting: Posting
 
 
@@ -63,7 +61,7 @@ class Debit:
     booked: Day
     account: AccountId
     value_date: Day
-    amount: AnyAmount
+    amount: Amount
 
 
 @dataclass(frozen=True, slots=True)
@@ -75,7 +73,7 @@ class Authorization:
     account: AccountId
     value_date: Day
     authorization: AuthorizationId
-    amount: AnyAmount
+    amount: Amount
 
 
 @dataclass(frozen=True, slots=True)
@@ -87,7 +85,7 @@ class Settlement:
     account: AccountId
     value_date: Day
     authorization: AuthorizationId
-    amount: AnyAmount
+    amount: Amount
     kind: SettlementKind
 
 
@@ -112,7 +110,7 @@ class Instalment:
     id: InstalmentId
     account: AccountId
     value_date: Day
-    amount: AnyAmount
+    amount: Amount
 
 
 @dataclass(frozen=True, slots=True)
@@ -122,7 +120,7 @@ class Fee:
     id: FeeId
     account: AccountId
     value_date: Day
-    amount: AnyAmount
+    amount: Amount
 
 
 @dataclass(frozen=True, slots=True)
@@ -133,7 +131,7 @@ class FeeRefund:
     account: AccountId
     value_date: Day
     fee: FeeId
-    amount: AnyAmount
+    amount: Amount
 
 
 @dataclass(frozen=True, slots=True)
@@ -143,7 +141,7 @@ class InterestAccrual:
     id: InterestId
     account: AccountId
     value_date: Day
-    amount: AnyAmount
+    amount: Amount
 
     def __post_init__(self) -> None:
         if self.id.for_day != self.id.generated_day:
@@ -158,7 +156,7 @@ class InterestAdjustment:
     account: AccountId
     value_date: Day
     direction: Direction
-    amount: AnyAmount
+    amount: Amount
 
     def __post_init__(self) -> None:
         if self.id.for_day >= self.id.generated_day:
@@ -172,7 +170,7 @@ class Capitalization:
     id: CapitalizationId
     account: AccountId
     value_date: Day
-    amount: AnyAmount
+    amount: Amount
 
 
 type GeneratedEvent = Instalment | Fee | FeeRefund | InterestAccrual | InterestAdjustment | Capitalization

@@ -9,9 +9,8 @@ import io
 from dataclasses import dataclass
 
 from account_ledger.common.result import Err, Ok, Result
-from account_ledger.domain.model.config import AnyAccount, LedgerConfig
+from account_ledger.domain.model.config import Account, LedgerConfig
 from account_ledger.domain.model.events import (
-    AnyAmount,
     Authorization,
     Credit,
     Debit,
@@ -38,6 +37,7 @@ from account_ledger.domain.model.money import (
     AboveLimit,
     Aed,
     Amount,
+    AmountIn,
     Bhd,
     Money,
     MoneyFault,
@@ -87,13 +87,13 @@ def _check_id[T](parsed_id: Result[T, IdFault]) -> Result[T, RowFault]:
     return parsed_id.map_err(lambda fault: RowFault(f"{fault.kind} '{fault.text}' is not valid"))
 
 
-def _parse_amount(text: str, sample: Money) -> Result[AnyAmount, RowFault]:
+def _parse_amount(text: str, sample: Money) -> Result[Amount, RowFault]:
     """An amount in the account's currency, or a fault saying why the text is not one."""
     match sample:
         case Aed():
-            amount = Aed.parse(text).flat_map(Amount.make)
+            amount = Aed.parse(text).flat_map(AmountIn.make)
         case Bhd():
-            amount = Bhd.parse(text).flat_map(Amount.make)
+            amount = Bhd.parse(text).flat_map(AmountIn.make)
     return amount.map_err(lambda fault: RowFault(_describe_amount_fault(text, fault)))
 
 
@@ -182,7 +182,7 @@ def _check_columns(cells: dict[str, str], kind: str) -> Result[None, RowFault]:
 
 def _parse_common_fields(
     cells: dict[str, str], config: LedgerConfig
-) -> Result[tuple[_CommonFields, AnyAccount], RowFault]:
+) -> Result[tuple[_CommonFields, Account], RowFault]:
     """The row's common fields, and the account it names, which must be a configured account."""
     if isinstance(event_id := _check_id(IncomingId.parse(cells["event"])), Err):
         return event_id
@@ -206,7 +206,7 @@ def _parse_reversal(reference: str, fields: _CommonFields) -> Result[Reversal, R
     )
 
 
-def _parse_credit(instalments: str, fields: _CommonFields, amount: AnyAmount) -> Result[Credit, RowFault]:
+def _parse_credit(instalments: str, fields: _CommonFields, amount: Amount) -> Result[Credit, RowFault]:
     """A credit, whole or in instalments; one whose amount cannot be split that many ways is refused."""
     if isinstance(parsed_posting := _parse_posting(instalments), Err):
         return parsed_posting
@@ -217,7 +217,7 @@ def _parse_credit(instalments: str, fields: _CommonFields, amount: AnyAmount) ->
 
 
 def _parse_authorization_or_settlement(
-    cells: dict[str, str], kind: str, fields: _CommonFields, amount: AnyAmount
+    cells: dict[str, str], kind: str, fields: _CommonFields, amount: Amount
 ) -> Result[Authorization | Settlement, RowFault]:
     """An authorization, or a settlement against one, each naming its hold in the reference."""
     if isinstance(hold := _check_id(AuthorizationId.parse(cells["reference"])), Err):

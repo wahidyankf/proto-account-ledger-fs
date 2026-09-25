@@ -157,12 +157,12 @@ class NotPositive:
 
 
 def _is_positive(money: Money) -> bool:
-    """Whether the money is above zero: the one rule the guard and ``Amount.make`` both apply."""
+    """Whether the money is above zero: the one rule the guard and ``AmountIn.make`` both apply."""
     return money.value > 0
 
 
 @dataclass(frozen=True, slots=True)
-class Amount[M: (Aed, Bhd)]:
+class AmountIn[M: (Aed, Bhd)]:
     """What an event carries: money above zero."""
 
     money: M
@@ -172,9 +172,12 @@ class Amount[M: (Aed, Bhd)]:
             raise ValueError(f"an amount is above zero, not {self.money.value}")
 
     @staticmethod
-    def make[N: (Aed, Bhd)](money: N) -> Result[Amount[N], NotPositive]:
+    def make[N: (Aed, Bhd)](money: N) -> Result[AmountIn[N], NotPositive]:
         """The money as an amount, or a fault when it is zero or below."""
-        return Ok(Amount(money)) if _is_positive(money) else Err(NotPositive(str(money.value)))
+        return Ok(AmountIn(money)) if _is_positive(money) else Err(NotPositive(str(money.value)))
+
+
+type Amount = AmountIn[Aed] | AmountIn[Bhd]
 
 
 class Direction(Enum):
@@ -255,42 +258,42 @@ class TooManyInstalments:
 
 
 def split_amount[M: (Aed, Bhd)](
-    amount: Amount[M], count: InstalmentCount
-) -> Result[tuple[Amount[M], ...], TooManyInstalments]:
+    amount: AmountIn[M], count: InstalmentCount
+) -> Result[tuple[AmountIn[M], ...], TooManyInstalments]:
     """Equal parts rounded down, the remainder on the last (AMB-020); each part at least one minor unit."""
     total = amount.money
     part = type(total)((total.value / count.number).quantize(_get_minor_unit(total), rounding=ROUND_DOWN))
     if part.value <= 0:
         return Err(TooManyInstalments(str(total.value), count=count.number))
     last_part = type(total)(total.value - part.value * (count.number - 1))
-    return Ok((*(Amount(part) for _ in range(count.number - 1)), Amount(last_part)))
+    return Ok((*(AmountIn(part) for _ in range(count.number - 1)), AmountIn(last_part)))
 
 
 AED_FEE = Decimal("25.00")
 AED_TO_BHD = Decimal("0.10238257")
 
 
-def compute_overdraft_fee[M: (Aed, Bhd)](sample: M) -> Amount[M]:
+def compute_overdraft_fee[M: (Aed, Bhd)](sample: M) -> AmountIn[M]:
     """The fee in ``sample``'s currency: AED 25.00, and for BHD its conversion, rounded half-even (AMB-027)."""
     match sample:
         case Aed():
-            return Amount(_round_money(sample, AED_FEE))
+            return AmountIn(_round_money(sample, AED_FEE))
         case Bhd():
-            return Amount(_round_money(sample, AED_FEE * AED_TO_BHD))
+            return AmountIn(_round_money(sample, AED_FEE * AED_TO_BHD))
 
 
 def split_amount_of(
-    amount: Amount[Aed] | Amount[Bhd], count: InstalmentCount
-) -> Result[tuple[Amount[Aed], ...] | tuple[Amount[Bhd], ...], TooManyInstalments]:
+    amount: AmountIn[Aed] | AmountIn[Bhd], count: InstalmentCount
+) -> Result[tuple[AmountIn[Aed], ...] | tuple[AmountIn[Bhd], ...], TooManyInstalments]:
     """``split_amount`` for an amount whose currency is known only at run time."""
     match amount.money:
         case Aed() as money:
-            return split_amount(Amount(money), count)
+            return split_amount(AmountIn(money), count)
         case Bhd() as money:
-            return split_amount(Amount(money), count)
+            return split_amount(AmountIn(money), count)
 
 
-def compute_overdraft_fee_of(sample: Money) -> Amount[Aed] | Amount[Bhd]:
+def compute_overdraft_fee_of(sample: Money) -> AmountIn[Aed] | AmountIn[Bhd]:
     """``compute_overdraft_fee`` for a currency known only at run time."""
     match sample:
         case Aed():
@@ -299,17 +302,17 @@ def compute_overdraft_fee_of(sample: Money) -> Amount[Aed] | Amount[Bhd]:
             return compute_overdraft_fee(sample)
 
 
-def make_amount_of(money: Money) -> Result[Amount[Aed] | Amount[Bhd], NotPositive]:
-    """``Amount.make`` for a currency known only at run time."""
+def make_amount_of(money: Money) -> Result[AmountIn[Aed] | AmountIn[Bhd], NotPositive]:
+    """``AmountIn.make`` for a currency known only at run time."""
     match money:
         case Aed():
-            return Amount.make(money)
+            return AmountIn.make(money)
         case Bhd():
-            return Amount.make(money)
+            return AmountIn.make(money)
 
 
 def compute_rest_of(
-    hold: Amount[Aed] | Amount[Bhd], taken_amount: Amount[Aed] | Amount[Bhd]
+    hold: AmountIn[Aed] | AmountIn[Bhd], taken_amount: AmountIn[Aed] | AmountIn[Bhd]
 ) -> Result[Money, CurrencyMismatch]:
     """What a hold keeps once an amount of its own currency is taken, or the mismatch a bug would bring."""
     match (hold.money, taken_amount.money):
@@ -322,14 +325,14 @@ def compute_rest_of(
 
 
 def sum_amounts(
-    first_amount: Amount[Aed] | Amount[Bhd], second_amount: Amount[Aed] | Amount[Bhd]
-) -> Result[Amount[Aed] | Amount[Bhd], CurrencyMismatch]:
+    first_amount: AmountIn[Aed] | AmountIn[Bhd], second_amount: AmountIn[Aed] | AmountIn[Bhd]
+) -> Result[AmountIn[Aed] | AmountIn[Bhd], CurrencyMismatch]:
     """Two amounts of one currency added, above zero as both are, or the mismatch a bug would bring."""
     match (first_amount.money, second_amount.money):
         case (Aed() as first_money, Aed() as second_money):
-            return Ok(Amount(first_money + second_money))
+            return Ok(AmountIn(first_money + second_money))
         case (Bhd() as first_money, Bhd() as second_money):
-            return Ok(Amount(first_money + second_money))
+            return Ok(AmountIn(first_money + second_money))
         case _:
             return Err(_make_mismatch(first_amount.money, second_amount.money))
 
@@ -339,7 +342,7 @@ def format_digits(money: Money) -> str:
     return str(money.value)
 
 
-def is_below(money: Money, amount: Amount[Aed] | Amount[Bhd]) -> Result[bool, CurrencyMismatch]:
+def is_below(money: Money, amount: Amount) -> Result[bool, CurrencyMismatch]:
     """Whether a balance is below an amount of its own currency, or the mismatch a bug would bring."""
     match (money, amount.money):
         case (Aed(), Aed()) | (Bhd(), Bhd()):

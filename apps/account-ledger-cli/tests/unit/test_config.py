@@ -5,11 +5,11 @@ from dataclasses import replace
 import pytest
 
 from account_ledger.common.result import Err, Ok
-from account_ledger.domain.model.config import CHALLENGE, Account, ConfigFault, LedgerConfig
+from account_ledger.domain.model.config import CHALLENGE, AccountIn, ConfigFault, LedgerConfig
 from account_ledger.domain.model.ids import AccountId, Day
 from support.values import make_aed, make_bhd
 
-ACC_001 = Account(AccountId("ACC-001"), make_aed("0.00"))
+ACC_001 = AccountIn(AccountId("ACC-001"), make_aed("0.00"))
 
 
 def test_ledger_config_refuses_an_inverted_window() -> None:
@@ -28,5 +28,5 @@ def test_ledger_config_refuses_an_inverted_window() -> None:
     )
     with pytest.raises(ValueError, match="the first day 1 is after the last 0"):
         replace(CHALLENGE, last_day=Day(0))
-    assert CHALLENGE.accounts == (ACC_001, Account(AccountId("ACC-002"), make_bhd("0.000")))
+    assert CHALLENGE.accounts == (ACC_001, AccountIn(AccountId("ACC-002"), make_bhd("0.000")))
     assert (CHALLENGE.first_day, CHALLENGE.last_day, CHALLENGE.capitalization_days) == (Day(1), Day(6), {Day(6)})

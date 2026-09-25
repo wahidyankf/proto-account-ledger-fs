@@ -13,7 +13,7 @@ from account_ledger.domain.ledger.event_log import (
 )
 from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.ids import Day
-from account_ledger.domain.model.money import Amount
+from account_ledger.domain.model.money import AmountIn
 from account_ledger.domain.stream_processing import (
     process_stream,
 )
@@ -47,7 +47,7 @@ def test_amb_027_a_bhd_account_is_charged_bhd_2_560() -> None:
     log = unwrap_ok(process_stream((make_debit("E1", 1, "1.000", account="ACC-002"),), CHALLENGE)).find_log(Day(1))
 
     fees = [entry.event for entry in log if isinstance(entry, FeeCharged)]
-    assert [fee.amount for fee in fees] == [Amount(make_bhd("2.560"))]
+    assert [fee.amount for fee in fees] == [AmountIn(make_bhd("2.560"))]
     assert list_fee_ids(log) == ["FEE-002-D1@D1"]
     assert unwrap_ok(compute_closing(find_history(log, ACC_002), Day(1))) == make_bhd("-3.560")
 

@@ -16,7 +16,7 @@ from account_ledger.domain.account.states import (
 from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.events import IncomingEvent
 from account_ledger.domain.model.ids import AccountId, AuthorizationId, Day, format_id
-from account_ledger.domain.model.money import Amount
+from account_ledger.domain.model.money import AmountIn
 from account_ledger.domain.report import Capitalized, DayReport, Generated, Note, NothingGenerated, Restatement, Step
 from account_ledger.domain.stream_processing import (
     process_stream,
@@ -58,10 +58,10 @@ def test_amb_019_every_known_authorization_is_listed_with_its_state() -> None:
         ]
 
     assert list_authorizations(1) == []
-    assert list_authorizations(2) == [(AuthorizationId("Auth-A"), Approved(Amount(make_aed("200.00"))))]
+    assert list_authorizations(2) == [(AuthorizationId("Auth-A"), Approved(AmountIn(make_aed("200.00"))))]
     assert list_authorizations(5) == [
-        (AuthorizationId("Auth-A"), Settled(Amount(make_aed("185.00")))),
-        (AuthorizationId("Auth-B"), Declined(Amount(make_aed("90.00")))),
+        (AuthorizationId("Auth-A"), Settled(AmountIn(make_aed("185.00")))),
+        (AuthorizationId("Auth-B"), Declined(AmountIn(make_aed("90.00")))),
     ]
 
 

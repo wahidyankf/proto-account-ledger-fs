@@ -10,7 +10,7 @@ from account_ledger.domain.account.fees import (
     assess_fees_of,
 )
 from account_ledger.domain.account.history import (
-    AnyHistory,
+    AccountHistory,
 )
 from account_ledger.domain.account.interest import (
     accrue_interest_of,
@@ -24,7 +24,7 @@ from account_ledger.domain.model.config import LedgerConfig
 from account_ledger.domain.model.ids import Day
 from account_ledger.domain.model.money import CurrencyMismatch
 
-type _Step = Callable[[AnyHistory], Result[tuple[LogEntry, ...], CurrencyMismatch]]
+type _Step = Callable[[AccountHistory], Result[tuple[LogEntry, ...], CurrencyMismatch]]
 
 
 def close_day(log: Log, today: Day, config: LedgerConfig) -> Result[Log, CurrencyMismatch]:

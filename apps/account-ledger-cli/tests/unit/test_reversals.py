@@ -27,10 +27,10 @@ from account_ledger.domain.ledger.event_log import (
     find_history,
     find_history_of,
 )
-from account_ledger.domain.model.config import CHALLENGE, AnyAccount
+from account_ledger.domain.model.config import CHALLENGE, Account
 from account_ledger.domain.model.events import IncomingEvent
 from account_ledger.domain.model.ids import Day, FeeId, IncomingId, InstalmentId, RefundId
-from account_ledger.domain.model.money import Amount
+from account_ledger.domain.model.money import AmountIn
 from account_ledger.domain.stream_processing import (
     process_stream,
 )
@@ -195,7 +195,7 @@ UNDONE = {
 
 @pytest.mark.parametrize(("stream", "account", "day", "reason"), UNDONE.values(), ids=UNDONE.keys())
 def test_amb_035_money_already_undone_cannot_be_undone_again(
-    stream: tuple[IncomingEvent, ...], account: AnyAccount, day: Day, reason: AlreadyUndone
+    stream: tuple[IncomingEvent, ...], account: Account, day: Day, reason: AlreadyUndone
 ) -> None:
     """AMB-035: each event's money is undone at most once, whichever event undoes it: an instalment of a reversed
     credit, a credit one of whose instalments is reversed, or a fee already refunded."""
@@ -220,7 +220,7 @@ def test_amb_035_a_reversed_settlement_leaves_its_authorization_settled() -> Non
 
     log = unwrap_ok(process_stream(stream, CHALLENGE)).find_log(Day(3))
 
-    assert list_states(log, "Auth-A") == [Settled(Amount(make_aed("30.00")))]
+    assert list_states(log, "Auth-A") == [Settled(AmountIn(make_aed("30.00")))]
     assert unwrap_ok(sum_holds(find_history(log, ACC_001), Day(3))) == make_aed("0.00")
     assert unwrap_ok(compute_closing(find_history(log, ACC_001), Day(3))) == make_aed("100.00")
 

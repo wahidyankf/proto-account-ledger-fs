@@ -9,18 +9,18 @@ from account_ledger.domain.model.money import Aed, Bhd
 
 
 @dataclass(frozen=True, slots=True)
-class Account[M: (Aed, Bhd)]:
+class AccountIn[M: (Aed, Bhd)]:
     """An account; its currency is the type of its opening balance."""
 
     id: AccountId
     opening: M
 
 
-type AnyAccount = Account[Aed] | Account[Bhd]
+type Account = AccountIn[Aed] | AccountIn[Bhd]
 
 
-def is_aed(account: AnyAccount) -> TypeIs[Account[Aed]]:
-    """Whether the account is in AED; when it is not, the type checker knows it is ``Account[Bhd]``."""
+def is_aed(account: Account) -> TypeIs[AccountIn[Aed]]:
+    """Whether the account is in AED; when it is not, the type checker knows it is ``AccountIn[Bhd]``."""
     return isinstance(account.opening, Aed)
 
 
@@ -32,7 +32,7 @@ class ConfigFault:
 
 
 def _check_config(
-    accounts: tuple[AnyAccount, ...], first_day: Day, last_day: Day, capitalization_days: frozenset[Day]
+    accounts: tuple[Account, ...], first_day: Day, last_day: Day, capitalization_days: frozenset[Day]
 ) -> Result[None, ConfigFault]:
     """Nothing when the configuration is valid, or the first reason it is not."""
     if first_day > last_day:
@@ -52,7 +52,7 @@ def _check_config(
 class LedgerConfig:
     """The accounts in order, the window of days processed, and the days interest is capitalized."""
 
-    accounts: tuple[AnyAccount, ...]
+    accounts: tuple[Account, ...]
     first_day: Day
     last_day: Day
     capitalization_days: frozenset[Day]
@@ -64,20 +64,20 @@ class LedgerConfig:
 
     @staticmethod
     def make(
-        accounts: tuple[AnyAccount, ...], first_day: Day, last_day: Day, capitalization_days: frozenset[Day]
+        accounts: tuple[Account, ...], first_day: Day, last_day: Day, capitalization_days: frozenset[Day]
     ) -> Result[LedgerConfig, ConfigFault]:
         """The configuration, or the fault that makes it invalid."""
         return _check_config(accounts, first_day, last_day, capitalization_days).map(
             lambda _: LedgerConfig(accounts, first_day, last_day, capitalization_days)
         )
 
-    def find_account(self, account_id: AccountId) -> AnyAccount | None:
+    def find_account(self, account_id: AccountId) -> Account | None:
         """The configured account with this ID, if the ledger holds it."""
         return next((account for account in self.accounts if account.id == account_id), None)
 
 
 CHALLENGE = LedgerConfig(
-    accounts=(Account(AccountId("ACC-001"), Aed.make_zero()), Account(AccountId("ACC-002"), Bhd.make_zero())),
+    accounts=(AccountIn(AccountId("ACC-001"), Aed.make_zero()), AccountIn(AccountId("ACC-002"), Bhd.make_zero())),
     first_day=Day(1),
     last_day=Day(6),
     capitalization_days=frozenset({Day(6)}),
