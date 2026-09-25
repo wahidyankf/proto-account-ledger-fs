@@ -5,7 +5,9 @@ program processes an event stream and prints one report a day, and a test suite 
 
 The program is layered around its domain: the shell binds every effect, the adapters read the CSV stream and write the
 text report, the application runs the one use case through its ports, and the domain holds every rule, as the
-[architecture](specs/apps/account-ledger/cli/architecture.md) draws it.
+[architecture](specs/apps/account-ledger/cli/architecture.md) draws it. Its trade-offs, Part 2 of the
+[brief](challenge-raw.md), are [a document](docs/explanation/architecture-trade-offs.md) and its PDF,
+`architecture-trade-offs.pdf`, built by `scripts/build-architecture-pdf.py`.
 
 The repository is an Nx monorepo. Rhino and husky gate every commit and push, and governance is adopted from
 `ose-rules`.
@@ -84,6 +86,7 @@ tables:
 | [WORKLOG.md](WORKLOG.md)                      | timestamped record of the work                       |
 | [MOVEMENT.md](MOVEMENT.md)                    | each day's movement per account, fully analysed      |
 | [OUTPUT_TARGET.md](OUTPUT_TARGET.md)          | the exact text the CLI must print                    |
+| `architecture-trade-offs.pdf`                 | the Part 2 document, printed from its Markdown       |
 
 ## Working Agreement
 

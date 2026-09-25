@@ -18,6 +18,7 @@ earlier work is claimed.
 | 2026-09-25 19:37–19:58 | Restructure Phase 2: AccountIn holds every account rule; D8 table over take; tests merged   |
 | 2026-09-25 19:18–19:37 | Restructure Phase 1: values without bases; take, directions, instalments; CHALLENGE moved   |
 | 2026-09-25 19:05–19:18 | Restructure Phase 0: baseline gates, corpus, inventory, literals, timings, audits recorded  |
+| 2026-09-25 18:18–22:00 | Part 2 PDF: three Mermaid figures in the trade-offs, printed by a Python script; 4 pages    |
 | 2026-09-25 18:12–19:05 | Plan quality gate: two repair cycles, the repaired draft chosen at the ceiling; R22 naming  |
 | 2026-09-25 17:12–18:12 | Restructure plan: research, pre-write gate R1 to R14, the six documents, R17 to R20 settled |
 | 2026-09-25 16:05–17:10 | Operations on their types: aggregate methods, money and ID methods, shared bases, the rule  |

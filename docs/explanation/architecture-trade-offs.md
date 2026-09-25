@@ -27,6 +27,22 @@ no figure moved by more than a fifth:
 | 60 days  | 600    | 3.50 s          |
 | 120 days | 1,200  | 26.89 s         |
 
+```mermaid
+flowchart LR
+  accTitle: Where the cost and the state grow
+  accDescr {
+    Each event is appended to one log. A day's close asks every day since the first for its closing, and each
+    closing scans all of the account's entries, so a close costs days times entries. A projection of running totals
+    by value day, rebuilt from the log, turns each scan into a lookup.
+  }
+  E[Incoming event] --> L[(Append-only log)]
+  L --> A[The account's entries]
+  A --> C[Each day's closing:<br/>a scan of every entry]
+  C --> D[A close re-judges<br/>every day so far]
+  L -.-> P[Projection: running<br/>totals by value day]
+  P -.-> C
+```
+
 Doubling the window multiplies the time by seven to eight. Volume alone is not the problem: a hundred times the brief's
 events inside the same six days, each repeated under new IDs, is processed in 0.71 s. A hundred times the days is.
 
@@ -84,10 +100,47 @@ reaches the log; and nothing may be value-dated before the last sealed period at
 who approved every entry that restates the past, which answers the audit, consumer-protection, and financial-crime
 questions together, and the seal bounds the window the first section could not.
 
+```mermaid
+flowchart LR
+  accTitle: A backdated event behind maker-checker
+  accDescr {
+    An event value-dated before its booking day waits for a second person's approval. Refused, it never reaches the
+    log; approved, it is appended, and from its value date on it restates closings, charges or refunds fees, and
+    adjusts interest, each visible to the customer and the auditor.
+  }
+  B[Backdated event,<br/>with a reason code] --> M{Checker approves?}
+  M -->|no| X[Refused, never logged]
+  M -->|yes| L[(Append-only log)]
+  L --> R[Earlier closings restated]
+  L --> F[Fees charged or refunded]
+  L --> I[Interest adjusted]
+```
+
 ## Authorization lifecycle
 
 An authorization is in one of four states: approved, partially settled, declined, or settled. The model ends one in
 these ways other than a settlement that matches its hold:
+
+```mermaid
+stateDiagram-v2
+  direction LR
+  accTitle: Every way an authorization ends
+  accDescr {
+    An authorization is approved when its hold leaves the available balance at or above zero, and declined
+    otherwise. A final settlement, or a partial one reaching the hold, settles it; a partial one below the hold
+    keeps the rest. A settlement against a settled or declined authorization is force-posted. An approved hold never
+    settled stays forever.
+  }
+  state "Partially settled" as PartiallySettled
+  [*] --> Approved: the hold fits
+  [*] --> Declined: the hold would not fit
+  Approved --> Settled: final, or reaches the hold
+  Approved --> PartiallySettled: partial, below the hold
+  PartiallySettled --> Settled: final, or reaches the hold
+  Settled --> Settled: a late one is force-posted
+  Declined --> Declined: any is force-posted
+  note right of Approved : never settled, held forever
+```
 
 | Ends by                        | In the model                                                                |
 | ------------------------------ | --------------------------------------------------------------------------- |
