@@ -1,6 +1,7 @@
 """Builders for the short streams the rule tests replay, and readers that turn log entries into plain values."""
 
 from account_ledger.core.config import Account
+from account_ledger.core.event_log import Accepted, Log
 from account_ledger.core.events import (
     AnyAmount,
     Authorization,
@@ -28,7 +29,6 @@ from account_ledger.core.ids import (
     parse_event_id,
     text,
 )
-from account_ledger.core.log import Accepted, Log
 from account_ledger.core.money import Aed, Amount, Bhd, Direction, Money
 from support.values import aed, bhd
 

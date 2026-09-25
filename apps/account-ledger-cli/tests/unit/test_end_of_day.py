@@ -5,9 +5,9 @@ from dataclasses import replace
 from account_ledger.core.authorizations import Settled
 from account_ledger.core.balances import closing, holds
 from account_ledger.core.config import CHALLENGE
+from account_ledger.core.event_log import Accepted
 from account_ledger.core.events import Fee
 from account_ledger.core.ids import Day
-from account_ledger.core.log import Accepted
 from account_ledger.core.money import Amount
 from account_ledger.core.replay import replay
 from account_ledger.core.report import Capitalized

@@ -4,9 +4,9 @@ from collections.abc import Iterator
 
 from account_ledger.core.balances import accrued, closing, interest_base, interest_fired
 from account_ledger.core.config import Account, AnyAccount, LedgerConfig, is_aed
+from account_ledger.core.event_log import Accepted, Log, append
 from account_ledger.core.events import Capitalization, Fee, FeeRefund, InterestAccrual, InterestAdjustment, Reversal
 from account_ledger.core.ids import AccountId, CapitalizationId, Day, FeeId, InterestId, RefundId
-from account_ledger.core.log import Accepted, Log, append
 from account_ledger.core.money import (
     Aed,
     Bhd,

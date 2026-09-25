@@ -71,7 +71,7 @@ Each layer is a place in the package: the shell is `cli.py` at its root, the ada
              | text -> the events, or   |  |  | DayReport -> text, as    |
              | a StreamError            |  |  | OUTPUT_TARGET prints it  |
              +--------------------------+  |  +--------------------------+
-                  | builds the types       |        | reads report, log, and the types
+                  | builds the types       |        | reads report, event_log, and the types
   ---------------------------------------------------------------------------------------------------
   core                                     v
   core/                       +--------------------------+
@@ -103,7 +103,7 @@ Each layer is a place in the package: the shell is `cli.py` at its root, the ada
                            |                  every component above reads the log;
                            v                  only processing and end_of_day append
                    +----------------+
-                   | log            |
+                   | event_log      |
                    | entries and    |
                    | rejections     |
                    +----------------+
@@ -127,14 +127,14 @@ Each layer is a place in the package: the shell is `cli.py` at its root, the ada
 | `report`         | a day's processed events, end-of-day rows, closings, restated closings, holds, and errors       |
 | `balances`       | closing, holds, available, accrued interest and its days, and interest base, each over the log  |
 | `authorizations` | the authorization states, `decide`, `transition`, and the records replayed from the log         |
-| `log`            | the append-only tuple of entries, each kind holding only its outcome, and every `Rejection`     |
+| `event_log`      | the append-only tuple of entries, each kind holding only its outcome, and every `Rejection`     |
 | `events`         | the incoming event kinds, joined in `IncomingEvent`, and the fired kinds, in `FiredEvent`       |
 | `config`         | the accounts, each typed by its currency, the window of days, and the capitalization days       |
 | `money`          | `Aed` and `Bhd`, one type per currency; `Amount` above zero; the split, fee, and daily interest |
 | `ids`            | days, account and hold IDs, incoming IDs, fired-event markers, and instalment counts            |
 
-`log` imports `AuthorizationState` for annotations only, so the log and the state machine do not import each other at
-run time.
+`event_log` imports `AuthorizationState` for annotations only, so the log and the state machine do not import each other
+at run time.
 
 ## L4 — Code
 
@@ -148,7 +148,7 @@ ids       Day   AccountId   AuthorizationId   IncomingId   InstalmentCount
 events    IncomingEvent = Credit | Debit | Authorization | Settlement | Reversal     each holds an Amount
           FiredEvent = Instalment | Fee | FeeRefund | InterestAccrual | InterestAdjustment | Capitalization
 config    Account[M] = id + opening M     LedgerConfig = accounts, first_day, last_day, capitalization_days
-log       LogEntry = Accepted | AuthorizationDecided | SettlementAccepted | Rejected | Duplicate
+event_log LogEntry = Accepted | AuthorizationDecided | SettlementAccepted | Rejected | Duplicate
           SettlementAccepted.effect = Captured(before, after) | ForcePosted
           Rejected.reason: Rejection = IdReused | AlreadyReversed | ReversesAReversal | UnknownTarget
                                        | MovedNoMoney | AlreadyUndone

@@ -4,6 +4,7 @@ from collections.abc import Sequence
 from typing import assert_never
 
 from account_ledger.core.authorizations import Approved, AuthorizationRecord, Declined, PartiallySettled, Settled
+from account_ledger.core.event_log import Captured, Duplicate, ForcePosted, LogEntry, SettlementAccepted
 from account_ledger.core.events import (
     AnyAmount,
     Authorization,
@@ -22,7 +23,6 @@ from account_ledger.core.events import (
     Whole,
 )
 from account_ledger.core.ids import AccountId, Day, text
-from account_ledger.core.log import Captured, Duplicate, ForcePosted, LogEntry, SettlementAccepted
 from account_ledger.core.money import Direction, Money, currency, digits
 from account_ledger.core.report import Capitalized, DayReport, EndOfDayEvent, Fired, NothingFired, Processed, Step
 

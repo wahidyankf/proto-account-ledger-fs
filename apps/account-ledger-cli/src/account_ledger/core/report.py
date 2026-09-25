@@ -9,6 +9,21 @@ from typing import assert_never
 from account_ledger.core.authorizations import AuthorizationRecord, records
 from account_ledger.core.balances import accrued_days_of, available_of, closing_of
 from account_ledger.core.config import AnyAccount, LedgerConfig
+from account_ledger.core.event_log import (
+    Accepted,
+    AlreadyReversed,
+    AlreadyUndone,
+    IdReused,
+    Log,
+    LogEntry,
+    LoggedEvent,
+    MovedNoMoney,
+    Rejected,
+    Rejection,
+    ReversesAReversal,
+    UnknownTarget,
+    instalments_of,
+)
 from account_ledger.core.events import (
     Authorization,
     Capitalization,
@@ -24,21 +39,6 @@ from account_ledger.core.events import (
     Settlement,
 )
 from account_ledger.core.ids import AccountId, Day, text
-from account_ledger.core.log import (
-    Accepted,
-    AlreadyReversed,
-    AlreadyUndone,
-    IdReused,
-    Log,
-    LogEntry,
-    LoggedEvent,
-    MovedNoMoney,
-    Rejected,
-    Rejection,
-    ReversesAReversal,
-    UnknownTarget,
-    instalments_of,
-)
 from account_ledger.core.money import Money
 
 

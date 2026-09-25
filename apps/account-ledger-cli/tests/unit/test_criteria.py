@@ -6,9 +6,9 @@ A refused criterion is proven by a test of what the ledger does instead (REJECTE
 from account_ledger.core.authorizations import Approved, Declined, Settled, records
 from account_ledger.core.balances import closing
 from account_ledger.core.config import CHALLENGE
+from account_ledger.core.event_log import Accepted, Captured, ForcePosted, SettlementAccepted
 from account_ledger.core.events import Fee, Instalment, Settlement
 from account_ledger.core.ids import AuthorizationId, Day, IncomingId, InstalmentId
-from account_ledger.core.log import Accepted, Captured, ForcePosted, SettlementAccepted
 from account_ledger.core.money import Aed, Amount, Bhd
 from account_ledger.core.replay import replay
 from support.brief_stream import brief_stream
