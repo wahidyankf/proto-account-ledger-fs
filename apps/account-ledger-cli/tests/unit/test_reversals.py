@@ -36,7 +36,7 @@ from support.values import make_aed, make_bhd
 
 
 def test_amb_035_a_reversal_undoes_what_its_target_moved() -> None:
-    """AMB-035: E9 reverses E7's 620.00 debit from E9's own value day, Day 2, so Days 2 to 4 restate to 250.00,
+    """AMB-035: E9 reverses E7's 620.00 debit from E9's own value date, Day 2, so Days 2 to 4 restate to 250.00,
     650.00, and 285.00."""
     log = unwrap_ok(process_stream(take_through(build_brief_stream(), "E9"), CHALLENGE)).find_log(Day(6))
 

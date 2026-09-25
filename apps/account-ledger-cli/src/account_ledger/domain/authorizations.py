@@ -201,12 +201,12 @@ def _is_named_by(record: AuthorizationRecord, settlement: Settlement) -> bool:
 
 
 def sum_holds[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> Result[M, CurrencyMismatch]:
-    """The hold of every approved or partially settled authorization on the account whose value day is <= day
+    """The hold of every approved or partially settled authorization on the account whose value date is <= day
     (AMB-010, AMB-013)."""
     holds: list[Money] = []
     for record in list_records(log):
         authorization, state = record.authorization, record.state
-        if authorization.account != account.id or authorization.value_day > day:
+        if authorization.account != account.id or authorization.value_date > day:
             continue
         match state:
             case Approved(hold=hold) | PartiallySettled(hold=hold):

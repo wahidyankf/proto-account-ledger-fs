@@ -188,9 +188,9 @@ def _parse_head(cells: dict[str, str], config: LedgerConfig) -> Result[tuple[_He
         return account_id
     if (account := config.find_account(account_id.value)) is None:
         return Err(RowFault(f"account '{cells['account']}' is not a configured account"))
-    if isinstance(value_day := _parse_day(cells["value_date"], config), Err):
-        return value_day
-    return Ok(((event_id.value, booked.value, account_id.value, value_day.value), account))
+    if isinstance(value_date := _parse_day(cells["value_date"], config), Err):
+        return value_date
+    return Ok(((event_id.value, booked.value, account_id.value, value_date.value), account))
 
 
 def _parse_reversal(reference: str, head: _Head) -> Result[Reversal, RowFault]:

@@ -45,7 +45,7 @@ days. That changes what the ledger reports, so it belongs with the controls belo
 ## Value-dated entries in production
 
 A value date lets an event land on a day that has already closed. In this ledger that one event re-opens every closing
-from its value day onward: earlier days' closings are restated in the day's report, fees are charged for days that turn
+from its value date onward: earlier days' closings are restated in the day's report, fees are charged for days that turn
 negative and refunded for days that recover, and interest already accrued for those days is adjusted up or down. Every
 one of those consequences is correct, and every one is visible to a customer, an auditor, or a regulator.
 

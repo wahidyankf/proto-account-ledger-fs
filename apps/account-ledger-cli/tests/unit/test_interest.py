@@ -75,7 +75,7 @@ def test_amb_035_a_reversed_capitalization_returns_its_interest_to_accrued() -> 
 
 
 def test_amb_035_a_capitalization_reversed_on_its_own_day_leaves_that_days_interest() -> None:
-    """AMB-035, AMB-023: a capitalization reversed with its own value day no longer counts in that day's closing, so
+    """AMB-035, AMB-023: a capitalization reversed with its own value date no longer counts in that day's closing, so
     that day's interest base takes nothing more out, and AED 50,000.00's Day 1 interest stays 20.00."""
     config = replace(CHALLENGE, last_day=Day(2), capitalization_days=frozenset({Day(1), Day(2)}))
     stream = (make_credit("E1", 1, "50000.00"), make_reversal("E2", 2, "CAP-001@D1", value=1))

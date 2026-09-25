@@ -53,7 +53,7 @@ def list_reversed_targets(log: Log, account_id: AccountId, cutoff_day: Day | Non
     return frozenset(
         event.target
         for event in list_counted_events(log, account_id)
-        if isinstance(event, Reversal) and (cutoff_day is None or event.value_day <= cutoff_day)
+        if isinstance(event, Reversal) and (cutoff_day is None or event.value_date <= cutoff_day)
     )
 
 

@@ -109,7 +109,7 @@ def _build_processed_rows(processed_event: Processed) -> list[Row]:
         _format_type(event),
         event.account.value,
         _format_detail(processed_event),
-        _format_day_cell(event.value_day),
+        _format_day_cell(event.value_date),
     )
     count = len(processed_event.instalments)
     return [row, *(_build_instalment_row(part, booked, count) for part in processed_event.instalments)]
@@ -118,7 +118,7 @@ def _build_processed_rows(processed_event: Processed) -> list[Row]:
 def _build_instalment_row(part: Instalment, booked: str, count: int) -> Row:
     """An instalment's row, printed as a credit booked with the credit that generated it."""
     detail = f"{_format_money(part.amount)}, instalment {part.id.number} of {count}"
-    return (format_id(part.id), booked, "Credit", part.account.value, detail, _format_day_cell(part.value_day))
+    return (format_id(part.id), booked, "Credit", part.account.value, detail, _format_day_cell(part.value_date))
 
 
 def _format_type(event: IncomingEvent) -> str:
@@ -207,7 +207,7 @@ def _build_applied_row(row: Generated | Capitalized | NothingGenerated) -> Row:
                 kind,
                 event.account.value,
                 detail,
-                _format_day_cell(event.value_day),
+                _format_day_cell(event.value_date),
             )
         case Capitalized(event=event, days=days):
             step, kind = Step.CAPITALIZATION, "Interest capitalization"
@@ -218,7 +218,7 @@ def _build_applied_row(row: Generated | Capitalized | NothingGenerated) -> Row:
                 kind,
                 event.account.value,
                 detail,
-                _format_day_cell(event.value_day),
+                _format_day_cell(event.value_date),
             )
         case NothingGenerated(step=step, accounts=accounts, note=note):
             return (

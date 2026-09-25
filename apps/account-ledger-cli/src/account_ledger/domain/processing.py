@@ -99,11 +99,11 @@ def _decide_effect(
 
 
 def _generate_instalments(credit: Credit, count: InstalmentCount, today: Day) -> tuple[Accepted, ...]:
-    """The instalments a credit generates, in order, each accepted with the credit's value day (AMB-017, AMB-020)."""
+    """The instalments a credit generates, in order, each accepted with the credit's value date (AMB-017, AMB-020)."""
     parts = split_amount_of(credit.amount, count)
     assert isinstance(parts, Ok)  # the stream reader refuses a credit it cannot split
     return tuple(
-        Accepted(Instalment(InstalmentId(credit.id, number), credit.account, credit.value_day, part), today)
+        Accepted(Instalment(InstalmentId(credit.id, number), credit.account, credit.value_date, part), today)
         for number, part in enumerate(parts.value, start=1)
     )
 

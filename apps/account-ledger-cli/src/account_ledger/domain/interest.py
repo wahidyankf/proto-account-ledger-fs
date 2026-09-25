@@ -166,8 +166,8 @@ def compute_interest_base[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day
     capitalized_moneys: list[Money] = []
     for event in list_counted_events(log, account.id):
         match event:
-            case Capitalization(id=capitalization_id, value_day=value_day, amount=amount) if (
-                value_day == day and capitalization_id not in undone_ids
+            case Capitalization(id=capitalization_id, value_date=value_date, amount=amount) if (
+                value_date == day and capitalization_id not in undone_ids
             ):
                 capitalized_moneys.append(-amount.money)
             case _:

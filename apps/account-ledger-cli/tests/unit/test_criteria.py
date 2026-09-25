@@ -89,7 +89,7 @@ def test_c7_e10_posts_3_333_3_333_3_334() -> None:
     log = unwrap_ok(process_stream(build_brief_stream(), CHALLENGE)).find_log(Day(6))
 
     parts = [entry.event for entry in log if isinstance(entry, Accepted) and isinstance(entry.event, Instalment)]
-    assert [(part.id, part.amount, part.value_day) for part in parts] == [
+    assert [(part.id, part.amount, part.value_date) for part in parts] == [
         (InstalmentId(IncomingId("E10"), number), Amount(make_bhd(text)), Day(5))
         for number, text in ((1, "3.333"), (2, "3.333"), (3, "3.334"))
     ]
@@ -103,7 +103,7 @@ def test_c2_e7_causes_three_fees_all_value_dated_day_5() -> None:
 
     assert list_fee_ids(log) == ["FEE-001-D2@D5", "FEE-001-D4@D5", "FEE-001-D5@D5"]
     fees = [entry.event for entry in log if isinstance(entry, Accepted) and isinstance(entry.event, Fee)]
-    assert [(fee.amount, fee.value_day) for fee in fees] == [(Amount(make_aed("25.00")), Day(5))] * 3
+    assert [(fee.amount, fee.value_date) for fee in fees] == [(Amount(make_aed("25.00")), Day(5))] * 3
 
 
 def test_c6_e9_restores_days_2_to_4_and_refunds_the_fees() -> None:

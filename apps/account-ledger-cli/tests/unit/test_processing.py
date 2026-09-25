@@ -63,7 +63,7 @@ def test_amb_034_a_repeated_reversal_or_settlement_is_a_duplicate(kind: str) -> 
 
 def test_amb_034_the_same_event_booked_another_day_is_refused() -> None:
     """AMB-034: a duplicate equals the first in every field, the booked day included, so E1 booked again on Day 2 with
-    the same value day and amount reuses its ID and is refused."""
+    the same value date and amount reuses its ID and is refused."""
     first_credit, retried_credit = make_credit("E1", 1, "100.00"), make_credit("E1", 2, "100.00", value=1)
 
     log = unwrap_ok(process_stream((first_credit, retried_credit), CHALLENGE)).find_log(Day(2))

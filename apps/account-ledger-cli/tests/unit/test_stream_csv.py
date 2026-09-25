@@ -176,7 +176,7 @@ def test_a_missing_or_inapplicable_cell_is_refused() -> None:
 
 
 def test_a_day_outside_the_window_is_refused() -> None:
-    """A booked or value day outside the window, or not a whole number, is refused."""
+    """A booked or value date outside the window, or not a whole number, is refused."""
     assert find_fault(booked="7") == StreamError(2, "line 2: day '7' is outside the window 1 to 6")
     assert find_fault(value_date="0") == StreamError(2, "line 2: day '0' is outside the window 1 to 6")
     assert find_fault(booked="1.5") == StreamError(2, "line 2: day '1.5' is outside the window 1 to 6")

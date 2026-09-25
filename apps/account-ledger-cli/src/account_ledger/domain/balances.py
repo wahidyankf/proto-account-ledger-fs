@@ -32,10 +32,10 @@ from account_ledger.domain.model.money import Aed, Bhd, CurrencyMismatch, Money,
 
 
 def _list_effects(log: Log, account_id: AccountId) -> list[tuple[Day, Money]]:
-    """Each counted entry's value day and signed effect on the account's ledger balance."""
+    """Each counted entry's value date and signed effect on the account's ledger balance."""
     effects: list[tuple[Day, Money]] = []
     for event in list_counted_events(log, account_id):
-        effects.extend((event.value_day, amount) for amount in _list_moved_amounts(log, event))
+        effects.extend((event.value_date, amount) for amount in _list_moved_amounts(log, event))
     return effects
 
 
@@ -61,7 +61,7 @@ def _list_moved_amounts(log: Log, event: LoggedEvent) -> tuple[Money, ...]:
         case Reversal(target=reverses):
             target = find_first_entry(log, reverses)
             undone_amounts = () if target is None else _list_undone_amounts(log, target.event)
-            return tuple(-amount for amount in undone_amounts)  # counted from the reversal's own value day
+            return tuple(-amount for amount in undone_amounts)  # counted from the reversal's own value date
         case _:
             assert_never(event)
 
@@ -79,8 +79,8 @@ def _list_undone_amounts(log: Log, target: LoggedEvent) -> tuple[Money, ...]:
 
 
 def compute_closing[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> Result[M, CurrencyMismatch]:
-    """The opening plus the effect of every counted entry for the account with value day <= day."""
-    effects = [effect for value_day, effect in _list_effects(log, account.id) if value_day <= day]
+    """The opening plus the effect of every counted entry for the account with value date <= day."""
+    effects = [effect for value_date, effect in _list_effects(log, account.id) if value_date <= day]
     return sum_money(account.opening, effects)
 
 
