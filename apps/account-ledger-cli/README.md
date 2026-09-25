@@ -5,7 +5,8 @@ into an append-only log, and prints one report per day: the events processed, th
 closing summary. For the brief's stream it prints [OUTPUT_TARGET](../../OUTPUT_TARGET.md) byte for byte.
 
 Specification: [specs/apps/account-ledger/cli/](../../specs/apps/account-ledger/cli/README.md), with the as-built
-[architecture](../../specs/apps/account-ledger/cli/architecture.md).
+[architecture](../../specs/apps/account-ledger/cli/architecture.md). Reading the code for the first time, start with its
+[reading order](../../specs/apps/account-ledger/cli/architecture.md#reading-the-code).
 
 ## Layout
 

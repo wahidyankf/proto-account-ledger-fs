@@ -205,10 +205,27 @@ cli, after the last day
 Every balance is recomputed from the log whenever it is asked for (D7), so a late event value-dated in the past changes
 every later closing without any stored balance being updated.
 
+## Reading the Code
+
+To read the code for the first time, follow one day through it, in this order:
+
+1. `cli.py`, `run`: where the program starts, and how every failure becomes an exit status.
+2. `domain/replay.py`: the loop over days, which the dynamic view above draws.
+3. `domain/processing.py`, `process`: what one incoming event adds to the log, duplicates caught first.
+4. `domain/end_of_day.py`, `close_day`: fees, then interest, then capitalization.
+5. `domain/event_log.py`: every kind of entry those two add, and every reason an event is rejected.
+6. `domain/authorizations.py`, then `domain/balances.py`: how an authorization moves from state to state, and how each
+   balance is worked out from the log.
+7. `domain/report.py`, then `adapters/render.py`: a day as data, then as the text OUTPUT_TARGET shows.
+
+`adapters/stream_csv.py` turns the file into events and holds no ledger rule. `domain/events.py`, `config.py`,
+`money.py`, and `ids.py` define the values the rest pass around; look them up when a name is unfamiliar rather than
+reading them first.
+
 ## Constraints
 
 - No web layer, persistence, UI, or database.
-- Every effect sits in the shell; the core stays pure and deterministic.
+- Every effect sits in the shell; the domain stays pure and deterministic.
 - Balances are recomputed from the append-only log, never stored (D7); nothing in the log is changed or removed.
 - Holds never expire (AMB-018), the ledger's known weakness.
 - Every diagram is plain-text ASCII.
