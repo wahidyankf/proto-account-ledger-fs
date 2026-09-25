@@ -29,23 +29,33 @@ class Replay:
 
 
 def replay(stream: tuple[IncomingEvent, ...], config: LedgerConfig) -> Replay:
-    """Replay the stream in listed order through the configured window (AMB-015).
+    """Replay the stream in listed order through the configured window (AMB-001, AMB-015).
 
-    Each day processes the events listed next whose booked day has come, then closes on time; an event listed after
-    one booked later waits for it, and is processed as a late event on the day that is open."""
+    Each event is processed on the day that is open. An event booked on a later day is the sign to close the open day
+    first, and every day up to its own, those with no events included; it is processed only once its day is open. An
+    event listed after one booked later is late and is processed on the open day. Once the stream is spent, every day
+    left in the window still closes. No day closes after the window, so an event booked after it reaches no day's log or
+    report."""
     log: Log = ()
     reports: list[DayReport] = [report(log, Day(0), config, {})]
     logs: list[Log] = [log]
     reported: Reported = {}
-    day, index = config.first_day, 0
-    while day <= config.last_day:
-        while index < len(stream) and stream[index].booked <= day:
-            log = process(log, stream[index], day, config)
-            index += 1
+
+    def close(day: Day) -> None:
+        nonlocal log, reported
         log = close_day(log, day, config)
         day_report = report(log, day, config, reported)
         reported = reported_after(reported, day_report)
         reports.append(day_report)
         logs.append(log)
+
+    day = config.first_day
+    for event in stream:
+        while event.booked > day and day <= config.last_day:
+            close(day)
+            day = day.next()
+        log = process(log, event, day, config)
+    while day <= config.last_day:
+        close(day)
         day = day.next()
     return Replay(tuple(reports), tuple(logs))

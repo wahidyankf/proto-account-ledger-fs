@@ -191,19 +191,24 @@ an authorization the log does not know, is accepted as a force-post: it debits i
 ## Dynamic View — One Day
 
 ```text
-replay, day D
-  1. for each event listed next whose booked day <= D:
-       processing.process(log, event, D) ---> log + one entry (+ the instalments a credit fires)
-         idempotency first; then by kind; a reversal checked against its target in order
-  2. end_of_day.close_day(log, D): step 1 in fees, steps 2 and 3 in interest
+replay, for each event in listed order, D the day open
+  1. the event is booked after D: close D (a and b), open D + 1, and look again; a day with no events closes too;
+     no day closes after the window's last, so an event booked after the window reaches no day's log or report
+  2. otherwise: processing.process(log, event, D) ---> log + one entry (+ the instalments a credit fires)
+       idempotency first; then by kind; a reversal checked against its target in order
+       an event booked before D is late and is processed on D (AMB-015)
+replay, once the stream is spent: close every day left in the window
+
+closing day D
+  a. end_of_day.close_day(log, D): step 1 in fees, steps 2 and 3 in interest
        step 1  fees:     each day first..D: negative with no fee in force -> Fee; non-negative with one -> FeeRefund
        step 2  interest: each day first..D: daily interest of its base, less what was fired for it
                          -> InterestAccrual for D, InterestAdjustment for an earlier day
        step 3  capitalization, on a capitalization day: accrued interest above zero -> Capitalization
-  3. report.report(log, D, reported) ---> DayReport: what D processed and fired, its closings, and each earlier
+  b. report.report(log, D, reported) ---> DayReport: what D processed and fired, its closings, and each earlier
        closing that changed since last reported
 cli, after the last day
-  4. render.render(reports) ---> the whole text, then one write and one flush to standard output
+  render.render(reports) ---> the whole text, then one write and one flush to standard output
 ```
 
 Every balance is recomputed from the log whenever it is asked for (D7), so a late event value-dated in the past changes
@@ -214,7 +219,8 @@ every later closing without any stored balance being updated.
 To read the code for the first time, follow one day through it, in this order:
 
 1. `cli.py`, `run`: where the program starts, and how every failure becomes an exit status.
-2. `domain/replay.py`: the loop over days, which the dynamic view above draws.
+2. `domain/replay.py`: the loop over events, where a later day's event closes the open day first, as the dynamic view
+   above draws.
 3. `domain/processing.py`, `process`: what one incoming event adds to the log, duplicates caught first.
 4. `domain/end_of_day.py`, `close_day`: the three steps of a day's close, each in its own module.
 5. `domain/fees.py`: when a day is charged an overdraft fee, and when that fee is refunded.
