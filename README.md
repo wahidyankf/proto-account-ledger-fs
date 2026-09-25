@@ -68,25 +68,33 @@ tables:
   ledger balance, its available balance after holds, every authorization with its state, and the errors, which are the
   events refused that day. A `-` means that account's figure did not change; `−` is a negative amount.
 
+## Why This Repository Is Public
+
+The repository is public because the brief requires it: the GitHub repository URL is a required submission, and the
+brief says "Make sure anyone can open your link without signing in" ([challenge-raw.md](challenge-raw.md)). How it was
+made, including extensive pairing with an AI harness that wrote well over 95% of the code, is stated in
+[how this was built](docs/explanation/how-this-was-built.md), and the commit history and [WORKLOG](WORKLOG.md) are kept
+intact to show it.
+
 ## Repository Map
 
-| Path                                          | Holds                                                |
-| --------------------------------------------- | ---------------------------------------------------- |
-| [apps/](apps/)                                | runnable applications, such as `account-ledger-cli`  |
-| [libs/](libs/README.md)                       | reusable libraries (none yet)                        |
-| [specs/](specs/README.md)                     | the as-built architecture and its domain model       |
-| [docs/](docs/README.md)                       | documentation for people                             |
-| [plans/](plans/README.md)                     | delivery plans                                       |
-| [repo-governance/](repo-governance/README.md) | principles, conventions, standards, and workflows    |
-| [AGENTS.md](AGENTS.md)                        | instructions for coding agents                       |
-| [challenge-raw.md](challenge-raw.md)          | the assessment brief, verbatim                       |
-| [AMBIGUITIES.md](AMBIGUITIES.md)              | every ambiguity in the brief and how it is resolved  |
-| [NUMBERS.md](NUMBERS.md)                      | every constant and why it has that value             |
-| [REJECTED.md](REJECTED.md)                    | refused acceptance criteria and abandoned approaches |
-| [WORKLOG.md](WORKLOG.md)                      | timestamped record of the work                       |
-| [MOVEMENT.md](MOVEMENT.md)                    | each day's movement per account, fully analysed      |
-| [OUTPUT_TARGET.md](OUTPUT_TARGET.md)          | the exact text the CLI must print                    |
-| `architecture-trade-offs.pdf`                 | the Part 2 document, printed from its Markdown       |
+| Path                                          | Holds                                                 |
+| --------------------------------------------- | ----------------------------------------------------- |
+| [apps/](apps/)                                | runnable applications, such as `account-ledger-cli`   |
+| [libs/](libs/README.md)                       | reusable libraries (none yet)                         |
+| [specs/](specs/README.md)                     | the as-built architecture and its domain model        |
+| [docs/](docs/README.md)                       | documentation for people, and a refresher on the code |
+| [plans/](plans/README.md)                     | delivery plans                                        |
+| [repo-governance/](repo-governance/README.md) | principles, conventions, standards, and workflows     |
+| [AGENTS.md](AGENTS.md)                        | instructions for coding agents                        |
+| [challenge-raw.md](challenge-raw.md)          | the assessment brief, verbatim                        |
+| [AMBIGUITIES.md](AMBIGUITIES.md)              | every ambiguity in the brief and how it is resolved   |
+| [NUMBERS.md](NUMBERS.md)                      | every constant and why it has that value              |
+| [REJECTED.md](REJECTED.md)                    | refused acceptance criteria and abandoned approaches  |
+| [WORKLOG.md](WORKLOG.md)                      | timestamped record of the work                        |
+| [MOVEMENT.md](MOVEMENT.md)                    | each day's movement per account, fully analysed       |
+| [OUTPUT_TARGET.md](OUTPUT_TARGET.md)          | the exact text the CLI must print                     |
+| `architecture-trade-offs.pdf`                 | the Part 2 document, printed from its Markdown        |
 
 ## Working Agreement
 

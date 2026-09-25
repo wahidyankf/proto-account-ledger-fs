@@ -8,6 +8,7 @@ earlier work is claimed.
 
 | When                   | What                                                                                        |
 | ---------------------- | ------------------------------------------------------------------------------------------- |
+| 2026-09-25 23:35–00:24 | Defense refresher in docs/: 10 pages, hold-expiry fix proven on a copy; README public note  |
 | 2026-09-25 23:04–23:11 | Docs sweep: every doc and README checked against the code; app README and test docstrings   |
 | 2026-09-25 22:52–22:55 | AMB-038: an authorization ID already used, on any account, is refused, test-first           |
 | 2026-09-25 22:44–23:02 | Part 2 re-check: 100× volume measured and answered; one control; AMB-038; two cuts added    |
