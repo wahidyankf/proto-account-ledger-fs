@@ -54,8 +54,9 @@ events closes at all, and where the report starts from.
 
 **Resolution.** Days are plain integers, Day 1 to Day 6, with no calendar, time zone, or cut-off, and every day in the
 window closes whether or not events arrive. Day 0 reports the opening state in the same shape as every other day, with
-the opening balance as its closing, and sits outside the window, so it assesses no fee and accrues no interest. _Test:_
-`test_an_empty_stream_reports_the_opening_balances_for_day_0_to_6`.
+the opening balance as its closing, and sits outside the window, so it assesses no fee and accrues no interest. _Tests:_
+`test_an_empty_stream_reports_the_opening_balances_for_day_0_to_6`, `test_amb_001_a_day_without_events_still_closes`,
+and `test_amb_001_an_event_booked_after_the_window_reaches_no_day`.
 
 **Rationale.** The brief names days only as "Day 1 through Day 6", and no rule consults a calendar, so dates, business
 days, or a cut-off would add assumptions without changing a figure. Closing every day keeps "0.04% per day" and the fee
@@ -458,7 +459,8 @@ the log as declined and moves no balance and holds nothing. A row that cannot be
 account that is not configured, an amount that is not positive or has more places than its currency (AMB-006), a day
 outside the replay, or more instalments than its amount has minor units (AMB-020), is a fault in the input, not a
 refusal: it never reaches the log, and the replay stops with an error naming its line. _Tests:_
-`test_c5_auth_b_is_declined` and `test_amb_014_a_rejected_event_prints_as_that_days_error`.
+`test_c5_auth_b_is_declined`, `test_amb_014_a_rejected_event_is_that_days_error`, and
+`test_amb_014_a_rejected_event_prints_its_refusal`.
 
 **Rationale.** Discarding a refused event deletes an event record in all but name, which "No event record is ever
 mutated or deleted" forbids. With the outcome in the log, a report line such as "Auth-B declined" points at the event

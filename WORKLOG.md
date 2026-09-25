@@ -8,6 +8,9 @@ earlier work is claimed.
 
 | When                   | What                                                                                        |
 | ---------------------- | ------------------------------------------------------------------------------------------- |
+| 2026-09-25 09:31–09:50 | Replay made event-driven, AMB-001 given two tests; AMB-001 and AMB-014 cite current tests   |
+| 2026-09-25 08:10–09:25 | Package split into cli, adapters, and domain; domain grouped by topic; render owns all text |
+| 2026-09-25 07:44–08:02 | Pre-commit formats staged Python with ruff; the unused lint-staged dropped                  |
 | 2026-09-25 06:49–07:38 | Plan archival: learnings triage, the execution check, and its repairs                       |
 | 2026-09-25 06:38–06:47 | Plan execution, Phase 10: the architecture trade-offs, measured; final verification         |
 | 2026-09-25 06:27–06:36 | Plan execution, Phase 9: the assessment docs name their tests; the feature file is retired  |
