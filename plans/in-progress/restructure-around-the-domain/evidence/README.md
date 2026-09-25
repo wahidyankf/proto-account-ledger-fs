@@ -9,3 +9,5 @@ by the `delivery.md` item that produced it.
 - [phase-0-corpus.txt](phase-0-corpus.txt) — the behaviour corpus on the baseline copy, 56 inputs.
 - [phase-0-literals.txt](phase-0-literals.txt) — each test function's literal constants on the baseline.
 - [phase-0-tests.txt](phase-0-tests.txt) — each test function's name and case count on the baseline.
+- [phase-5-no-inheritance.txt](phase-5-no-inheritance.txt) — the inheritance gate, failing on the baseline and a probe,
+  then passing on the tree.

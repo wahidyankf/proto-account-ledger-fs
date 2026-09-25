@@ -49,10 +49,17 @@ max-nested-blocks = 3
 
 # ruff's D1 checks public names only; pylint's three docstring checks hold private names to a docstring too. Only
 # magic methods, whose meaning is Python's own, are exempt. invalid-name holds every name to its style, and every
-# function to a verb and its object; see Naming in the Python standards.
+# function to a verb and its object; see Naming in the Python standards. too-many-ancestors, with the design settings
+# below, refuses class inheritance; see Operations.
 [tool.pylint."messages control"]
 disable = ["all"]
-enable = ["missing-module-docstring", "missing-class-docstring", "missing-function-docstring", "invalid-name"]
+enable = [
+    "missing-module-docstring",
+    "missing-class-docstring",
+    "missing-function-docstring",
+    "invalid-name",
+    "too-many-ancestors",
+]
 
 [tool.pylint.basic]
 no-docstring-rgx = "^__.+__$"
@@ -68,6 +75,19 @@ good-names = ["main", "_", "flat_map", "flat_map_err"]
 # noun, as `Money` does.
 class-rgx = '^(?!_?Any[A-Z])_?[^\W\da-z][^\W_]*$'
 typealias-rgx = '^(?!_?Any[A-Z])_?[A-Z][A-Za-z0-9]*$'
+
+# No class derives from another but a Protocol, a Generic, an Enum, or an exception; astroid counts NoneType among an
+# Enum's ancestors.
+[tool.pylint.design]
+max-parents = 0
+ignored-parents = [
+    "typing.Protocol",
+    "typing.Generic",
+    "enum.Enum",
+    "builtins.NoneType",
+    "builtins.Exception",
+    "builtins.BaseException",
+]
 
 [tool.pylint.reports]
 score = false

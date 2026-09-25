@@ -1,0 +1,59 @@
+# Phase 5, no inheritance: the too-many-ancestors gate
+
+## RED, 2026-09-25 20:34
+
+Command, from apps/account-ledger-cli:
+uv run --no-sync pylint --rcfile=/dev/null --disable=all --enable=too-many-ancestors --max-parents=0 \
+  --ignored-parents=typing.Protocol,typing.Generic,enum.Enum,builtins.NoneType,builtins.Exception,builtins.BaseException \
+  $BASE/src $BASE/tests local-tmp/restructure/probe/probe.py
+
+Exit 8: 39 findings, 38 on the Phase 0 baseline copy and 1 on the probe, a frozen dataclass Derived(Base):
+
+src/account_ledger/domain/model/events.py:64:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/model/events.py:72:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/model/events.py:79:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/model/events.py:87:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/model/events.py:96:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/model/events.py:106:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/model/events.py:113:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/model/events.py:120:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/model/events.py:128:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/model/events.py:139:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/model/events.py:151:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/model/money.py:136:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/model/money.py:152:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/model/ids.py:112:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/model/ids.py:126:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/model/ids.py:135:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/model/ids.py:180:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/model/ids.py:187:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/model/ids.py:194:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/account/aggregate.py:19:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/account/domain_events.py:33:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/account/domain_events.py:38:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/account/domain_events.py:43:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/account/domain_events.py:48:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/account/domain_events.py:53:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/account/domain_events.py:58:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/account/domain_events.py:63:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/account/domain_events.py:68:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/account/domain_events.py:73:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/account/domain_events.py:78:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/account/domain_events.py:83:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/account/domain_events.py:88:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/account/domain_events.py:96:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/account/domain_events.py:162:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/account/domain_events.py:169:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/account/authorizations.py:48:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+src/account_ledger/domain/account/authorizations.py:53:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+tests/unit/test_cli.py:120:0: R0901: Too many ancestors (3/0) (too-many-ancestors)
+local-tmp/restructure/probe/probe.py:14:0: R0901: Too many ancestors (1/0) (too-many-ancestors)
+
+Without builtins.NoneType the working tree's four Enums (Step, Note, SettlementKind, Direction) fail as well, so
+the six ignored parents stay as tech-docs 005 lists them.
+
+## GREEN, 2026-09-25 20:35
+
+`too-many-ancestors` enabled and `[tool.pylint.design]` set in apps/account-ledger-cli/pyproject.toml.
+Command: (cd apps/account-ledger-cli && uv run --no-sync pylint src tests). Exit 0: no class in the tree derives.
+The probe copied into src/account_ledger/common/ fails the configured run with R0901, then is removed.
