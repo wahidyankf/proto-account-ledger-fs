@@ -133,6 +133,7 @@ first.
   check:hygiene, check-md, internal-link, heading-hierarchy, naming, and word-budget 0.
 - Archival (07:34–07:38): the second execution check permitted it; Dev Artifact Clean-Up removed this task's scratch;
   the plan moved to `plans/done/2026-09-25__in-memory-account-ledger-init/`, and the full validation passed from there.
+- Archive commit: `9bfcf6c`, pushed as `dac8f50..9bfcf6c`.
 
 ## Execution Checkout
 
@@ -2782,6 +2783,9 @@ execution check alone (D11).
   - Full validation from the archived state, 07:35–07:37, `--skip-nx-cache`, every command exit 0: test:quick (116
     passed, 1 xfailed; coverage 95%), test:integration (2 passed), test:e2e (6 passed), check:hygiene, check-md,
     internal-link (1375 links, no findings), heading-hierarchy, naming, and word-budget.
+
+  - Committed as `9bfcf6c` (07:39), `docs(plan): archive the in-memory ledger plan`, and pushed as `dac8f50..9bfcf6c`;
+    the pre-push hook's gates passed, and Nx ran no test task, since no project was affected.
 
 ```bash
 grep -rln --exclude-dir=.git --exclude-dir=.nx --exclude-dir=local-tmp --exclude-dir=node_modules \
