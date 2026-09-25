@@ -36,7 +36,7 @@ def _list_interest_changes(
     log: Log, account: AnyAccount, today: Day, first_day: Day
 ) -> Result[tuple[tuple[Day, Money], ...], CurrencyMismatch]:
     """Each day from ``first_day`` to ``today`` whose interest differs from what was generated, with the difference."""
-    # Both branches read alike; each narrows the account to one currency for the generic call.
+    # Both branches read alike; each gives the generic call an account of one known currency.
     if is_aed(account):
         return _find_interest_changes(log, account, today, first_day)
     return _find_interest_changes(log, account, today, first_day)
@@ -94,7 +94,7 @@ def capitalize_interest(log: Log, account: AnyAccount, today: Day) -> Result[Log
 
 def _compute_accrued_of(log: Log, account: AnyAccount) -> Result[Money, CurrencyMismatch]:
     """The interest the account has accrued and not yet capitalized."""
-    # Both branches read alike; each narrows the account to one currency for the generic call.
+    # Both branches read alike; each gives the generic call an account of one known currency.
     if is_aed(account):
         return compute_accrued(log, account)
     return compute_accrued(log, account)
@@ -163,16 +163,16 @@ def compute_interest_base[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day
     """The closing less any capitalization value-dated that day, which posts after the day's interest (AMB-023); one
     whose reversal that closing already counts is out of it already (AMB-035)."""
     undone_ids = list_reversed_targets(log, account.id, cutoff_day=day)
-    capitalized_moneys: list[Money] = []
+    capitalized_values: list[Money] = []
     for event in list_counted_events(log, account.id):
         match event:
             case Capitalization(id=capitalization_id, value_date=value_date, amount=amount) if (
                 value_date == day and capitalization_id not in undone_ids
             ):
-                capitalized_moneys.append(-amount.money)
+                capitalized_values.append(-amount.money)
             case _:
                 pass
-    return compute_closing(log, account, day).flat_map(lambda closing: sum_money(closing, capitalized_moneys))
+    return compute_closing(log, account, day).flat_map(lambda closing: sum_money(closing, capitalized_values))
 
 
 def sum_interest_generated[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> Result[M, CurrencyMismatch]:

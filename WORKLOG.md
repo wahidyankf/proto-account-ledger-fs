@@ -8,7 +8,7 @@ earlier work is claimed.
 
 | When                   | What                                                                                        |
 | ---------------------- | ------------------------------------------------------------------------------------------- |
-| 2026-09-25 13:49–14:07 | Neutral terms: processed, not replayed; generated, not fired; settlements in brief's words  |
+| 2026-09-25 13:49–14:12 | Neutral terms: processed, generated, settled, value date, plain names; brief quotes kept    |
 | 2026-09-25 13:02–13:06 | Instalment limit: a credit takes 2 to 360 instalments; NUMBERS and AMB-014 record it        |
 | 2026-09-25 12:32–12:45 | Amount limit: stream amounts below 10¹², so no sum outgrows 28 digits; NUMBERS, AMB-014     |
 | 2026-09-25 09:31–09:50 | Replay made event-driven, AMB-001 given two tests; AMB-001 and AMB-014 cite current tests   |

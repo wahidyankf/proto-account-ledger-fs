@@ -15,7 +15,7 @@ from support.refusals import REFUSALS
 from support.results import unwrap_ok
 from support.streams import make_authorization, make_credit, make_debit, make_reversal, make_settlement
 
-RULE = "=" * 120
+SEPARATOR = "=" * 120
 TITLES = ("Events processed", "EOD applied", "Closing summary")
 
 
@@ -27,12 +27,12 @@ def test_a_day_opens_with_its_banner_and_its_blocks() -> None:
     text = render_reports((result.find_report(Day(0)), result.find_report(Day(1))))
 
     lines = text.split("\n")
-    assert lines[:5] == [RULE, "Day 0", RULE, "", "Events processed"]
+    assert lines[:5] == [SEPARATOR, "Day 0", SEPARATOR, "", "Events processed"]
     title_indexes = [index for index, line in enumerate(lines) if line in TITLES]
     assert [lines[index] for index in title_indexes] == [*TITLES, *TITLES]
     assert all(lines[index - 1] == "" for index in title_indexes)
     day_1 = lines.index("Day 1")
-    assert lines[day_1 - 2 : day_1 + 2] == ["", RULE, "Day 1", RULE]
+    assert lines[day_1 - 2 : day_1 + 2] == ["", SEPARATOR, "Day 1", SEPARATOR]
     assert text.endswith("\n")
 
 

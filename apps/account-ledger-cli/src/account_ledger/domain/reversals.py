@@ -31,13 +31,13 @@ def check_reversal(log: Log, target_id: EventId) -> Result[None, Rejection]:
         return Err(ReversesAReversal(target_id))
     if isinstance(target, AuthorizationDecided | Rejected):
         return Err(MovedNoMoney(target_id))
-    reverser_id = find_reverser(log, target_id)
-    if reverser_id is not None:
-        return Err(AlreadyReversed(target_id, reverser_id))
+    reversal_id = find_reversal_id(log, target_id)
+    if reversal_id is not None:
+        return Err(AlreadyReversed(target_id, reversal_id))
     return _check_undoing(log, target.event)
 
 
-def find_reverser(log: Log, target_id: EventId) -> IncomingId | None:
+def find_reversal_id(log: Log, target_id: EventId) -> IncomingId | None:
     """The accepted reversal of the target, if there is one."""
     for entry in log:
         match entry:
@@ -49,7 +49,8 @@ def find_reverser(log: Log, target_id: EventId) -> IncomingId | None:
 
 
 def list_reversed_targets(log: Log, account_id: AccountId, cutoff_day: Day | None = None) -> frozenset[EventId]:
-    """The events an accepted reversal on the account undid (AMB-035); with ``by``, only those value-dated by then."""
+    """The events an accepted reversal on the account undid (AMB-035); with ``cutoff_day``, only reversals
+    value-dated by then."""
     return frozenset(
         event.target
         for event in list_counted_events(log, account_id)
@@ -62,14 +63,14 @@ def _check_undoing(log: Log, target: LoggedEvent) -> Result[None, AlreadyUndone]
     or one of its instalments reversed."""
     match target:
         case Instalment(id=part):
-            undoing_id = find_reverser(log, part.parent)
+            undoing_id = find_reversal_id(log, part.parent)
             return Ok(None) if undoing_id is None else Err(AlreadyUndone(part, undoing_id))
         case Fee(id=fee):
             refund = _find_refund(log, fee)
             return Ok(None) if refund is None else Err(AlreadyUndone(fee, refund))
         case Credit(posting=Instalments()):
             for part in list_instalments(log, target.id):
-                undoing_id = find_reverser(log, part.id)
+                undoing_id = find_reversal_id(log, part.id)
                 if undoing_id is not None:
                     return Err(AlreadyUndone(part.id, undoing_id))
             return Ok(None)
@@ -82,7 +83,7 @@ def _find_refund(log: Log, fee: FeeId) -> RefundId | None:
     for entry in log:
         match entry:
             case Accepted(event=FeeRefund(id=refund, fee=refunded_fee)) if refunded_fee == fee:
-                if find_reverser(log, refund) is None:
+                if find_reversal_id(log, refund) is None:
                     return refund
             case _:
                 pass

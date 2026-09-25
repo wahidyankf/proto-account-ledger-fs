@@ -38,7 +38,7 @@ def test_amb_008_a_future_dated_credit_does_not_count_for_an_authorization() -> 
     assert list_states(log, "Auth-A") == [Declined(Amount(make_aed("50.00")))]
 
 
-def test_amb_009_a_later_credit_the_same_day_does_not_rescue_a_decline() -> None:
+def test_amb_009_a_later_credit_the_same_day_does_not_change_a_decline() -> None:
     """AMB-009: an authorization is decided when it arrives, and the decision is final."""
     stream = (make_authorization("E1", 2, "Auth-A", "50.00"), make_credit("E2", 2, "100.00"))
 

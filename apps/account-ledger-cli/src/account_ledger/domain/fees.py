@@ -55,7 +55,7 @@ def _map_fees_in_force(log: Log, account_id: AccountId) -> dict[Day, Fee]:
 
 def _is_closing_negative(log: Log, account: AnyAccount, day: Day) -> Result[bool, CurrencyMismatch]:
     """Whether the account's closing on the day is below zero."""
-    # Both branches read alike; each narrows the account to one currency for the generic call.
+    # Both branches read alike; each gives the generic call an account of one known currency.
     if is_aed(account):
         return _is_closing_below_zero(log, account, day)
     return _is_closing_below_zero(log, account, day)

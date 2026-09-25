@@ -21,10 +21,10 @@ from account_ledger.domain.model.money import (
     compute_overdraft_fee,
     compute_rest_of,
     is_below,
+    require_same_currency,
     split_amount,
     sum_amounts,
     sum_money,
-    try_narrow_currency,
 )
 from support.values import make_aed, make_bhd
 
@@ -67,11 +67,11 @@ def test_an_amount_must_be_above_zero() -> None:
 def test_aed_and_bhd_values_never_combine() -> None:
     """AED and BHD each combine only with their own kind, in the types and at run time."""
     unknown_money: Money = make_bhd("1.000")
-    assert try_narrow_currency(make_aed("1.00"), unknown_money) == Err(
+    assert require_same_currency(make_aed("1.00"), unknown_money) == Err(
         CurrencyMismatch(expected_currency="AED", found_currency="BHD")
     )
     known_money: Money = make_aed("2.00")
-    assert try_narrow_currency(make_aed("1.00"), known_money) == Ok(make_aed("2.00"))
+    assert require_same_currency(make_aed("1.00"), known_money) == Ok(make_aed("2.00"))
     assert make_aed("1.00") + make_aed("2.50") == make_aed("3.50")
     assert make_aed("1.00") - make_aed("2.50") == make_aed("-1.50")
     assert -make_aed("1.00") == make_aed("-1.00")

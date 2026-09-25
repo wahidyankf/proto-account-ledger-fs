@@ -18,7 +18,7 @@ from support.streams import ACC_001, build_unsettled_auth_a
 # Auth-A, yet this ledger still reserves its AED 200.00.
 # The fix: a hold lifetime after which the end of day generates a hold-expiry event that releases the hold.
 @pytest.mark.xfail(strict=True, reason="AMB-018: holds never expire, so an unsettled hold is never released")
-def test_known_weakness_an_unsettled_hold_never_lapses() -> None:
+def test_known_weakness_an_unsettled_hold_never_expires() -> None:
     """AMB-018: Auth-A, never settled, should lapse by Day 32, but its hold still reduces the available balance."""
     processed = unwrap_ok(process_stream(build_unsettled_auth_a(), replace(CHALLENGE, last_day=Day(32))))
     day_32 = processed.find_report(Day(32))

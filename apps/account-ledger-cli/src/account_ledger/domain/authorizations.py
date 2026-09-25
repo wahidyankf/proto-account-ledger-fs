@@ -179,7 +179,9 @@ def list_records(log: Log) -> tuple[AuthorizationRecord, ...]:
                 records.append(AuthorizationRecord(event, state))
             case SettlementAccepted(event=event, effect=AppliedToHold(state_after=state_after)):
                 records = [
-                    AuthorizationRecord(record.authorization, state_after) if _is_named_by(record, event) else record
+                    AuthorizationRecord(record.authorization, state_after)
+                    if _is_referenced_by(record, event)
+                    else record
                     for record in records
                 ]
             case Accepted() | SettlementAccepted() | Rejected() | Duplicate():
@@ -191,10 +193,10 @@ def list_records(log: Log) -> tuple[AuthorizationRecord, ...]:
 
 def find_record(log: Log, settlement: Settlement) -> AuthorizationRecord | None:
     """The authorization a settlement names, on its account, if the log knows it."""
-    return next((record for record in list_records(log) if _is_named_by(record, settlement)), None)
+    return next((record for record in list_records(log) if _is_referenced_by(record, settlement)), None)
 
 
-def _is_named_by(record: AuthorizationRecord, settlement: Settlement) -> bool:
+def _is_referenced_by(record: AuthorizationRecord, settlement: Settlement) -> bool:
     """Whether the settlement names this record's hold on the same account."""
     authorization = record.authorization
     return authorization.authorization == settlement.authorization and authorization.account == settlement.account

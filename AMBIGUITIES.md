@@ -319,7 +319,7 @@ both readings decline Auth-B.
 
 **Resolution.** An authorization is decided the moment it arrives, against the ledger balance (AMB-008) and the active
 holds as they stand then, before any later event of that day. The decision is final, and an approved hold is active from
-that moment. _Test:_ `test_amb_009_a_later_credit_the_same_day_does_not_rescue_a_decline`.
+that moment. _Test:_ `test_amb_009_a_later_credit_the_same_day_does_not_change_a_decline`.
 
 **Rationale.** A card network needs the answer when the card is presented, not at the end of the day, so the ledger can
 only weigh what preceded the request. A credit arriving later that day cannot rescue a decline, which is how card
@@ -581,7 +581,7 @@ open: Auth-B is declined, and Auth-A is settled finally, so AMB-013 keeps none o
 limitation the deliberately failing test exposes: it processes a hold left unsettled past a card network's usual
 lifetime and asserts that the hold has lapsed, which it never does. The fix, a lifetime after which the ledger generates
 a hold-expiry event, is described in the architecture document. _Test:_
-`test_known_weakness_an_unsettled_hold_never_lapses`.
+`test_known_weakness_an_unsettled_hold_never_expires`.
 
 **Rationale.** The brief gives no hold lifetime, and any number would be invented and would need its own defence in
 NUMBERS; a lifetime of six days or more would change nothing in this window anyway. The brief also asks for "One failing
@@ -972,7 +972,7 @@ and pytest reports it as `XFAIL`, so the run stays green; once the weakness is f
 target no longer refuses `mark.xfail` but refuses `strict=False`, so every expected failure is strict, and the
 test-driven development rule that a deliberately failing test is "never a finished state" carries an exception for a
 strict expected failure that records a known design weakness. _Test:_
-`test_known_weakness_an_unsettled_hold_never_lapses`.
+`test_known_weakness_an_unsettled_hold_never_expires`.
 
 **Rationale.** An expected failure is the idiomatic pytest form for a known weakness: the test is still run, its failure
 is still observed, and its `reason` is the inline annotation the brief asks for. Strict mode keeps the marker honest,

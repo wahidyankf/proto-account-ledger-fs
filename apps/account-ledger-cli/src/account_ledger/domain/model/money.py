@@ -201,7 +201,7 @@ def get_currency(money: Money) -> str:
             return "BHD"
 
 
-def try_narrow_currency[M: (Aed, Bhd)](sample: M, money: Money) -> Result[M, CurrencyMismatch]:
+def require_same_currency[M: (Aed, Bhd)](sample: M, money: Money) -> Result[M, CurrencyMismatch]:
     """Narrow a value known only as ``Money`` to the currency of ``sample``."""
     if isinstance(money, type(sample)):
         return Ok(money)
@@ -216,14 +216,14 @@ def _make_mismatch(expected_money: Money, found_money: Money) -> CurrencyMismatc
     return CurrencyMismatch(expected_currency=get_currency(expected_money), found_currency=get_currency(found_money))
 
 
-def sum_money[M: (Aed, Bhd)](start: M, moneys: Iterable[Money]) -> Result[M, CurrencyMismatch]:
+def sum_money[M: (Aed, Bhd)](start: M, money_values: Iterable[Money]) -> Result[M, CurrencyMismatch]:
     """``start`` plus every value, each of ``start``'s currency, or the first value of another; the reader keeps every
     effect in its account's currency, so only a bug returns the mismatch."""
     total = start
-    for money in moneys:
-        if isinstance(narrowed_money := try_narrow_currency(start, money), Err):
-            return narrowed_money
-        total = total + narrowed_money.value
+    for money in money_values:
+        if isinstance(checked_money := require_same_currency(start, money), Err):
+            return checked_money
+        total = total + checked_money.value
     return Ok(total)
 
 

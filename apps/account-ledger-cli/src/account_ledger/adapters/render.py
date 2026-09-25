@@ -49,7 +49,7 @@ from account_ledger.domain.report import (
     Step,
 )
 
-RULE = "=" * 120
+SEPARATOR = "=" * 120
 
 type Row = Sequence[str]
 
@@ -64,7 +64,7 @@ def render_reports(reports: Sequence[DayReport]) -> str:
 
 def _format_day(report: DayReport) -> str:
     """One day's banner, then its events, its end-of-day steps, and its closing summary."""
-    banner = f"{RULE}\nDay {report.day.number}\n{RULE}"
+    banner = f"{SEPARATOR}\nDay {report.day.number}\n{SEPARATOR}"
     blocks = (
         _format_block("Events processed", _format_table(EVENTS, _build_event_rows(report))),
         _format_block("EOD applied", _format_table(APPLIED, [_build_applied_row(row) for row in report.end_of_day])),
@@ -173,12 +173,14 @@ def _format_posting(posting: Posting) -> str:
             assert_never(posting)
 
 
-SPELLED = dict(zip(range(2, 11), ("two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"), strict=True))
+NUMBER_WORDS = dict(
+    zip(range(2, 11), ("two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"), strict=True)
+)
 
 
 def _format_count(count: int) -> str:
     """An instalment count as an English word from two to ten, and as digits above (tech-docs 003)."""
-    return SPELLED.get(count, str(count))
+    return NUMBER_WORDS.get(count, str(count))
 
 
 def _format_settlement(entry: LogEntry) -> str:

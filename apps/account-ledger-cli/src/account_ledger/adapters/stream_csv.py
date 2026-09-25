@@ -50,13 +50,13 @@ from account_ledger.domain.model.money import (
 
 COLUMNS = ("event", "booked", "type", "account", "amount", "value_date", "reference", "instalments", "final")
 KINDS = ("CREDIT", "DEBIT", "AUTHORIZATION", "SETTLEMENT", "REVERSAL")
-_EVERY = frozenset({"event", "booked", "type", "account", "value_date"})
+_COMMON_COLUMNS = frozenset({"event", "booked", "type", "account", "value_date"})
 REQUIRED = {
-    "CREDIT": _EVERY | {"amount"},
-    "DEBIT": _EVERY | {"amount"},
-    "AUTHORIZATION": _EVERY | {"amount", "reference"},
-    "SETTLEMENT": _EVERY | {"amount", "reference"},
-    "REVERSAL": _EVERY | {"reference"},
+    "CREDIT": _COMMON_COLUMNS | {"amount"},
+    "DEBIT": _COMMON_COLUMNS | {"amount"},
+    "AUTHORIZATION": _COMMON_COLUMNS | {"amount", "reference"},
+    "SETTLEMENT": _COMMON_COLUMNS | {"amount", "reference"},
+    "REVERSAL": _COMMON_COLUMNS | {"reference"},
 }
 OPTIONAL: dict[str, frozenset[str]] = {
     "CREDIT": frozenset({"instalments"}),
@@ -142,29 +142,31 @@ def _parse_settlement_kind(text: str) -> Result[SettlementKind, RowFault]:
             return Err(RowFault("final must be yes or no"))
 
 
-type _Head = tuple[IncomingId, Day, AccountId, Day]  # the event, booked, account, and value_date every row carries
+type _CommonFields = tuple[
+    IncomingId, Day, AccountId, Day
+]  # the event, booked, account, and value_date every row carries
 
 
 def _parse_row(cells: dict[str, str], config: LedgerConfig) -> Result[IncomingEvent, RowFault]:
-    """The row's event, checked in column order: its type, which columns it fills, its head, then its own cells."""
+    """The row's event, checked in column order: its type, the columns it fills, its common fields, then the rest."""
     if (kind := cells["type"]) not in KINDS:
         return Err(RowFault(f"type '{kind}' is not one of {', '.join(KINDS)}"))
     if isinstance(checked_columns := _check_columns(cells, kind), Err):
         return checked_columns
-    if isinstance(parsed_head := _parse_head(cells, config), Err):
-        return parsed_head
-    head, account = parsed_head.value
+    if isinstance(parsed_fields := _parse_common_fields(cells, config), Err):
+        return parsed_fields
+    fields, account = parsed_fields.value
     if kind == "REVERSAL":
-        return _parse_reversal(cells["reference"], head)
+        return _parse_reversal(cells["reference"], fields)
     if isinstance(parsed_amount := _parse_amount(cells["amount"], account.opening), Err):
         return parsed_amount
     match kind:
         case "CREDIT":
-            return _parse_credit(cells["instalments"], head, parsed_amount.value)
+            return _parse_credit(cells["instalments"], fields, parsed_amount.value)
         case "DEBIT":
-            return Ok(Debit(*head, parsed_amount.value))
+            return Ok(Debit(*fields, parsed_amount.value))
         case _:
-            return _parse_authorization_or_settlement(cells, kind, head, parsed_amount.value)
+            return _parse_authorization_or_settlement(cells, kind, fields, parsed_amount.value)
 
 
 def _check_columns(cells: dict[str, str], kind: str) -> Result[None, RowFault]:
@@ -178,8 +180,10 @@ def _check_columns(cells: dict[str, str], kind: str) -> Result[None, RowFault]:
     return Ok(None)
 
 
-def _parse_head(cells: dict[str, str], config: LedgerConfig) -> Result[tuple[_Head, AnyAccount], RowFault]:
-    """The row's head, and the account it names, which must be one this ledger holds."""
+def _parse_common_fields(
+    cells: dict[str, str], config: LedgerConfig
+) -> Result[tuple[_CommonFields, AnyAccount], RowFault]:
+    """The row's common fields, and the account it names, which must be a configured account."""
     if isinstance(event_id := _check_id(IncomingId.parse(cells["event"])), Err):
         return event_id
     if isinstance(booked := _parse_day(cells["booked"], config), Err):
@@ -193,35 +197,35 @@ def _parse_head(cells: dict[str, str], config: LedgerConfig) -> Result[tuple[_He
     return Ok(((event_id.value, booked.value, account_id.value, value_date.value), account))
 
 
-def _parse_reversal(reference: str, head: _Head) -> Result[Reversal, RowFault]:
+def _parse_reversal(reference: str, fields: _CommonFields) -> Result[Reversal, RowFault]:
     """A reversal of the event its reference names, which must be an event ID."""
     return (
         parse_event_id(reference)
-        .map(lambda target: Reversal(*head, target))
+        .map(lambda target: Reversal(*fields, target))
         .map_err(lambda fault: RowFault(f"reference '{fault.text}' is not an event ID"))
     )
 
 
-def _parse_credit(instalments: str, head: _Head, amount: AnyAmount) -> Result[Credit, RowFault]:
+def _parse_credit(instalments: str, fields: _CommonFields, amount: AnyAmount) -> Result[Credit, RowFault]:
     """A credit, whole or in instalments; one whose amount cannot be split that many ways is refused."""
     if isinstance(parsed_posting := _parse_posting(instalments), Err):
         return parsed_posting
     posting = parsed_posting.value
     if isinstance(posting, Instalments) and isinstance(split_amount_of(amount, posting.count), Err):
         return Err(RowFault(f"{format_digits(amount.money)} cannot be split into {posting.count.number} instalments"))
-    return Ok(Credit(*head, amount, posting))
+    return Ok(Credit(*fields, amount, posting))
 
 
 def _parse_authorization_or_settlement(
-    cells: dict[str, str], kind: str, head: _Head, amount: AnyAmount
+    cells: dict[str, str], kind: str, fields: _CommonFields, amount: AnyAmount
 ) -> Result[Authorization | Settlement, RowFault]:
     """An authorization, or a settlement against one, each naming its hold in the reference."""
     if isinstance(hold := _check_id(AuthorizationId.parse(cells["reference"])), Err):
         return hold
     if kind == "AUTHORIZATION":
-        return Ok(Authorization(*head, hold.value, amount))
+        return Ok(Authorization(*fields, hold.value, amount))
     return _parse_settlement_kind(cells["final"]).map(
-        lambda settlement_kind: Settlement(*head, hold.value, amount, settlement_kind)
+        lambda settlement_kind: Settlement(*fields, hold.value, amount, settlement_kind)
     )
 
 

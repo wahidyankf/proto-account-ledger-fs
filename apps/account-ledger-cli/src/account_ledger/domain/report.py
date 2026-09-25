@@ -185,8 +185,8 @@ def _build_end_of_day_rows(
     """Each step's events in the order generated, with a row for a step that generated nothing of its kind
     (tech-docs 002)."""
     generated_events = [entry.event for entry in log if isinstance(entry, Accepted) and entry.processed_day == day]
-    everyone = tuple(account.id for account in config.accounts)
-    rows = _build_fee_rows(generated_events, everyone) + _build_interest_rows(generated_events, everyone)
+    account_ids = tuple(account.id for account in config.accounts)
+    rows = _build_fee_rows(generated_events, account_ids) + _build_interest_rows(generated_events, account_ids)
     if day not in config.capitalization_days:  # step 3 has no row on any other day
         return Ok(tuple(rows))
     if isinstance(capitalization_rows := _build_capitalization_rows(log, generated_events, config.accounts), Err):
@@ -195,22 +195,22 @@ def _build_end_of_day_rows(
 
 
 def _build_fee_rows(
-    generated_events: Sequence[LoggedEvent], everyone: tuple[AccountId, ...]
+    generated_events: Sequence[LoggedEvent], account_ids: tuple[AccountId, ...]
 ) -> list[Generated | Capitalized | NothingGenerated]:
     """Step 1: each fee or refund generated, then a note when no fee was."""
     fees = [event for event in generated_events if isinstance(event, Fee | FeeRefund)]
     rows: list[Generated | Capitalized | NothingGenerated] = [Generated(Step.FEES, event) for event in fees]
     if not any(isinstance(event, Fee) for event in fees):
-        rows.append(NothingGenerated(Step.FEES, everyone, Note.NO_NEW_FEE if fees else Note.NO_FEE))
+        rows.append(NothingGenerated(Step.FEES, account_ids, Note.NO_NEW_FEE if fees else Note.NO_FEE))
     return rows
 
 
 def _build_interest_rows(
-    generated_events: Sequence[LoggedEvent], everyone: tuple[AccountId, ...]
+    generated_events: Sequence[LoggedEvent], account_ids: tuple[AccountId, ...]
 ) -> list[Generated | Capitalized | NothingGenerated]:
     """Step 2: each account's interest events generated, then a note for each account that accrued none."""
     rows: list[Generated | Capitalized | NothingGenerated] = []
-    for account in everyone:
+    for account in account_ids:
         interest = [
             event
             for event in generated_events

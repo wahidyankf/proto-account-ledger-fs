@@ -59,8 +59,8 @@ no-docstring-rgx = "^__.+__$"
 docstring-min-length = -1
 # A function starts with a verb from this list and names its object after it; a method may leave the object to its
 # class, as `Day.parse` does. A new verb joins the list in the change that first needs it.
-function-rgx = "^_?(accrue|add|advance|append|apply|assess|build|capitalize|check|close|compute|count|decide|derive|describe|fail|find|format|generate|get|has|interrupt|is|list|load|make|map|narrow|parse|process|read|record|remove|render|round|run|save|select|sign|span|split|sum|take|tap|test|try|unwrap|update|validate|write)(_[a-z0-9]+)+$"
-method-rgx = "^(__[a-z0-9_]+__|_?(accrue|add|advance|append|apply|assess|build|capitalize|check|close|compute|count|decide|derive|describe|fail|find|format|generate|get|has|interrupt|is|list|load|make|map|narrow|parse|process|read|record|remove|render|round|run|save|select|sign|span|split|sum|take|tap|test|try|unwrap|update|validate|write)(_[a-z0-9]+)*)$"
+function-rgx = "^_?(accrue|add|advance|append|apply|assess|build|capitalize|check|close|compute|count|decide|derive|describe|fail|find|format|generate|get|has|interrupt|is|list|load|make|map|parse|process|read|record|remove|render|require|round|run|save|select|sign|span|split|sum|take|tap|test|try|unwrap|update|validate|write)(_[a-z0-9]+)+$"
+method-rgx = "^(__[a-z0-9_]+__|_?(accrue|add|advance|append|apply|assess|build|capitalize|check|close|compute|count|decide|derive|describe|fail|find|format|generate|get|has|interrupt|is|list|load|make|map|parse|process|read|record|remove|render|require|round|run|save|select|sign|span|split|sum|take|tap|test|try|unwrap|update|validate|write)(_[a-z0-9]+)*)$"
 # `main` is Python's entry-point name, as `__main__.py` calls it; `flat_map` and `flat_map_err` are the Result
 # combinators' conventional names.
 good-names = ["main", "_", "flat_map", "flat_map_err"]
