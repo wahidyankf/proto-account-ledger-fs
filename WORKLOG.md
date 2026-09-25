@@ -8,8 +8,8 @@ earlier work is claimed.
 
 | When                   | What                                                                                        |
 | ---------------------- | ------------------------------------------------------------------------------------------- |
-| 2026-09-25 22:47–22:49 | MOVEMENT: Day 6's readings name AMB-036 and AMB-037 beside AMB-028 and AMB-035              |
-| 2026-09-25 22:36–22:46 | AMB-037: a reversal value-dated before its target is refused, test-first                    |
+| 2026-09-25 22:42–22:43 | MOVEMENT: Day 6's readings name AMB-036 and AMB-037 beside AMB-028 and AMB-035              |
+| 2026-09-25 22:36–22:42 | AMB-037: a reversal value-dated before its target is refused, test-first                    |
 | 2026-09-25 22:24–22:36 | Re-check against the brief: doc figures corrected; four abandoned approaches added          |
 | 2026-09-25 22:04–22:22 | Layout: a blank line parts each step of a body; the Python standards gain a Layout module   |
 | 2026-09-25 21:15–21:37 | Restructure archival: execution check BLOCKED, repaired, then PASS; RC4 fired; archived     |
