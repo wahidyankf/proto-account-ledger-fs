@@ -1,16 +1,18 @@
 """The Ledger: what spans accounts, checked before the account decides: a repeated event ID (AMB-034), a reversal of
-another account's event (AMB-036), and an account the ledger does not hold."""
+another account's event (AMB-036), a reused authorization ID (AMB-038), and an account the ledger does not hold."""
 
 import pytest
 
 from account_ledger.application.stream import IncomingStream
 from account_ledger.challenge import CHALLENGE
 from account_ledger.common.result import Err
+from account_ledger.domain.account.authorizations import Approved, Settled
 from account_ledger.domain.account.domain_events import CreditPosted, DuplicateIgnored, EventRejected
-from account_ledger.domain.account.rejections import IdReused, TargetOnAnotherAccount
+from account_ledger.domain.account.rejections import AuthorizationIdReused, IdReused, TargetOnAnotherAccount
 from account_ledger.domain.ledger.ledger import Ledger, UnknownAccount
-from account_ledger.domain.model.ids import AccountId, Day, IncomingId
-from support.entries import list_entries
+from account_ledger.domain.model.ids import AccountId, AuthorizationId, Day, IncomingId
+from account_ledger.domain.model.money import AmountIn
+from support.entries import list_entries, list_states
 from support.results import unwrap_ok
 from support.streams import (
     ACC_001_OPENING,
@@ -96,6 +98,51 @@ def test_amb_034_a_reused_id_with_different_content_is_refused() -> None:
         EventRejected(reused_credit, Day(1), IdReused()),
     ]
     assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001_OPENING).compute_closing(Day(1))) == make_aed("100.00")
+
+
+def test_amb_038_an_authorization_id_already_used_is_refused() -> None:
+    """AMB-038: an authorization ID names one hold, so a second Auth-A is refused and holds nothing, and the settlement
+    for Auth-A settles the first alone."""
+
+    second_authorization = make_authorization("E3", 1, "Auth-A", "50.00")
+
+    stream = (
+        make_credit("E1", 1, "500.00"),
+        make_authorization("E2", 1, "Auth-A", "100.00"),
+        second_authorization,
+        make_settlement("E4", 2, "Auth-A", "100.00"),
+    )
+
+    result = unwrap_ok(IncomingStream(stream).process(CHALLENGE))
+
+    assert list_entries(result.find_log(Day(1)), "E3") == [
+        EventRejected(second_authorization, Day(1), AuthorizationIdReused(AuthorizationId("Auth-A"), IncomingId("E2")))
+    ]
+    assert list_states(result.find_log(Day(1)), "Auth-A") == [Approved(AmountIn(make_aed("100.00")))]
+    assert list_states(result.find_log(Day(2)), "Auth-A") == [Settled(AmountIn(make_aed("100.00")))]
+    assert result.find_report(Day(1)).available_balances[ACC_001_OPENING.id] == make_aed("400.00")
+
+
+def test_amb_038_an_authorization_id_is_refused_on_another_account_too() -> None:
+    """AMB-038: an authorization ID is unique across the ledger, as an event ID is, so ACC-002's Auth-A is refused."""
+
+    misplaced_authorization = make_authorization("E3", 1, "Auth-A", "1.000", account="ACC-002")
+
+    stream = (
+        make_credit("E1", 1, "500.00"),
+        make_credit("E2", 1, "5.000", account="ACC-002"),
+        make_authorization("E4", 1, "Auth-A", "100.00"),
+        misplaced_authorization,
+    )
+
+    log = unwrap_ok(IncomingStream(stream).process(CHALLENGE)).find_log(Day(1))
+
+    assert list_entries(log, "E3") == [
+        EventRejected(
+            misplaced_authorization, Day(1), AuthorizationIdReused(AuthorizationId("Auth-A"), IncomingId("E4"))
+        )
+    ]
+    assert list_states(log, "Auth-A", ACC_002_OPENING) == []
 
 
 def test_amb_036_a_reversal_of_another_accounts_event_is_refused() -> None:

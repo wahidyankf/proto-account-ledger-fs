@@ -47,7 +47,7 @@ Non-negotiable rules:
 - The ledger is append-only. No event record is ever mutated or deleted. _Ambiguities: AMB-004, AMB-024, AMB-028,
   AMB-014, AMB-035._
 - An authorization is approved only if the account's available balance — ledger balance minus active holds — remains at
-  or above zero after the hold is applied. _Ambiguities: AMB-008, AMB-009, AMB-010, AMB-013, AMB-018._
+  or above zero after the hold is applied. _Ambiguities: AMB-008, AMB-009, AMB-010, AMB-013, AMB-018, AMB-038._
 
 ## Acceptance Criteria
 

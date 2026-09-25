@@ -33,6 +33,7 @@ from account_ledger.domain.account.domain_events import (
 from account_ledger.domain.account.rejections import (
     AlreadyReversed,
     AlreadyUndone,
+    AuthorizationIdReused,
     DatedBeforeTarget,
     IdReused,
     MovedNoMoney,
@@ -430,6 +431,8 @@ def _format_reason(reason: Rejection, account: AccountId) -> str:
     match reason:
         case IdReused():
             return "ID already used with different content"
+        case AuthorizationIdReused(authorization=authorization, first_id=first_id):
+            return f"{authorization.value} is already used by {first_id.format()}"
         case AlreadyReversed(target=target, undoing_id=undoing_id):
             return f"{target.format()} is already reversed by {undoing_id.format()}"
         case ReversesAReversal(target=target):

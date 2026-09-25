@@ -181,7 +181,8 @@ account/domain_events
             | SettlementApplied(+ state_before, state_after) | SettlementForcePosted
             | EventRejected(+ reason) | DuplicateIgnored
 account/rejections
-          EventRejected.reason: Rejection = IdReused | AlreadyReversed | ReversesAReversal | UnknownTarget
+          EventRejected.reason: Rejection = IdReused | AuthorizationIdReused | AlreadyReversed
+                                            | ReversesAReversal | UnknownTarget
                                             | TargetOnAnotherAccount | MovedNoMoney | DatedBeforeTarget
                                             | AlreadyUndone
 account/event_log
@@ -250,7 +251,8 @@ IncomingStream.process, for each event in listed order, D the current day
   1. the event is booked after D: close D (a and b), open D + 1, and look again; a day with no events closes too;
      no day closes after the window's last, so an event booked after the window reaches no day's log or report
   2. otherwise: Ledger.process_event(event, D) ---> the ledger + one entry, and a credit's instalments
-       idempotency first, across every account; then a reversal whose target is on another account;
+       idempotency first, across every account; then a reversal whose target is on another account, and an
+       authorization whose ID an earlier one on any account holds;
        then the account decides from its own entries, by kind; a reversal checked against its target in order
        an event booked before D is late and is processed on D (AMB-015)
 IncomingStream.process, once every event is processed: close every day left in the window
@@ -321,9 +323,10 @@ recomputed from its domain events whenever it is asked for (D7).
 
 **The Ledger**, `Ledger` in `domain/ledger/ledger.py`, is the only object that sees every account at once. It holds the
 configuration and the one log (AMB-014, AMB-024), refuses what spans accounts before any account decides, an event ID
-seen before (AMB-034) and a reversal whose target is on another account (AMB-036), and runs a day's close as each step
-on every account in turn. `find_account` builds an account's aggregate from its opening and its own entries, and an
-event on an account it does not hold is returned as `UnknownAccount`. Each method returns a new `Ledger`.
+seen before (AMB-034), a reversal whose target is on another account (AMB-036), and an authorization ID already used
+(AMB-038), and runs a day's close as each step on every account in turn. `find_account` builds an account's aggregate
+from its opening and its own entries, and an event on an account it does not hold is returned as `UnknownAccount`. Each
+method returns a new `Ledger`.
 
 **The report** is a read model, outside the domain because it serves the output, not a rule: `application/report.py`
 reads the Ledger's log and each account and writes nothing back. `IncomingStream.process` drives the Ledger and the
@@ -336,7 +339,8 @@ To read the code for the first time, follow one day through it, in this order:
 1. `cli.py`, `run_cli`: where the program starts, and how every failure becomes an exit status.
 2. `application/run.py`, `LedgerRun.run`, then `application/stream.py`, `IncomingStream.process`: the use case, and the
    loop over events, where a later day's event closes the current day first, as the dynamic view above draws.
-3. `domain/ledger/ledger.py`, `Ledger.process_event`: duplicates and cross-account reversals caught on the whole log.
+3. `domain/ledger/ledger.py`, `Ledger.process_event`: duplicates, cross-account reversals, and reused authorization IDs
+   caught on the whole log.
 4. `domain/account/account.py`, `AccountIn.decide_event`: what one incoming event adds to its account.
 5. `Ledger.close_day`: the three steps of a day's close, each run on every account.
 6. `AccountIn.assess_fees`: when a day is charged an overdraft fee, and when that fee is refunded.

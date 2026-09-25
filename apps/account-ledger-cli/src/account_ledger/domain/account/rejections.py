@@ -1,14 +1,22 @@
-"""Every reason an event is refused, recorded in ``EventRejected``: by the Ledger for a reused ID or another account's
-target, and by the Account aggregate for the rest."""
+"""Every reason an event is refused, recorded in ``EventRejected``: by the Ledger for a reused event or authorization ID
+or another account's target, and by the Account aggregate for the rest."""
 
 from dataclasses import dataclass
 
-from account_ledger.domain.model.ids import AccountId, Day, EventId, IncomingId
+from account_ledger.domain.model.ids import AccountId, AuthorizationId, Day, EventId, IncomingId
 
 
 @dataclass(frozen=True, slots=True)
 class IdReused:
     """The event's ID is already used by an event with different content (AMB-034); the event names the ID."""
+
+
+@dataclass(frozen=True, slots=True)
+class AuthorizationIdReused:
+    """The authorization's ID already names the hold of the authorization event given, on any account (AMB-038)."""
+
+    authorization: AuthorizationId
+    first_id: IncomingId
 
 
 @dataclass(frozen=True, slots=True)
@@ -67,6 +75,7 @@ class AlreadyUndone:
 
 type Rejection = (
     IdReused
+    | AuthorizationIdReused
     | AlreadyReversed
     | ReversesAReversal
     | UnknownTarget

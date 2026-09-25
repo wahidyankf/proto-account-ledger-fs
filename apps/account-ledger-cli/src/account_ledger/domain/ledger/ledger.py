@@ -6,11 +6,17 @@ from dataclasses import dataclass
 
 from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.account.account import Account, AccountIn
-from account_ledger.domain.account.domain_events import DuplicateIgnored, EventRejected, LogEntry
+from account_ledger.domain.account.domain_events import (
+    AuthorizationApproved,
+    AuthorizationDeclined,
+    DuplicateIgnored,
+    EventRejected,
+    LogEntry,
+)
 from account_ledger.domain.account.event_log import EventLog
-from account_ledger.domain.account.rejections import IdReused, TargetOnAnotherAccount
+from account_ledger.domain.account.rejections import AuthorizationIdReused, IdReused, TargetOnAnotherAccount
 from account_ledger.domain.model.config import AccountOpening, LedgerConfig, is_aed
-from account_ledger.domain.model.events import IncomingEvent, Reversal
+from account_ledger.domain.model.events import Authorization, IncomingEvent, Reversal
 from account_ledger.domain.model.ids import AccountId, Day
 from account_ledger.domain.model.money import CurrencyMismatch
 
@@ -57,8 +63,9 @@ class Ledger:
 
     def process_event(self, event: IncomingEvent, today: Day) -> Result[Ledger, InternalFault]:
         """The ledger with the event's entries appended; ``today`` is the day it is processed on (AMB-015). What spans
-        accounts is checked here, against the whole log: a repeated event ID (AMB-034) and a reversal whose target is on
-        another account (AMB-036). Everything else the event's own account decides, from its own entries alone."""
+        accounts is checked here, against the whole log: a repeated event ID (AMB-034), a reversal whose target is on
+        another account (AMB-036), and an authorization ID already used (AMB-038). Everything else the event's own
+        account decides, from its own entries alone."""
 
         known_entry = self.log.find_first_entry(event.id)  # the event ID is the idempotency key (AMB-034)
 
@@ -70,6 +77,9 @@ class Ledger:
 
         if isinstance(event, Reversal) and isinstance(target_check := self._check_target_account(event), Err):
             return Ok(self._append(EventRejected(event, today, target_check.error)))
+
+        if isinstance(event, Authorization) and isinstance(id_check := self._check_authorization_id(event), Err):
+            return Ok(self._append(EventRejected(event, today, id_check.error)))
 
         if isinstance(opening := self._find_opening(event.account), Err):
             return opening
@@ -112,6 +122,21 @@ class Ledger:
             return Ok(None)
 
         return Err(TargetOnAnotherAccount(reversal.target, target.event.account))
+
+    def _check_authorization_id(self, authorization: Authorization) -> Result[None, AuthorizationIdReused]:
+        """Nothing when no authorization on any account has decided this authorization ID yet, else the first that
+        did."""
+
+        for entry in self.log.entries:
+            match entry:
+                case AuthorizationApproved(event=decided) | AuthorizationDeclined(event=decided) if (
+                    decided.authorization == authorization.authorization
+                ):
+                    return Err(AuthorizationIdReused(authorization.authorization, decided.id))
+                case _:
+                    pass
+
+        return Ok(None)
 
     def _find_opening(self, account_id: AccountId) -> Result[AccountOpening, UnknownAccount]:
         """The account's opening, or the fault of an account the ledger does not hold."""

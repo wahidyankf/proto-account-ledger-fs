@@ -3,6 +3,7 @@
 from account_ledger.domain.account.rejections import (
     AlreadyReversed,
     AlreadyUndone,
+    AuthorizationIdReused,
     DatedBeforeTarget,
     IdReused,
     MovedNoMoney,
@@ -12,7 +13,7 @@ from account_ledger.domain.account.rejections import (
     UnknownTarget,
 )
 from account_ledger.domain.model.events import IncomingEvent
-from account_ledger.domain.model.ids import AccountId, Day, IncomingId, InstalmentId
+from account_ledger.domain.model.ids import AccountId, AuthorizationId, Day, IncomingId, InstalmentId
 from support.streams import ACC_001_OPENING, ACC_002_OPENING, make_authorization, make_credit, make_debit, make_reversal
 
 type Refusal = tuple[tuple[IncomingEvent, ...], AccountId, Rejection, str]
@@ -23,6 +24,16 @@ REFUSALS: dict[str, Refusal] = {
         ACC_001_OPENING.id,
         IdReused(),
         "E1 refused: ID already used with different content",
+    ),
+    "AuthorizationIdReused": (
+        (
+            make_credit("E1", 1, "500.00"),
+            make_authorization("E2", 1, "Auth-A", "100.00"),
+            make_authorization("E3", 1, "Auth-A", "50.00"),
+        ),
+        ACC_001_OPENING.id,
+        AuthorizationIdReused(AuthorizationId("Auth-A"), IncomingId("E2")),
+        "E3 refused: Auth-A is already used by E2",
     ),
     "AlreadyReversed": (
         (

@@ -8,6 +8,7 @@ earlier work is claimed.
 
 | When                   | What                                                                                        |
 | ---------------------- | ------------------------------------------------------------------------------------------- |
+| 2026-09-25 22:52–22:55 | AMB-038: an authorization ID already used, on any account, is refused, test-first           |
 | 2026-09-25 22:42–22:43 | MOVEMENT: Day 6's readings name AMB-036 and AMB-037 beside AMB-028 and AMB-035              |
 | 2026-09-25 22:36–22:42 | AMB-037: a reversal value-dated before its target is refused, test-first                    |
 | 2026-09-25 22:24–22:36 | Re-check against the brief: doc figures corrected; four abandoned approaches added          |

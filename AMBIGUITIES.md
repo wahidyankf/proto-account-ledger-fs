@@ -1187,3 +1187,36 @@ counted from an earlier date, it would put money into closings, fees, and intere
 target's date for every reversal would hide a mistyped value date instead of showing it, and would take away a
 correction dated from the day an error is found, which leaves the past days as they were reported. A named refusal
 points at the one field to correct.
+
+## AMB-038 — An authorization ID used twice
+
+**Where.** "E3 — Day 2 — AUTHORIZATION — ACC-001 Auth-A hold AED 200.00", and "E5 — Day 4 — SETTLEMENT — ACC-001 Auth-A
+settles for AED 185.00". A settlement names the authorization it settles by that ID alone. Not otherwise in this stream.
+
+**Why it is problematic.** The brief does not say whether an authorization ID may arrive on a second authorization
+event. If both are approved, a settlement naming the ID matches both: one settlement of 100.00 would settle a hold of
+100.00 and a second hold of 50.00 together, releasing the 50.00 with nothing debited for it and printing two settlements
+where there was one.
+
+**Options.**
+
+- Refuse an authorization whose ID an authorization already decided on any account holds. **Recommended**: a settlement
+  finds its hold by this ID, so the ID must name one hold, as an event ID names one event (AMB-034).
+- Accept both, and let a settlement move the first open authorization with the ID only.
+- Accept both, as the settlement lookup does without a check.
+
+**Status.** Resolved.
+
+**Resolution.** Refused. An authorization whose authorization ID is held by an authorization already approved or
+declined, on any account, is refused once its event ID is found new (AMB-034); it is recorded with its outcome
+(AMB-014), holds nothing, and prints as that day's error, `E3 refused: Auth-A is already used by E2`. A settlement
+naming the ID then moves the first authorization alone. The same authorization event delivered again is still a
+duplicate (AMB-034), not a refusal. Auth-A and Auth-B each arrive once in this stream, so no figure moves. _Tests:_
+`test_amb_038_an_authorization_id_already_used_is_refused` and
+`test_amb_038_an_authorization_id_is_refused_on_another_account_too`.
+
+**Rationale.** The ID is the only link between a hold and its settlement, so a second holder of it makes every later
+settlement ambiguous; moving the first open one only would settle the wrong hold whenever settlements arrive out of
+order. Refusing it keeps each hold settled by what names it and shows the clash to someone who can correct it. In
+production the link is the card network's transaction identifier, which is unique; a short authorization code, which is
+not, would be only part of the key.
