@@ -6,7 +6,6 @@ from account_ledger.ids import Day
 from account_ledger.render import render
 from account_ledger.replay import replay
 from support.brief_stream import brief_stream
-from support.output_target import expected_output
 from support.streams import authorization, credit, debit, reversal, settlement
 
 RULE = "=" * 120
@@ -37,12 +36,24 @@ def test_an_empty_block_prints_none() -> None:
     assert lines[4:10] == ["Events processed", "  none", "", "EOD applied", "  none", ""]
 
 
+DAY_0_SUMMARY = [
+    "+------------------------+---------------+---------------+",
+    "| Item                   | ACC-001 (AED) | ACC-002 (BHD) |",
+    "+------------------------+---------------+---------------+",
+    "| Closing ledger balance | 0.00          | 0.000         |",
+    "| Available balance      | 0.00          | 0.000         |",
+    "| Authorizations         | none          | none          |",
+    "| Errors                 | none          | none          |",
+    "+------------------------+---------------+---------------+",
+]
+
+
 def test_a_table_is_a_box_as_wide_as_its_cells() -> None:
     """tech-docs 003: borders of `+`, `-`, and `|`, one space either side of each cell, every cell left-aligned, and
-    every column as wide as its widest cell, header included; Day 0 prints exactly as OUTPUT_TARGET's Day 0."""
-    day_0 = render((replay((), CHALLENGE).report(Day(0)),))
+    every column as wide as its widest cell, header included; Day 0's summary prints as OUTPUT_TARGET's does."""
+    lines = render((replay((), CHALLENGE).report(Day(0)),)).split("\n")
 
-    assert day_0 == expected_output().split(f"\n\n{RULE}\nDay 1\n")[0] + "\n"
+    assert lines[lines.index("Closing summary") + 1 :] == [*DAY_0_SUMMARY, ""]
 
 
 def test_amounts_print_in_their_currencys_format() -> None:
@@ -58,51 +69,104 @@ def test_amounts_print_in_their_currencys_format() -> None:
     assert len({len(line) for line in summary if line}) == 1
 
 
-def _rows(output: str, day: int) -> str:
-    """A day's Events processed and EOD applied blocks, as one text."""
-    start = output.index(f"{RULE}\nDay {day}\n")
-    return output[output.index("Events processed", start) : output.index("Closing summary", start)]
+def _type_and_detail(text: str) -> list[tuple[str, str]]:
+    """The Type and Detail cells of every Events processed and EOD applied row, header rows left out."""
+    cells = [line.split(" | ") for line in text.split("\n") if line.startswith("| ")]
+    return [(row[2].strip(), row[4].strip()) for row in cells if len(row) == 6 and row[2].strip() != "Type"]
+
+
+def _blocks(text: str) -> str:
+    """The Events processed and EOD applied blocks of one rendered day."""
+    return text[text.index("Events processed") : text.index("Closing summary")]
 
 
 def test_each_row_prints_its_type_and_detail() -> None:
-    """tech-docs 003: every Events processed and EOD applied row prints OUTPUT_TARGET's Type and Detail texts; Days 1 to
-    5 of the brief print those blocks exactly as OUTPUT_TARGET does."""
-    printed = render(replay(brief_stream(), CHALLENGE).reports)
+    """tech-docs 003: every Events processed and EOD applied row prints OUTPUT_TARGET's Type and Detail texts: a debit
+    value-dated back charges two fees and adjusts interest down, and its reversal refunds both and adjusts it up."""
+    stream = (
+        credit("E1", 1, "100.00"),
+        debit("E2", 2, "150.00", value=1),
+        reversal("E3", 3, "E2", value=1),
+        authorization("E4", 4, "Auth-A", "20.00"),
+        settlement("E5", 4, "Auth-A", "20.00"),
+    )
+    days = [_type_and_detail(_blocks(render((day,)))) for day in replay(stream, CHALLENGE).reports[1:5]]
 
-    for day in range(1, 6):
-        assert _rows(printed, day) == _rows(expected_output(), day)
+    no_accrual = ("Interest accrual", "no interest accrued")
+    assert days == [
+        [
+            ("Credit", "AED 100.00"),
+            ("Fee re-evaluation", "no fee assessed or refunded"),
+            ("Interest accrual", "0.04, for Day 1"),
+            no_accrual,
+        ],
+        [
+            ("Debit", "AED 150.00"),
+            ("Overdraft fee", "AED 25.00, for Day 1"),
+            ("Overdraft fee", "AED 25.00, for Day 2"),
+            ("Interest adjustment", "\u22120.04, for Day 1"),
+            no_accrual,
+            no_accrual,
+        ],
+        [
+            ("Reversal", "reverses E2"),
+            ("Fee refund", "AED 25.00, for Day 1"),
+            ("Fee refund", "AED 25.00, for Day 2"),
+            ("Fee re-evaluation", "no new fee assessed"),
+            ("Interest adjustment", "0.04, for Day 1"),
+            ("Interest adjustment", "0.02, for Day 2"),
+            ("Interest accrual", "0.04, for Day 3"),
+            no_accrual,
+        ],
+        [
+            ("Authorization", "Auth-A, hold AED 20.00"),
+            ("Settlement", "Auth-A settles for AED 20.00"),
+            ("Fee re-evaluation", "no fee assessed or refunded"),
+            ("Interest accrual", "0.03, for Day 4"),
+            no_accrual,
+        ],
+    ]
 
 
 def test_instalment_counts_print_as_words() -> None:
     """tech-docs 003: `in three equal instalments` spells the count as an English word from two to ten, and as digits
-    above; E10 and its parts print as OUTPUT_TARGET's Day 6 shows them."""
-    brief = render(replay(brief_stream(), CHALLENGE).reports).split("\n")
-    target = expected_output().split("\n")
-    e10 = [line for line in target if line.startswith("| E10")]
+    above; each instalment prints its amount and its place, as OUTPUT_TARGET's E10 does."""
 
-    assert [line for line in brief if line.startswith("| E10")] == e10
+    def details(count: int) -> list[str]:
+        stream = (credit("E1", 1, "10.000", account="ACC-002", instalments=count),)
+        return [detail for _, detail in _type_and_detail(_blocks(render((replay(stream, CHALLENGE).report(Day(1)),))))]
 
-    def detail(count: int) -> str:
-        stream = (credit("E1", 1, "12.000", account="ACC-002", instalments=count),)
-        lines = render((replay(stream, CHALLENGE).report(Day(1)),)).split("\n")
-        return next(line for line in lines if line.startswith("| E1 ")).split(" | ")[4].strip()
-
-    assert [detail(2), detail(10), detail(11)] == [
-        "BHD 12.000 in two equal instalments",
-        "BHD 12.000 in ten equal instalments",
-        "BHD 12.000 in 11 equal instalments",
+    assert details(3)[:4] == [
+        "BHD 10.000 in three equal instalments",
+        "BHD 3.333, instalment 1 of 3",
+        "BHD 3.333, instalment 2 of 3",
+        "BHD 3.334, instalment 3 of 3",
+    ]
+    assert [details(count)[0] for count in (2, 10, 11)] == [
+        "BHD 10.000 in two equal instalments",
+        "BHD 10.000 in ten equal instalments",
+        "BHD 10.000 in 11 equal instalments",
     ]
 
 
 def test_authorization_states_print_as_output_target_shows() -> None:
     """AMB-019, tech-docs 003: each authorization prints its state as OUTPUT_TARGET does, with no currency code, and an
     account's several authorizations are joined by `; `."""
-    brief = render(replay(brief_stream(), CHALLENGE).reports).split("\n")
+    stream = (
+        credit("E1", 1, "100.00"),
+        authorization("E2", 1, "Auth-A", "50.00"),
+        authorization("E3", 1, "Auth-B", "90.00"),
+        settlement("E4", 2, "Auth-A", "45.00"),
+    )
 
-    def rows(lines: list[str]) -> list[str]:
-        return [line for line in lines if line.startswith("| Authorizations")]
+    def cells(day: int) -> list[str]:
+        lines = render((replay(stream, CHALLENGE).report(Day(day)),)).split("\n")
+        row = next(line for line in lines if line.startswith("| Authorizations"))
+        return [cell.strip() for cell in row.strip("|").split("|")[1:]]
 
-    assert rows(brief) == rows(expected_output().split("\n"))
+    assert cells(0) == ["none", "none"]
+    assert cells(1) == ["Auth-A approved, hold 50.00; Auth-B declined, 90.00", "none"]
+    assert cells(2) == ["Auth-A settled for 45.00; Auth-B declined, 90.00", "none"]
 
 
 def test_capitalization_names_the_days_it_accrued() -> None:

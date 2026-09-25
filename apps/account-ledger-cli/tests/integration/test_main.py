@@ -7,7 +7,10 @@ from pathlib import Path
 import pytest
 
 from account_ledger.cli import main
-from support.output_target import expected_output
+from account_ledger.config import CHALLENGE
+from account_ledger.render import render
+from account_ledger.replay import replay
+from support.brief_stream import brief_stream
 
 APP = Path(__file__).resolve().parents[2]
 
@@ -28,5 +31,5 @@ def test_main_reads_a_real_file_and_reports_a_missing_one(
     monkeypatch.setattr(sys, "argv", ["account-ledger-cli", "streams/missing.csv"])
     missing = main()
 
-    assert (printed.out, printed.err, read) == (expected_output(), "", 0)
+    assert (printed.out, printed.err, read) == (render(replay(brief_stream(), CHALLENGE).reports), "", 0)
     assert (capfd.readouterr().err, missing) == ("error: cannot read streams/missing.csv: no such file\n", 2)

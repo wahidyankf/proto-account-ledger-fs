@@ -2,7 +2,8 @@
 
 from dataclasses import replace
 
-from account_ledger.balances import closing
+from account_ledger.authorizations import Settled
+from account_ledger.balances import closing, holds
 from account_ledger.config import CHALLENGE
 from account_ledger.events import Fee
 from account_ledger.ids import Day
@@ -11,8 +12,10 @@ from account_ledger.money import Amount
 from account_ledger.replay import replay
 from account_ledger.report import Capitalized
 from support.brief_stream import brief_stream
+from support.states import state_of
 from support.streams import (
     ACC_001,
+    ACC_002,
     authorization,
     capitalization_amounts,
     credit,
@@ -45,11 +48,14 @@ def test_amb_011_a_fee_counts_in_the_closings_after_it() -> None:
 
 
 def test_amb_027_a_bhd_account_is_charged_bhd_2_560() -> None:
-    """AMB-027: the fee is AED 25.00 converted at the configured rate and rounded half-even to BHD's three places."""
+    """AMB-027: the fee is AED 25.00 converted at the configured rate and rounded half-even to BHD's three places, so
+    ACC-002 is charged FEE-002-D1@D1 and closes Day 1 at −3.560."""
     log = replay((debit("E1", 1, "1.000", account="ACC-002"),), CHALLENGE).log_at(Day(1))
 
     fees = [entry.event for entry in log if isinstance(entry, Accepted) and isinstance(entry.event, Fee)]
     assert [fee.amount for fee in fees] == [Amount(bhd("2.560"))]
+    assert fee_markers(log) == ["FEE-002-D1@D1"]
+    assert closing(log, ACC_002, Day(1)) == bhd("-3.560")
 
 
 def test_amb_030_a_settlement_above_its_hold_debits_in_full() -> None:
@@ -63,6 +69,8 @@ def test_amb_030_a_settlement_above_its_hold_debits_in_full() -> None:
 
     log = replay(stream, CHALLENGE).log_at(Day(2))
 
+    assert state_of(log, "Auth-A") == [Settled(Amount(aed("120.00")))]
+    assert holds(log, ACC_001, Day(2)) == aed("0.00")
     assert fee_markers(log) == ["FEE-001-D2@D2"]
     assert closing(log, ACC_001, Day(2)) == aed("-45.00")
 

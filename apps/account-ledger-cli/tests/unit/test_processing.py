@@ -4,7 +4,8 @@ from dataclasses import replace
 
 import pytest
 
-from account_ledger.balances import closing, closing_of
+from account_ledger.authorizations import Settled
+from account_ledger.balances import closing, closing_of, holds
 from account_ledger.config import CHALLENGE, AnyAccount
 from account_ledger.events import IncomingEvent
 from account_ledger.ids import Day, FeeId, IncomingId, InstalmentId, RefundId
@@ -19,10 +20,11 @@ from account_ledger.log import (
     ReversesAReversal,
     UnknownTarget,
 )
+from account_ledger.money import Amount
 from account_ledger.replay import replay
 from support.brief_stream import brief_stream
-from support.states import entries_for
-from support.streams import ACC_001, ACC_002, authorization, credit, debit, reversal, through
+from support.states import entries_for, state_of
+from support.streams import ACC_001, ACC_002, authorization, credit, debit, reversal, settlement, through
 from support.values import aed, bhd
 
 
@@ -139,13 +141,15 @@ def test_amb_035_money_already_undone_cannot_be_undone_again(
 
 def test_amb_034_a_repeated_event_is_logged_as_a_duplicate_with_no_effect() -> None:
     """AMB-034: the event ID is the idempotency key, so E1 delivered twice with identical content is logged again as a
-    duplicate and credits once."""
+    duplicate and credits once; a duplicate is not an error, so Day 1's errors read none."""
     e1 = credit("E1", 1, "100.00")
 
-    log = replay((e1, e1), CHALLENGE).log_at(Day(1))
+    result = replay((e1, e1), CHALLENGE)
+    log = result.log_at(Day(1))
 
     assert entries_for(log, "E1") == [Accepted(e1, Day(1)), Duplicate(e1, Day(1))]
     assert closing(log, ACC_001, Day(1)) == aed("100.00")
+    assert dict(result.report(Day(1)).errors) == {ACC_001.id: (), ACC_002.id: ()}
 
 
 def test_amb_034_a_reused_id_with_different_content_is_refused() -> None:
@@ -156,3 +160,40 @@ def test_amb_034_a_reused_id_with_different_content_is_refused() -> None:
 
     assert entries_for(log, "E1") == [Accepted(first, Day(1)), Rejected(reused, Day(1), IdReused())]
     assert closing(log, ACC_001, Day(1)) == aed("100.00")
+
+
+def test_amb_035_a_reversed_settlement_leaves_its_authorization_settled() -> None:
+    """AMB-035: a reversal undoes only what its target moved, so reversing a settlement credits its debit back and
+    leaves its authorization settled, with no hold restored."""
+    stream = (
+        credit("E1", 1, "100.00"),
+        authorization("E2", 1, "Auth-A", "50.00"),
+        settlement("E3", 2, "Auth-A", "30.00"),
+        reversal("E4", 3, "E3", value=2),
+    )
+
+    log = replay(stream, CHALLENGE).log_at(Day(3))
+
+    assert state_of(log, "Auth-A") == [Settled(Amount(aed("30.00")))]
+    assert holds(log, ACC_001, Day(3)) == aed("0.00")
+    assert closing(log, ACC_001, Day(3)) == aed("100.00")
+
+
+def test_amb_035_a_reversed_instalment_stays_reversed() -> None:
+    """AMB-035: an instalment is fired when its credit is processed, not at a close, so once reversed it stays
+    reversed at every later close."""
+    stream = (
+        credit("E1", 1, "10.000", account="ACC-002", instalments=3),
+        reversal("E2", 2, "E1-2", account="ACC-002", value=1),
+    )
+
+    result = replay(stream, CHALLENGE)
+
+    assert [closing(result.log_at(Day(day)), ACC_002, Day(1)) for day in (1, 2, 6)] == [
+        bhd("10.000"),
+        bhd("6.667"),
+        bhd("6.667"),
+    ]
+    assert [entry.event.id for entry in result.log_at(Day(6)) if isinstance(entry.event.id, InstalmentId)] == [
+        InstalmentId(IncomingId("E1"), n) for n in (1, 2, 3)
+    ]

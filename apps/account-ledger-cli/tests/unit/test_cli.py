@@ -6,17 +6,20 @@ import pytest
 
 from account_ledger import cli
 from account_ledger.cli import run
-from support.brief_stream import BRIEF_CSV
-from support.output_target import expected_output
+from account_ledger.config import CHALLENGE
+from account_ledger.render import render
+from account_ledger.replay import replay
+from support.brief_stream import BRIEF_CSV, brief_stream
 
 
 def test_a_stream_file_prints_its_report_and_exits_0() -> None:
-    """AC-01: `run` reads the named stream, replays it, and writes the report to standard output, exiting 0."""
+    """AC-01: `run` reads the named stream, replays it, and writes the report to standard output, exiting 0; the
+    end-to-end golden run compares that report with OUTPUT_TARGET."""
     out, err = io.StringIO(), io.StringIO()
 
     exit_code = run(["streams/challenge.csv"], {"streams/challenge.csv": BRIEF_CSV}.__getitem__, out, err)
 
-    assert (out.getvalue(), err.getvalue(), exit_code) == (expected_output(), "", 0)
+    assert (out.getvalue(), err.getvalue(), exit_code) == (render(replay(brief_stream(), CHALLENGE).reports), "", 0)
 
 
 USAGE = "usage: account-ledger-cli <stream.csv>\n"
