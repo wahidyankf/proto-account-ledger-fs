@@ -15,11 +15,11 @@ from account_ledger.domain.authorizations import (
     transition,
 )
 from account_ledger.domain.balances import closing
-from account_ledger.domain.config import CHALLENGE
-from account_ledger.domain.event_log import ForcePosted, SettlementAccepted
-from account_ledger.domain.events import Capture
-from account_ledger.domain.ids import Day
-from account_ledger.domain.money import Aed, Amount
+from account_ledger.domain.model.config import CHALLENGE
+from account_ledger.domain.model.event_log import ForcePosted, SettlementAccepted
+from account_ledger.domain.model.events import Capture
+from account_ledger.domain.model.ids import Day
+from account_ledger.domain.model.money import Aed, Amount
 from account_ledger.domain.replay import replay
 from support.states import settlements_of, state_of
 from support.streams import ACC_001, authorization, credit, settlement

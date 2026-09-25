@@ -3,11 +3,18 @@
 from collections.abc import Iterator
 
 from account_ledger.domain.balances import accrued, closing, interest_base, interest_fired
-from account_ledger.domain.config import Account, AnyAccount, LedgerConfig, is_aed
-from account_ledger.domain.event_log import Accepted, Log, append
-from account_ledger.domain.events import Capitalization, Fee, FeeRefund, InterestAccrual, InterestAdjustment, Reversal
-from account_ledger.domain.ids import AccountId, CapitalizationId, Day, FeeId, InterestId, RefundId
-from account_ledger.domain.money import (
+from account_ledger.domain.model.config import Account, AnyAccount, LedgerConfig, is_aed
+from account_ledger.domain.model.event_log import Accepted, Log, append
+from account_ledger.domain.model.events import (
+    Capitalization,
+    Fee,
+    FeeRefund,
+    InterestAccrual,
+    InterestAdjustment,
+    Reversal,
+)
+from account_ledger.domain.model.ids import AccountId, CapitalizationId, Day, FeeId, InterestId, RefundId
+from account_ledger.domain.model.money import (
     Aed,
     Bhd,
     Direction,

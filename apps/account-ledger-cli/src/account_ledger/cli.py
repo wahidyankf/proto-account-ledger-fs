@@ -9,7 +9,7 @@ from typing import TextIO
 
 from account_ledger.adapters.render import render
 from account_ledger.adapters.stream_csv import StreamError, parse_stream
-from account_ledger.domain.config import CHALLENGE
+from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.replay import replay
 
 USAGE = "usage: account-ledger-cli <stream.csv>"

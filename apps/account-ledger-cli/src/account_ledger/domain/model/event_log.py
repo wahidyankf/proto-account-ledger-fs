@@ -4,7 +4,7 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import TYPE_CHECKING
 
-from account_ledger.domain.events import (
+from account_ledger.domain.model.events import (
     Authorization,
     Credit,
     Debit,
@@ -14,7 +14,7 @@ from account_ledger.domain.events import (
     Reversal,
     Settlement,
 )
-from account_ledger.domain.ids import Day, EventId, IncomingId
+from account_ledger.domain.model.ids import Day, EventId, IncomingId
 
 if TYPE_CHECKING:  # authorizations reads the log, so the states are imported for annotations only
     from account_ledger.domain.authorizations import AuthorizationState

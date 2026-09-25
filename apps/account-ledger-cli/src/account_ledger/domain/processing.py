@@ -15,8 +15,8 @@ from account_ledger.domain.authorizations import (
     trigger_of,
 )
 from account_ledger.domain.balances import available_of
-from account_ledger.domain.config import LedgerConfig
-from account_ledger.domain.event_log import (
+from account_ledger.domain.model.config import LedgerConfig
+from account_ledger.domain.model.event_log import (
     Accepted,
     AlreadyReversed,
     AlreadyUndone,
@@ -37,7 +37,7 @@ from account_ledger.domain.event_log import (
     first,
     instalments_of,
 )
-from account_ledger.domain.events import (
+from account_ledger.domain.model.events import (
     Authorization,
     Credit,
     Debit,
@@ -49,8 +49,8 @@ from account_ledger.domain.events import (
     Reversal,
     Settlement,
 )
-from account_ledger.domain.ids import Day, EventId, FeeId, IncomingId, InstalmentCount, InstalmentId, RefundId
-from account_ledger.domain.money import TooManyInstalments, split_of
+from account_ledger.domain.model.ids import Day, EventId, FeeId, IncomingId, InstalmentCount, InstalmentId, RefundId
+from account_ledger.domain.model.money import TooManyInstalments, split_of
 
 
 def process(log: Log, event: IncomingEvent, today: Day, config: LedgerConfig) -> Log:

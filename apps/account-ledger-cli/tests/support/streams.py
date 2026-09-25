@@ -1,8 +1,8 @@
 """Builders for the short streams the rule tests replay, and readers that turn log entries into plain values."""
 
-from account_ledger.domain.config import Account
-from account_ledger.domain.event_log import Accepted, Log
-from account_ledger.domain.events import (
+from account_ledger.domain.model.config import Account
+from account_ledger.domain.model.event_log import Accepted, Log
+from account_ledger.domain.model.events import (
     AnyAmount,
     Authorization,
     Capitalization,
@@ -19,7 +19,7 @@ from account_ledger.domain.events import (
     Settlement,
     Whole,
 )
-from account_ledger.domain.ids import (
+from account_ledger.domain.model.ids import (
     AccountId,
     AuthorizationId,
     Day,
@@ -29,7 +29,7 @@ from account_ledger.domain.ids import (
     parse_event_id,
     text,
 )
-from account_ledger.domain.money import Aed, Amount, Bhd, Direction, Money
+from account_ledger.domain.model.money import Aed, Amount, Bhd, Direction, Money
 from support.values import aed, bhd
 
 HEADER = ("event", "booked", "type", "account", "amount", "value_date", "reference", "instalments", "final")

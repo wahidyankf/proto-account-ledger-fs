@@ -5,11 +5,11 @@ A refused criterion is proven by a test of what the ledger does instead (REJECTE
 
 from account_ledger.domain.authorizations import Approved, Declined, Settled, records
 from account_ledger.domain.balances import closing
-from account_ledger.domain.config import CHALLENGE
-from account_ledger.domain.event_log import Accepted, Captured, ForcePosted, SettlementAccepted
-from account_ledger.domain.events import Fee, Instalment, Settlement
-from account_ledger.domain.ids import AuthorizationId, Day, IncomingId, InstalmentId
-from account_ledger.domain.money import Aed, Amount, Bhd
+from account_ledger.domain.model.config import CHALLENGE
+from account_ledger.domain.model.event_log import Accepted, Captured, ForcePosted, SettlementAccepted
+from account_ledger.domain.model.events import Fee, Instalment, Settlement
+from account_ledger.domain.model.ids import AuthorizationId, Day, IncomingId, InstalmentId
+from account_ledger.domain.model.money import Aed, Amount, Bhd
 from account_ledger.domain.replay import replay
 from support.brief_stream import brief_stream
 from support.states import settlements_of, state_of

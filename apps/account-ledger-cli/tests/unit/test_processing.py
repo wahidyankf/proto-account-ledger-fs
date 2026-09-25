@@ -6,8 +6,8 @@ import pytest
 
 from account_ledger.domain.authorizations import Settled
 from account_ledger.domain.balances import closing, closing_of, holds
-from account_ledger.domain.config import CHALLENGE, AnyAccount
-from account_ledger.domain.event_log import (
+from account_ledger.domain.model.config import CHALLENGE, AnyAccount
+from account_ledger.domain.model.event_log import (
     Accepted,
     AlreadyReversed,
     AlreadyUndone,
@@ -18,9 +18,9 @@ from account_ledger.domain.event_log import (
     ReversesAReversal,
     UnknownTarget,
 )
-from account_ledger.domain.events import IncomingEvent
-from account_ledger.domain.ids import Day, FeeId, IncomingId, InstalmentId, RefundId
-from account_ledger.domain.money import Amount
+from account_ledger.domain.model.events import IncomingEvent
+from account_ledger.domain.model.ids import Day, FeeId, IncomingId, InstalmentId, RefundId
+from account_ledger.domain.model.money import Amount
 from account_ledger.domain.replay import replay
 from support.brief_stream import brief_stream
 from support.states import entries_for, state_of

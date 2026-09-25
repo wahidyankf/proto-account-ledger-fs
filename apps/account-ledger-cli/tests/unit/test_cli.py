@@ -7,7 +7,7 @@ import pytest
 from account_ledger import cli
 from account_ledger.adapters.render import render
 from account_ledger.cli import run
-from account_ledger.domain.config import CHALLENGE
+from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.replay import replay
 from support.brief_stream import BRIEF_CSV, brief_stream
 

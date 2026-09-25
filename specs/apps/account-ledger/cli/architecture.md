@@ -58,8 +58,9 @@ The shell holds every effect and every raw value; the adapters translate between
 holds every business rule. The adapters and the domain are pure. Every dependency points inward, from the shell to the
 adapters and the domain, from the adapters to the domain's types, and, inside the domain, from the driver down to the
 types. Each layer is a place in the package: the shell is `cli.py` at its root, the adapters are `adapters/`, and the
-domain is `domain/`, whose own `ruff.toml` refuses any import of `account_ledger.adapters` or `account_ledger.cli`
-(TID251).
+domain is `domain/`, its values in `domain/model/`, under its own `ruff.toml` that refuses any import of
+`account_ledger.adapters` or `account_ledger.cli` (TID251). The values are everything below the model line: they decide
+nothing.
 
 ```text
   shell      +--------------------------------------------------------------------------------+
@@ -102,8 +103,10 @@ domain is `domain/`, whose own `ruff.toml` refuses any import of `account_ledger
                    | transition     |
                    +----------------+
                            |                  every component above reads the log;
-                           v                  only processing and end_of_day append
-                   +----------------+
+                           |                  only processing and end_of_day append
+  ---------------------------------------------------------------------------------------------------
+  model                    v
+  domain/model/    +----------------+
                    | event_log      |
                    | entries and    |
                    | rejections     |
@@ -213,14 +216,14 @@ To read the code for the first time, follow one day through it, in this order:
 2. `domain/replay.py`: the loop over days, which the dynamic view above draws.
 3. `domain/processing.py`, `process`: what one incoming event adds to the log, duplicates caught first.
 4. `domain/end_of_day.py`, `close_day`: fees, then interest, then capitalization.
-5. `domain/event_log.py`: every kind of entry those two add, and every reason an event is rejected.
+5. `domain/model/event_log.py`: every kind of entry those two add, and every reason an event is rejected.
 6. `domain/authorizations.py`, then `domain/balances.py`: how an authorization moves from state to state, and how each
    balance is worked out from the log.
 7. `domain/report.py`, then `adapters/render.py`: a day as data, then as the text OUTPUT_TARGET shows.
 
-`adapters/stream_csv.py` turns the file into events and holds no ledger rule. `domain/events.py`, `config.py`,
-`money.py`, and `ids.py` define the values the rest pass around; look them up when a name is unfamiliar rather than
-reading them first.
+`adapters/stream_csv.py` turns the file into events and holds no ledger rule. The rest of `domain/model/`, `events.py`,
+`config.py`, `money.py`, and `ids.py`, defines the values the rules pass around; look them up when a name is unfamiliar
+rather than reading them first.
 
 ## Constraints
 

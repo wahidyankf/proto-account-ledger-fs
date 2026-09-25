@@ -8,8 +8,8 @@ from typing import assert_never
 
 from account_ledger.domain.authorizations import AuthorizationRecord, records
 from account_ledger.domain.balances import accrued_days_of, available_of, closing_of
-from account_ledger.domain.config import AnyAccount, LedgerConfig
-from account_ledger.domain.event_log import (
+from account_ledger.domain.model.config import AnyAccount, LedgerConfig
+from account_ledger.domain.model.event_log import (
     Accepted,
     AlreadyReversed,
     AlreadyUndone,
@@ -24,7 +24,7 @@ from account_ledger.domain.event_log import (
     UnknownTarget,
     instalments_of,
 )
-from account_ledger.domain.events import (
+from account_ledger.domain.model.events import (
     Authorization,
     Capitalization,
     Credit,
@@ -38,8 +38,8 @@ from account_ledger.domain.events import (
     Reversal,
     Settlement,
 )
-from account_ledger.domain.ids import AccountId, Day, text
-from account_ledger.domain.money import Money
+from account_ledger.domain.model.ids import AccountId, Day, text
+from account_ledger.domain.model.money import Money
 
 
 @dataclass(frozen=True, slots=True)

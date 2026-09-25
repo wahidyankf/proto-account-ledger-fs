@@ -2,11 +2,11 @@
 
 from dataclasses import dataclass
 
-from account_ledger.domain.config import LedgerConfig
 from account_ledger.domain.end_of_day import close_day
-from account_ledger.domain.event_log import Log
-from account_ledger.domain.events import IncomingEvent
-from account_ledger.domain.ids import Day
+from account_ledger.domain.model.config import LedgerConfig
+from account_ledger.domain.model.event_log import Log
+from account_ledger.domain.model.events import IncomingEvent
+from account_ledger.domain.model.ids import Day
 from account_ledger.domain.processing import process
 from account_ledger.domain.report import DayReport, Reported, report, reported_after
 

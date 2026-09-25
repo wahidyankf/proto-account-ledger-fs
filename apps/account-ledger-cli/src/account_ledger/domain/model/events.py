@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from enum import Enum
 
-from account_ledger.domain.ids import (
+from account_ledger.domain.model.ids import (
     AccountId,
     AuthorizationId,
     CapitalizationId,
@@ -16,7 +16,7 @@ from account_ledger.domain.ids import (
     InterestId,
     RefundId,
 )
-from account_ledger.domain.money import Aed, Amount, Bhd, Direction
+from account_ledger.domain.model.money import Aed, Amount, Bhd, Direction
 
 type AnyAmount = Amount[Aed] | Amount[Bhd]
 

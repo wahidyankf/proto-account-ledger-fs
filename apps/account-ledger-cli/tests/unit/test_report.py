@@ -5,10 +5,10 @@ from typing import assert_never
 import pytest
 
 from account_ledger.domain.authorizations import Approved, AuthorizationState, Declined, Settled
-from account_ledger.domain.config import CHALLENGE
-from account_ledger.domain.events import IncomingEvent
-from account_ledger.domain.ids import AccountId, AuthorizationId, Day, text
-from account_ledger.domain.money import Amount
+from account_ledger.domain.model.config import CHALLENGE
+from account_ledger.domain.model.events import IncomingEvent
+from account_ledger.domain.model.ids import AccountId, AuthorizationId, Day, text
+from account_ledger.domain.model.money import Amount
 from account_ledger.domain.replay import replay
 from account_ledger.domain.report import Capitalized, DayReport, Fired, NothingFired, Restatement, Step
 from support.brief_stream import brief_stream

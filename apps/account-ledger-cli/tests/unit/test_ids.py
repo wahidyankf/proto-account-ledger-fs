@@ -2,7 +2,7 @@
 
 import pytest
 
-from account_ledger.domain.ids import (
+from account_ledger.domain.model.ids import (
     AccountId,
     AuthorizationId,
     CapitalizationId,

@@ -4,11 +4,11 @@ from dataclasses import replace
 
 from account_ledger.domain.authorizations import Settled
 from account_ledger.domain.balances import closing, holds
-from account_ledger.domain.config import CHALLENGE
-from account_ledger.domain.event_log import Accepted
-from account_ledger.domain.events import Fee
-from account_ledger.domain.ids import Day
-from account_ledger.domain.money import Amount
+from account_ledger.domain.model.config import CHALLENGE
+from account_ledger.domain.model.event_log import Accepted
+from account_ledger.domain.model.events import Fee
+from account_ledger.domain.model.ids import Day
+from account_ledger.domain.model.money import Amount
 from account_ledger.domain.replay import replay
 from account_ledger.domain.report import Capitalized
 from support.brief_stream import brief_stream

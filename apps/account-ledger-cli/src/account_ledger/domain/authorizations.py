@@ -3,7 +3,7 @@
 from dataclasses import dataclass
 from typing import assert_never
 
-from account_ledger.domain.event_log import (
+from account_ledger.domain.model.event_log import (
     Accepted,
     AuthorizationDecided,
     Captured,
@@ -13,8 +13,8 @@ from account_ledger.domain.event_log import (
     Rejected,
     SettlementAccepted,
 )
-from account_ledger.domain.events import AnyAmount, Authorization, Capture, Settlement
-from account_ledger.domain.money import Money, NotPositive, amount_of, below, rest_of, sum_of
+from account_ledger.domain.model.events import AnyAmount, Authorization, Capture, Settlement
+from account_ledger.domain.model.money import Money, NotPositive, amount_of, below, rest_of, sum_of
 
 
 @dataclass(frozen=True, slots=True)
