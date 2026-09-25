@@ -32,7 +32,7 @@ Every level is plain pytest, written test-first; there is no Gherkin corpus and 
 npx nx run account-ledger-cli:install           # uv sync --locked; every other target depends on it
 npx nx run account-ledger-cli:run               # prints the daily report for streams/challenge.csv
 npx nx run account-ledger-cli:typecheck         # pyright, strict
-npx nx run account-ledger-cli:lint              # ruff check + ruff format --check + pylint docstrings
+npx nx run account-ledger-cli:lint              # ruff check + ruff format --check + pylint docstrings and names
 npx nx run account-ledger-cli:test:unit         # unit suite, 80% line coverage gate
 npx nx run account-ledger-cli:test:integration  # integration suite
 npx nx run account-ledger-cli:test:e2e          # end-to-end suite

@@ -46,15 +46,22 @@ max-complexity = 10
 [tool.ruff.lint.pylint]
 max-nested-blocks = 3
 
-# ruff's D1 checks public names only; pylint runs just its three docstring checks, so private names are held to a
-# docstring too. Only magic methods, whose meaning is Python's own, are exempt.
+# ruff's D1 checks public names only; pylint's three docstring checks hold private names to a docstring too. Only
+# magic methods, whose meaning is Python's own, are exempt. invalid-name holds every name to its style, and every
+# function to a verb and its object; see Naming in the Python standards.
 [tool.pylint."messages control"]
 disable = ["all"]
-enable = ["missing-module-docstring", "missing-class-docstring", "missing-function-docstring"]
+enable = ["missing-module-docstring", "missing-class-docstring", "missing-function-docstring", "invalid-name"]
 
 [tool.pylint.basic]
 no-docstring-rgx = "^__.+__$"
 docstring-min-length = -1
+# A function starts with a verb from this list and names its object after it; a method may leave the object to its
+# class, as `Day.parse` does. A new verb joins the list in the change that first needs it.
+function-rgx = "^_?(accrue|add|advance|append|apply|assess|build|capitalize|check|close|compute|count|decide|derive|describe|fail|find|fire|format|get|has|interrupt|is|list|load|make|map|narrow|parse|process|read|record|remove|render|replay|round|run|save|select|sign|span|split|sum|take|test|try|update|validate|write)(_[a-z0-9]+)+$"
+method-rgx = "^(__[a-z0-9_]+__|_?(accrue|add|advance|append|apply|assess|build|capitalize|check|close|compute|count|decide|derive|describe|fail|find|fire|format|get|has|interrupt|is|list|load|make|map|narrow|parse|process|read|record|remove|render|replay|round|run|save|select|sign|span|split|sum|take|test|try|update|validate|write)(_[a-z0-9]+)*)$"
+# `main` is Python's entry-point name, as `__main__.py` calls it.
+good-names = ["main", "_"]
 
 [tool.pylint.reports]
 score = false

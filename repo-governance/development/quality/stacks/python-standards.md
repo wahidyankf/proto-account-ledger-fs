@@ -32,6 +32,10 @@ applies. It implements [Explicit Over Implicit](../../../principles/explicit-ove
 - **Suppressions:** `Any`, `cast()`, `# type: ignore`, and `# noqa` each take the narrowest scope and state their
   reason, as [Lint Strictness](../checks/lint-strictness.md) requires.
 
+## Naming
+
+Functions are named by a verb and its object, and variables by nouns, as [Naming](python-standards/001-naming.md) holds.
+
 ## Functional Core
 
 Domain and application decisions are pure functions returning typed values. Standard output, files, the clock, and
@@ -69,5 +73,9 @@ CPython reuses bytecode whose source kept its size and modification second.
 ## Enforcement
 
 The `lint`, `typecheck`, and `test:*` Nx targets enforce the gates in hooks. Review applies the domain shapes, the
-failure rules, and the mutation-proof step. Test levels and coverage follow
+failure rules, the variable names, and the mutation-proof step. Test levels and coverage follow
 [Test Boundaries and Gates](../testing/test-boundaries-and-gates.md).
+
+## Modules
+
+1. [Naming](python-standards/001-naming.md)
