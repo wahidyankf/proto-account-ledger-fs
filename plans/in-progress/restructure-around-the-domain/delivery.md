@@ -63,6 +63,13 @@ first, above all [the target layout](tech-docs/001-target-layout.md) and
   shape through `_build_generated_row`. The test support is builders in `streams.py` and readers in `entries.py`, and
   the openings are `ACC_001_OPENING` and `ACC_002_OPENING`. The gate passed: 161 passed and 1 xfailed, the corpus and
   literals equal. Last gate passed: Phase 6. Next item: Phase 7, the first. No budget partly spent.
+- **2026-09-25 21:03, Phase 7.** Phase 6 is d592e56, pushed as 4bb46c9..d592e56. The architecture names `__main__.py` in
+  the shell, so every source module is in L3, and its prose, dynamic view, and Constraints name the event source, each
+  account's own currency, and effects performed in the adapters; the app README maps `__main__.py` and the event source;
+  the root README says the layers in one sentence. Measured again, no timing moved by a fifth, so the trade-offs table
+  stands and its prose says the account's entries, not its history. The removed-name sweep over every tracked Markdown
+  file finds only a past WORKLOG entry; the assessment docs are unchanged since 83dfd58. The gate passed. Last gate
+  passed: Phase 7. Next item: Phase 8, the first. No budget partly spent.
 
 ## Execution Checkout
 
@@ -815,9 +822,13 @@ Reads every source and test file once, top to bottom, and fixes what the comb fi
 
 ### Phase 6 Gate
 
-- [ ] [AI] Run `sh local-tmp/restructure/gate.sh`. Proof: exit 0. Acceptance: AC-02, AC-03, AC-04.
-- [ ] [AI] Commit as `style(cli): comb every module after the restructure`, with the WORKLOG entry and the Execution
-      Record line, and push. Proof: the hash and range. Acceptance: AC-16.
+- [x] [AI] Run `sh local-tmp/restructure/gate.sh`. Proof: exit 0. Acceptance: AC-02, AC-03, AC-04. - Done 20:53:
+      `GATE PASSED`, exit 0: every step exit 0, the corpus equal, every baseline name kept with 5 added, 115 names'
+      literals equal, `cited 60 defined 120 missing 0`.
+- [x] [AI] Commit as `style(cli): comb every module after the restructure`, with the WORKLOG entry and the Execution
+      Record line, and push. Proof: the hash and range. Acceptance: AC-16. - Done 20:55: d592e56, with the WORKLOG
+      entry, the Phase 6 line, and the app README's `tests/support/` row naming the log readers; pushed as
+      4bb46c9..d592e56; every hook passed.
 
 Pause safety: the polish is on `origin/main`. Re-verify with `sh local-tmp/restructure/gate.sh`.
 
@@ -825,31 +836,63 @@ Pause safety: the polish is on `origin/main`. Re-verify with `sh local-tmp/restr
 
 Reads each document against the tree and carries every change the restructure made stale (AC-14).
 
-- [ ] [AI] Read `architecture.md` against the tree from top to bottom; Scope, L1, and L2 unchanged; add the Constraints
+- [x] [AI] Read `architecture.md` against the tree from top to bottom; Scope, L1, and L2 unchanged; add the Constraints
       bullet. Proof: every module, type, and function it names exists (`grep`), and every source module appears in L3.
-      Acceptance: AC-14.
-- [ ] [AI] Read `$APP/README.md` against the tree: layout, DDD paragraph, exit table, known weakness. Proof: every path
-      exists. Acceptance: AC-14.
-- [ ] [AI] Add the layers to the root `README.md` in one sentence under its opening paragraph, pointing at the
-      architecture. Proof: the sentence and a resolving link. Acceptance: AC-14.
-- [ ] [AI] Rewrite `local-tmp/restructure/scale.py` against the new API, measure 6, 30, 60, and 120 days and the
+      Acceptance: AC-14. - Done: Scope, L1, and L2 unchanged; the Constraints bullet on inheritance landed in Phase 5.
+      Carried now: `__main__.py` joins the shell in L3's prose, its box, and the table, so every source module appears;
+      the ban sentence names `account_ledger.cli` and `account_ledger.challenge` rather than "the shell's two modules";
+      the dynamic view's closing paragraph says each account keeps its effects in its currency and the event source
+      refuses an unknown account, not "the reader"; the effects Constraint says they are bound in the shell and
+      performed in the adapters, as L3 does. - Proof: a script over every backticked and diagram name finds each code
+      name in `src` (the misses are English words only), every path exists, and each of the 19 source modules but the
+      `__init__.py` files appears in L3.
+- [x] [AI] Read `$APP/README.md` against the tree: layout, DDD paragraph, exit table, known weakness. Proof: every path
+      exists. Acceptance: AC-14. - Done: the layout table gains `__main__.py`; the `tests/support/` row names the log
+      readers (carried in d592e56); the exit paragraph says the event source refuses an unconfigured account, not the
+      stream reader; the `lint` line names pylint's class-base check. The DDD paragraph, the exit table, and the known
+      weakness's `tests/unit/application/test_stream.py` match the tree. - Proof: every path in the README exists (a
+      loop over each backticked `src/`, `tests/`, and `streams/` path and the three project files printed nothing
+      missing).
+- [x] [AI] Add the layers to the root `README.md` in one sentence under its opening paragraph, pointing at the
+      architecture. Proof: the sentence and a resolving link. Acceptance: AC-14. - Done: under the opening paragraph:
+      "The program is layered around its domain: the shell binds every effect, the adapters read the CSV stream and
+      write the text report, the application runs the one use case through its ports, and the domain holds every rule,
+      as the architecture draws it." - Proof: the sentence; its link resolves (internal-link in the Phase 7 gate).
+- [x] [AI] Rewrite `local-tmp/restructure/scale.py` against the new API, measure 6, 30, 60, and 120 days and the
       1,000-event volume run on the result into `local-tmp/restructure/timings-result.txt`, and update
       `docs/explanation/architecture-trade-offs.md`'s table and figures if any moves by more than a fifth from the
       recorded ones; replace "history" with "entries" where it names the code. Proof: the measurements and the diff.
-      Acceptance: AC-14.
-- [ ] [AI] Extend `local-tmp/restructure/doc_sweep.py` with the names the restructure removed, and run the removed-name
+      Acceptance: AC-14. - Done: `scale.py` parses through `CsvFileSource.parse` and processes through
+      `IncomingStream.process`, with `CHALLENGE` from `challenge`. On the result: 6 days 0.01 s, 30 days 0.47 s, 60 days
+      3.56 s, 120 days 27.21 s, and the 1,000-event volume 0.71 s, in `local-tmp/restructure/timings-result.txt`.
+      Against the recorded 0.01, 0.46, 3.50, 26.89, and 0.71 none moves by a fifth, so the table stands; the prose now
+      says the figures were measured again after the restructure. Its five uses of "history" for the code now say the
+      account's entries, and a figure is worked out by a method of the Account aggregate, not a function. - Proof: the
+      measurements above; `git diff docs/explanation/architecture-trade-offs.md` changes prose only, the table
+      untouched.
+- [x] [AI] Extend `local-tmp/restructure/doc_sweep.py` with the names the restructure removed, and run the removed-name
       check over every tracked Markdown file and the Phase 0 checks over the Phase 0 scope. Command:
       `python3 local-tmp/restructure/doc_sweep.py`. Proof: no hit outside `plans/done/` and this plan. Acceptance:
-      AC-14.
-- [ ] [AI] Check the assessment docs:
+      AC-14. - Done: 29 removed names (the old modules `history.py`, `aggregate.py`, `stream_csv`, `render.py`,
+      `processing.py`, `end_of_day.py`, `domain/report.py`, `states.py`; the old functions and types, `process_stream`,
+      `parse_stream`, `render_reports`, `build_report`, `update_reported`, `find_history`, `AccountHistory`,
+      `AccountAggregate`, `format_id`, `sum_money`, `is_aed_history`, every `_of(`, and `` `Log` ``; and the superseded
+      rule's wording) checked over every tracked Markdown file, besides the Phase 0 checks over their 18 files. - Proof:
+      exit 0: no removed name, missing identifier, missing path, or bad link. One hit outside the plans is WORKLOG's
+      16:05 entry, "shared bases", which the script reports as history: a WORKLOG entry is never reworded.
+- [x] [AI] Check the assessment docs:
       `/usr/bin/git diff 83dfd58 -- AMBIGUITIES.md NUMBERS.md REJECTED.md MOVEMENT.md OUTPUT_TARGET.md challenge-raw.md`
       is empty; `WORKLOG.md` only gained entries, newest first. Proof: the empty diff and the WORKLOG diff showing only
-      additions. Acceptance: AC-05.
+      additions. Acceptance: AC-05. - Done: the diff of the six files against 83dfd58 is empty (0 lines); `WORKLOG.md`'s
+      diff against 83dfd58 removes no line and adds only entries, newest first. - Proof: `wc -l` 0 on the six-file diff;
+      0 removed lines in the WORKLOG diff.
 
 ### Phase 7 Gate
 
-- [ ] [AI] Run `sh local-tmp/restructure/gate.sh`, `./rhino md internal-link validate`,
-      `./rhino md heading-hierarchy validate`, and `./rhino md naming validate`. Proof: each 0. Acceptance: AC-14.
+- [x] [AI] Run `sh local-tmp/restructure/gate.sh`, `./rhino md internal-link validate`,
+      `./rhino md heading-hierarchy validate`, and `./rhino md naming validate`. Proof: each 0. Acceptance: AC-14. -
+      Done 21:03: `GATE PASSED`, exit 0; internal-link exit 0 (1491 links, no findings); heading-hierarchy exit 0;
+      naming exit 0.
 - [ ] [AI] Commit as `docs(specs): describe the restructured ledger as built` (and `docs: …` for the READMEs and the
       trade-offs document), with the WORKLOG entry and the Execution Record line, and push. Proof: the hashes and range.
       Acceptance: AC-16.

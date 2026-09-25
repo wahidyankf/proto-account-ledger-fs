@@ -3,6 +3,10 @@
 An in-memory account ledger core written in Python. There is no web layer, persistence, UI, or database: a command-line
 program processes an event stream and prints one report a day, and a test suite at three levels proves every figure.
 
+The program is layered around its domain: the shell binds every effect, the adapters read the CSV stream and write the
+text report, the application runs the one use case through its ports, and the domain holds every rule, as the
+[architecture](specs/apps/account-ledger/cli/architecture.md) draws it.
+
 The repository is an Nx monorepo. Rhino and husky gate every commit and push, and governance is adopted from
 `ose-rules`.
 

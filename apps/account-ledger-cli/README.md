@@ -14,6 +14,7 @@ Specification: [specs/apps/account-ledger/cli/](../../specs/apps/account-ledger/
 | --------------------------------- | ------------------------------------------------------------------------------- |
 | `src/account_ledger/cli.py`       | the shell: `run_cli` takes every effect and the use case; `main` binds them     |
 | `src/account_ledger/challenge.py` | `CHALLENGE`, the brief's configuration, which `main` passes to the use case     |
+| `src/account_ledger/__main__.py`  | what `python -m account_ledger` runs: `main`, exiting with its status           |
 | `src/account_ledger/adapters/`    | the adapters: `csv_file` reads the stream, `text_report` writes the report      |
 | `src/account_ledger/application/` | the use case, `LedgerRun`, its ports, the stream processing, and the report     |
 | `src/account_ledger/domain/`      | the domain, in DDD terms: `model/`, `account/`, and `ledger/`                   |
@@ -43,7 +44,7 @@ Every level is plain pytest, written test-first; there is no Gherkin corpus and 
 npx nx run account-ledger-cli:install           # uv sync --locked; every other target depends on it
 npx nx run account-ledger-cli:run               # prints the daily report for streams/challenge.csv
 npx nx run account-ledger-cli:typecheck         # pyright, strict
-npx nx run account-ledger-cli:lint              # ruff check and format, pylint docstrings and names, vulture dead code
+npx nx run account-ledger-cli:lint              # ruff check, format; pylint docstrings, names, bases; vulture dead code
 npx nx run account-ledger-cli:test:unit         # unit suite, 80% line coverage gate
 npx nx run account-ledger-cli:test:integration  # integration suite
 npx nx run account-ledger-cli:test:e2e          # end-to-end suite
@@ -102,7 +103,7 @@ D13 records.
 `REASON` is `no such file` for a missing file, `not UTF-8 text` for one that does not decode, and the operating system's
 message otherwise. A currency mismatch prints `error: internal: FOUND met where EXPECTED was required`, and an event on
 an account the ledger does not hold prints `error: internal: ACC-NNN is not a configured account`; no input reaches the
-second, because the stream reader refuses an unconfigured account first. Both streams are written as UTF-8 whatever the
+second, because the event source refuses an unconfigured account first. Both streams are written as UTF-8 whatever the
 locale, because the report prints `−` (U+2212) for a negative amount.
 
 ## Known Weakness

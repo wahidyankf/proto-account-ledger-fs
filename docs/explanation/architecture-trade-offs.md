@@ -8,16 +8,17 @@ test, in [AMBIGUITIES](../../AMBIGUITIES.md).
 ## Append-only at scale
 
 The ledger keeps one append-only log and stores no balance. Every figure, a closing, an available balance, accrued
-interest, is a pure function that scans its account's history, the account's own entries taken from the one log, when it
-is asked. That is what makes a backdated event cheap to get right: nothing stored has to be found and corrected, because
-nothing is stored.
+interest, is worked out, when it is asked, by a method of the Account aggregate that scans the account's own entries,
+taken from the one log. That is what makes a backdated event cheap to get right: nothing stored has to be found and
+corrected, because nothing is stored.
 
 It is also what breaks first. A day's close re-evaluates fees and interest for every day from the first day of the
-window through today, and each of those days asks for its closing, which scans every entry of the account's history. One
+window through today, and each of those days asks for its closing, which scans every one of the account's entries. One
 close therefore costs days × entries, and processing D days costs about D³ once the log grows with the days. The log is
-also a tuple, so each append copies it. Measured on 2026-09-25, on a laptop, after the rules moved onto one account's
-history, with a scratch stream of ten alternating credits and debits a day on one account, each value-dated on its
-booking day, and interest capitalized every thirtieth day:
+also a tuple, so each append copies it. Measured on 2026-09-25, on a laptop, once the rules had moved onto one account's
+entries, with a scratch stream of ten alternating credits and debits a day on one account, each value-dated on its
+booking day, and interest capitalized every thirtieth day; measured again after the code was restructured into layers,
+no figure moved by more than a fifth:
 
 | Window   | Events | Processing time |
 | -------- | ------ | --------------- |
@@ -31,15 +32,15 @@ events inside the same six days, each repeated under new IDs, is processed in 0.
 
 The state grows without bound in three places:
 
-- **The log.** It holds every entry since the first day, and every query reads the whole of its account's history.
-- **The window.** Fees and interest are re-judged for every day since the first, so each close does more work than the
-  last, forever.
-- **The snapshots.** Processing keeps the log as it stood at every day's close, so memory grows with days × entries.
+- **The log.** It holds every entry since the first day, and every query reads all of its account's entries. - **The
+  window.** Fees and interest are re-judged for every day since the first, so each close does more work than the last,
+  forever. - **The snapshots.** Processing keeps the log as it stood at every day's close, so memory grows with days ×
+  entries.
 
 The cheapest structural change that defers this is a projection: a running total of each account's movements by value
 day, updated on every append, with each closing read as a prefix sum over it. It belongs to the Account aggregate, kept
-beside the account's history, and the rules that scan that history for a balance read it from the projection instead. It
-changes no rule's logic and no output; a close still re-judges every day, but each judgement becomes a lookup rather
+beside the account's entries, and the methods that scan those entries for a balance read it from the projection instead.
+It changes no rule's logic and no output; a close still re-judges every day, but each judgement becomes a lookup rather
 than a scan, which takes processing from about D³ to about D². The log stays the source of truth, and the projection can
 be rebuilt from it at any time. What it does not fix is the ever-growing window. That needs a business decision, not a
 data structure: a period close after which a day is sealed, and a backdated event older than the seal posts its effect
