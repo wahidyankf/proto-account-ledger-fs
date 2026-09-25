@@ -23,6 +23,7 @@ from account_ledger.domain.model.events import (
     Whole,
 )
 from account_ledger.domain.model.ids import (
+    MAX_INSTALMENTS,
     AccountId,
     AuthorizationId,
     Day,
@@ -123,7 +124,11 @@ def _parse_posting(text: str) -> Result[Posting, RowFault]:
     """A whole credit for a blank cell, or the instalment count it holds."""
     if not text:
         return Ok(Whole())
-    return InstalmentCount.parse(text).map(Instalments).map_err(lambda _: RowFault("instalments must be at least 2"))
+    return (
+        InstalmentCount.parse(text)
+        .map(Instalments)
+        .map_err(lambda _: RowFault(f"instalments must be a whole number from 2 to {MAX_INSTALMENTS}"))
+    )
 
 
 def _parse_capture(text: str) -> Result[Capture, RowFault]:

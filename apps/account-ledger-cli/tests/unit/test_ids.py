@@ -72,13 +72,17 @@ def test_event_id_refuses_a_malformed_value() -> None:
 
 
 def test_instalment_count_refuses_a_malformed_value() -> None:
-    """An instalment count is a whole number of 2 or more; any other text is a fault."""
+    """An instalment count is a whole number from 2 to 360 (NUMBERS.md); any other text is a fault."""
     assert InstalmentCount.parse("1") == Err(IdFault("instalment count", "1"))
     assert InstalmentCount.parse("three") == Err(IdFault("instalment count", "three"))
     assert InstalmentCount.parse("3") == Ok(InstalmentCount(3))
     assert InstalmentCount.make(1) == Err(IdFault("instalment count", "1"))
-    with pytest.raises(ValueError, match="an instalment count is at least 2"):
+    assert InstalmentCount.parse("360") == Ok(InstalmentCount(360))
+    assert InstalmentCount.parse("361") == Err(IdFault("instalment count", "361"))
+    with pytest.raises(ValueError, match="an instalment count is from 2 to 360"):
         InstalmentCount(1)
+    with pytest.raises(ValueError, match="an instalment count is from 2 to 360"):
+        InstalmentCount(361)
 
 
 def test_a_marker_prints_its_kind_account_and_days() -> None:

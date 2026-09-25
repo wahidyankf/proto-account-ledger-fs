@@ -32,6 +32,7 @@ Both are listed, as AMB-032 resolves.
 | Rate literal                | `Decimal("0.0004")`                  | in place           |
 | Decimal working precision   | 28 significant digits                | in place           |
 | Amount limit                | below 10¹² in either direction       | in place           |
+| Instalment limit            | 2 to 360 instalments                 | in place           |
 | Rounding mode               | half-even                            | resolved, AMB-006  |
 | Instalment split            | 3.333, 3.333, 3.334                  | resolved, AMB-020  |
 | Hold released on settlement | the full hold, on a final settlement | resolved, AMB-013  |
@@ -63,6 +64,13 @@ is a fault in the input (AMB-014). The limit keeps every sum inside the working 
 digits each could sum to 29, which no balance can hold, and the replay would fail; at this limit a sum could reach 28
 digits only after some 10¹³ events, far beyond any replay held in memory. It sits at the 10¹² scale the working
 precision is sized for; halving it to 5 × 10¹¹ would refuse more amounts and make no sum safer.
+
+### Instalment limit
+
+A credit is posted in 2 to 360 instalments; a count outside that range is a fault in the input (AMB-014). Every
+instalment is fired and kept in memory, so without a ceiling one credit at the amount limit could ask for some 10¹⁴
+parts and exhaust memory before the replay ends. 360 is a monthly plan over thirty years, the longest schedule in common
+use; halving it to 180 would refuse a thirty-year plan and guard against nothing the ceiling does not already stop.
 
 ### Rounding mode
 

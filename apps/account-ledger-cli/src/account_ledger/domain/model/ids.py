@@ -10,26 +10,29 @@ from account_ledger.domain.model.result import Err, Ok, Result
 _ACCOUNT = re.compile(r"ACC-[0-9]{3}")
 _HOLD = re.compile(r"Auth-[A-Za-z0-9]+")
 _INCOMING = re.compile(r"E[0-9]+")
+MAX_INSTALMENTS = 360  # a monthly plan over thirty years; a split never grows past it (NUMBERS.md)
 
 
 @dataclass(frozen=True, slots=True)
 class InstalmentCount:
-    """How many instalments a credit is posted in."""
+    """How many instalments a credit is posted in, from 2 to ``MAX_INSTALMENTS``."""
 
     number: int
 
     def __post_init__(self) -> None:
-        if self.number < 2:
-            raise ValueError(f"an instalment count is at least 2, not {self.number}")
+        if not 2 <= self.number <= MAX_INSTALMENTS:
+            raise ValueError(f"an instalment count is from 2 to {MAX_INSTALMENTS}, not {self.number}")
 
     @staticmethod
     def make(number: int) -> Result[InstalmentCount, IdFault]:
-        """The count, or a fault for one below 2."""
-        return Ok(InstalmentCount(number)) if number >= 2 else Err(IdFault("instalment count", str(number)))
+        """The count, or a fault for one below 2 or above ``MAX_INSTALMENTS``."""
+        if 2 <= number <= MAX_INSTALMENTS:
+            return Ok(InstalmentCount(number))
+        return Err(IdFault("instalment count", str(number)))
 
     @staticmethod
     def parse(text: str) -> Result[InstalmentCount, IdFault]:
-        """The count the text holds, or a fault for one below 2 or not a whole number."""
+        """The count the text holds, or a fault for one outside 2 to ``MAX_INSTALMENTS`` or not a whole number."""
         if re.fullmatch(r"[0-9]+", text):
             return InstalmentCount.make(int(text))
         return Err(IdFault("instalment count", text))

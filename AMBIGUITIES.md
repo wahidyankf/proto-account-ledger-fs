@@ -458,9 +458,9 @@ rejected, or duplicate (AMB-034), and the aggregations count only the events tha
 the log as declined and moves no balance and holds nothing. A row that cannot be an event at all, such as one naming an
 account that is not configured, an amount that is not positive, has more places than its currency (AMB-006), or is not
 below the limit in [NUMBERS](NUMBERS.md), a day outside the replay, or more instalments than its amount has minor units
-(AMB-020), is a fault in the input, not a refusal: it never reaches the log, and the replay stops with an error naming
-its line. _Tests:_ `test_c5_auth_b_is_declined`, `test_amb_014_a_rejected_event_is_that_days_error`, and
-`test_amb_014_a_rejected_event_prints_its_refusal`.
+(AMB-020) or than the limit in NUMBERS, is a fault in the input, not a refusal: it never reaches the log, and the replay
+stops with an error naming its line. _Tests:_ `test_c5_auth_b_is_declined`,
+`test_amb_014_a_rejected_event_is_that_days_error`, and `test_amb_014_a_rejected_event_prints_its_refusal`.
 
 **Rationale.** Discarding a refused event deletes an event record in all but name, which "No event record is ever
 mutated or deleted" forbids. With the outcome in the log, a report line such as "Auth-B declined" points at the event

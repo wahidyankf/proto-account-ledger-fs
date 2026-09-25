@@ -192,10 +192,13 @@ def test_a_reversal_reference_must_be_an_event_id() -> None:
     ) == Ok((Reversal(IncomingId("E1"), Day(1), ACC_001, Day(1), FeeId(ACC_001, Day(2), Day(5))),))
 
 
-def test_an_instalment_count_below_2_is_refused() -> None:
-    """An instalment count below 2, or not a whole number, is refused."""
-    assert find_fault(instalments="1") == StreamError(2, "line 2: instalments must be at least 2")
-    assert find_fault(instalments="two") == StreamError(2, "line 2: instalments must be at least 2")
+def test_an_instalment_count_outside_2_to_360_is_refused() -> None:
+    """An instalment count below 2 or above 360 (NUMBERS.md), or not a whole number, is refused."""
+    must_be_from_2_to_360 = StreamError(2, "line 2: instalments must be a whole number from 2 to 360")
+    assert find_fault(instalments="1") == must_be_from_2_to_360
+    assert find_fault(instalments="two") == must_be_from_2_to_360
+    assert find_fault(instalments="361") == must_be_from_2_to_360
+    assert find_fault(instalments="99999999999999999999") == must_be_from_2_to_360
 
 
 def test_more_instalments_than_minor_units_are_refused() -> None:

@@ -63,11 +63,11 @@ makes every `mark.xfail` strict, and every test target fails if `strict=False` a
 ## The Stream File
 
 A UTF-8 CSV with the header `event,booked,type,account,amount,value_date,reference,instalments,final` and one event per
-row; `final` is `yes`, `no`, or blank for `yes`, on a settlement only. Amounts are read as decimals in the account's
-currency and never pass through a float; one not below 10¹² in either direction is refused, as
-[NUMBERS](../../NUMBERS.md) records. The first fault stops the run with its line number, the header being line 1; a
-well-formed event the ledger refuses, such as a second reversal of the same event, is not a fault, and prints on that
-day's Errors row instead.
+row; `final` is `yes`, `no`, or blank for `yes`, on a settlement only, and `instalments` is blank or 2 to 360. Amounts
+are read as decimals in the account's currency and never pass through a float; one not below 10¹² in either direction is
+refused, as [NUMBERS](../../NUMBERS.md) records. The first fault stops the run with its line number, the header being
+line 1; a well-formed event the ledger refuses, such as a second reversal of the same event, is not a fault, and prints
+on that day's Errors row instead.
 
 ## Exit Statuses
 
