@@ -70,6 +70,14 @@ first, above all [the target layout](tech-docs/001-target-layout.md) and
   stands and its prose says the account's entries, not its history. The removed-name sweep over every tracked Markdown
   file finds only a past WORKLOG entry; the assessment docs are unchanged since 83dfd58. The gate passed. Last gate
   passed: Phase 7. Next item: Phase 8, the first. No budget partly spent.
+- **2026-09-25 21:14, Phase 8.** Phase 7 is 466eb19 and 9827e54, pushed as d592e56..9827e54. Every criterion holds on
+  the result: the corpus and the golden fence equal Phase 0's, every baseline test name keeps its count and literals
+  with five added, 60 cited names resolve, pyright is clean with no `assert`, `Any`, `cast`, or suppression, the six
+  public functions are AC-08's, every class is frozen and slotted or an allowed exception, and the tree equals 001's.
+  Each of the six mutations fails tests, and no timing moved by a fifth. Coverage is 94.95%, against 95.12%: the new
+  lines left uncovered pass on internal faults only a bug brings. The evidence is 26f2e12, pushed before this line and
+  its WORKLOG entry, which a failed script had left out; they follow in the next commit. Last gate passed: Phase 8. Next
+  item: Archival, the first. No budget partly spent.
 
 ## Execution Checkout
 
@@ -964,8 +972,10 @@ Proves every acceptance criterion against the result and files the evidence.
 
 - [x] [AI] Run `sh local-tmp/restructure/gate.sh`. Proof: exit 0. Acceptance: AC-01 to AC-16. - Done 21:13:
       `GATE PASSED`, exit 0.
-- [ ] [AI] Commit the evidence as `docs(plan): record the restructure's verification`, with the WORKLOG entry and the
-      Execution Record line, and push. Proof: the hash and range. Acceptance: AC-16.
+- [x] [AI] Commit the evidence as `docs(plan): record the restructure's verification`, with the WORKLOG entry and the
+      Execution Record line, and push. Proof: the hash and range. Acceptance: AC-16. - Done 21:15: 26f2e12 (the evidence
+      and the checklist), pushed as 9827e54..26f2e12; the Phase 8 line and the WORKLOG entry, which a failed script left
+      out of it, follow in `docs(plan): add the Phase 8 record line`, as `learnings.md` records.
 
 Pause safety: every criterion is proven on `origin/main`. Re-verify with `sh local-tmp/restructure/gate.sh`.
 

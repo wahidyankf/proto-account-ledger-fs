@@ -20,6 +20,11 @@ Each entry records when, what was found, why it matters, and, once routed, its o
   for `TID251`, but this ruff prints a rule by its name, `banned-api`, not its code. Rerun matching the name, all seven
   failed as they should. Why it matters: a mutation check that greps for a failure proves nothing until one deliberate
   failure has been seen to match; each such grep should be tried once against a failure first.
+- **2026-09-25 21:13, Phase 8.** The Phase 8 record line and its WORKLOG entry were left out of 26f2e12: the script that
+  wrote them failed an assertion on a stale anchor, which Prettier had reflowed, but the commit and the push after it
+  ran on their own lines of the same command, so nothing stopped them. The two lines followed in the next commit. Why it
+  matters: a chain of dependent steps should stop at the first failure, with `set -e` or `&&` through the commit, and an
+  anchor into Prettier-formatted text should be read from the file just before it is used.
 
 [capture]: ../../../repo-governance/conventions/structure/plans/008-knowledge-capture-and-archival.md
 [triage]: ../../../repo-governance/conventions/structure/plans/017-learning-triage.md
