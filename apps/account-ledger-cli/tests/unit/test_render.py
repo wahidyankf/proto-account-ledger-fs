@@ -172,7 +172,7 @@ def test_authorization_states_print_as_output_target_shows() -> None:
 def test_capitalization_names_the_days_it_accrued() -> None:
     """tech-docs 003: a capitalization names the days whose interest events do not net to zero: `Days 1 to 6` for three
     or more in a row, `Days 5 and 6` for two, `Day 6` for one, and `Days 1, 2, and 4` otherwise."""
-    brief = render(replay(brief_stream(), CHALLENGE).reports).split("\n")
+    brief = render((replay(brief_stream(), CHALLENGE).report(Day(6)),)).split("\n")
     gaps = (
         credit("E1", 1, "1000.00"),
         debit("E2", 3, "1000.00"),
