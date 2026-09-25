@@ -6,11 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from account_ledger.adapters.render import render
+from account_ledger.adapters.render import render_reports
 from account_ledger.cli import main
 from account_ledger.domain.model.config import CHALLENGE
-from account_ledger.domain.replay import replay
-from support.brief_stream import brief_stream
+from account_ledger.domain.replay import replay_stream
+from support.brief_stream import build_brief_stream
 
 APP = Path(__file__).resolve().parents[2]
 
@@ -24,12 +24,16 @@ def test_main_reads_a_real_file_and_reports_a_missing_one(
     monkeypatch.setattr(sys, "stdout", io.TextIOWrapper(io.FileIO(1, "w", closefd=False), encoding="ascii"))
     monkeypatch.setattr(sys, "argv", ["account-ledger-cli", "streams/challenge.csv"])
 
-    read = main()
+    read_exit_code = main()
     sys.stdout.flush()
-    printed = capfd.readouterr()
+    captured_output = capfd.readouterr()
 
     monkeypatch.setattr(sys, "argv", ["account-ledger-cli", "streams/missing.csv"])
-    missing = main()
+    missing_exit_code = main()
 
-    assert (printed.out, printed.err, read) == (render(replay(brief_stream(), CHALLENGE).reports), "", 0)
-    assert (capfd.readouterr().err, missing) == ("error: cannot read streams/missing.csv: no such file\n", 2)
+    assert (captured_output.out, captured_output.err, read_exit_code) == (
+        render_reports(replay_stream(build_brief_stream(), CHALLENGE).reports),
+        "",
+        0,
+    )
+    assert (capfd.readouterr().err, missing_exit_code) == ("error: cannot read streams/missing.csv: no such file\n", 2)

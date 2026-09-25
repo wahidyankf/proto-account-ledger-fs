@@ -7,8 +7,8 @@ from account_ledger.domain.model.config import LedgerConfig
 from account_ledger.domain.model.event_log import Log
 from account_ledger.domain.model.events import IncomingEvent
 from account_ledger.domain.model.ids import Day
-from account_ledger.domain.processing import process
-from account_ledger.domain.report import DayReport, Reported, report, reported_after
+from account_ledger.domain.processing import process_event
+from account_ledger.domain.report import DayReport, ReportedClosings, build_report, update_reported
 
 
 @dataclass(frozen=True, slots=True)
@@ -18,20 +18,20 @@ class Replay:
     reports: tuple[DayReport, ...]
     logs: tuple[Log, ...]
 
-    def report(self, day: Day) -> DayReport:
+    def find_report(self, day: Day) -> DayReport:
         """The report for the day."""
-        return self.reports[self._index(day)]
+        return self.reports[self._find_index(day)]
 
-    def log_at(self, day: Day) -> Log:
+    def find_log(self, day: Day) -> Log:
         """The log as it stood at the day's close."""
-        return self.logs[self._index(day)]
+        return self.logs[self._find_index(day)]
 
-    def _index(self, day: Day) -> int:
+    def _find_index(self, day: Day) -> int:
         """Where the day sits in the reports and the logs alike."""
-        return [each.day for each in self.reports].index(day)
+        return [report.day for report in self.reports].index(day)
 
 
-def replay(stream: tuple[IncomingEvent, ...], config: LedgerConfig) -> Replay:
+def replay_stream(stream: tuple[IncomingEvent, ...], config: LedgerConfig) -> Replay:
     """Replay the stream in listed order through the configured window (AMB-001, AMB-015).
 
     Each event is processed on the day that is open. An event booked on a later day is the sign to close the open day
@@ -40,26 +40,26 @@ def replay(stream: tuple[IncomingEvent, ...], config: LedgerConfig) -> Replay:
     left in the window still closes. No day closes after the window, so an event booked after it reaches no day's log or
     report."""
     log: Log = ()
-    reports: list[DayReport] = [report(log, Day(0), config, {})]
+    reports: list[DayReport] = [build_report(log, Day(0), config, {})]
     logs: list[Log] = [log]
-    reported: Reported = {}
+    reported_closings: ReportedClosings = {}
 
-    def close(day: Day) -> None:
+    def record_close(day: Day) -> None:
         """The day's close: its end of day runs, then its report and its log are kept."""
-        nonlocal log, reported
+        nonlocal log, reported_closings
         log = close_day(log, day, config)
-        day_report = report(log, day, config, reported)
-        reported = reported_after(reported, day_report)
+        day_report = build_report(log, day, config, reported_closings)
+        reported_closings = update_reported(reported_closings, day_report)
         reports.append(day_report)
         logs.append(log)
 
     day = config.first_day
     for event in stream:
         while event.booked > day and day <= config.last_day:
-            close(day)
-            day = day.next()
-        log = process(log, event, day, config)
+            record_close(day)
+            day = day.advance()
+        log = process_event(log, event, day, config)
     while day <= config.last_day:
-        close(day)
-        day = day.next()
+        record_close(day)
+        day = day.advance()
     return Replay(tuple(reports), tuple(logs))

@@ -30,7 +30,7 @@ class TooManyPlaces:
 type MoneyFault = NotADecimal | TooManyPlaces
 
 
-def _read(text: str, places: int, currency: str) -> Decimal | MoneyFault:
+def _read_decimal(text: str, places: int, currency: str) -> Decimal | MoneyFault:
     """The text as a decimal at the currency's places, or a fault for a non-number or too many places."""
     try:
         value = Decimal(text)
@@ -44,7 +44,7 @@ def _read(text: str, places: int, currency: str) -> Decimal | MoneyFault:
     return value.quantize(Decimal(1).scaleb(-places))
 
 
-def _check(value: Decimal, places: int, currency: str) -> None:
+def _check_places(value: Decimal, places: int, currency: str) -> None:
     """A guard that raises unless the value is finite at exactly the currency's places; only a bug reaches it."""
     if not value.is_finite() or value.as_tuple().exponent != -places:
         raise ValueError(f"{currency} holds exactly {places} places, not {value}")
@@ -57,16 +57,16 @@ class Aed:
     value: Decimal
 
     def __post_init__(self) -> None:
-        _check(self.value, 2, "AED")
+        _check_places(self.value, 2, "AED")
 
     @staticmethod
     def parse(text: str) -> Aed | MoneyFault:
         """The AED amount the text holds, or a fault saying why it is not one."""
-        read = _read(text, 2, "AED")
-        return Aed(read) if isinstance(read, Decimal) else read
+        parsed_value = _read_decimal(text, 2, "AED")
+        return Aed(parsed_value) if isinstance(parsed_value, Decimal) else parsed_value
 
     @staticmethod
-    def zero() -> Aed:
+    def make_zero() -> Aed:
         """AED 0.00."""
         return Aed(Decimal("0.00"))
 
@@ -91,16 +91,16 @@ class Bhd:
     value: Decimal
 
     def __post_init__(self) -> None:
-        _check(self.value, 3, "BHD")
+        _check_places(self.value, 3, "BHD")
 
     @staticmethod
     def parse(text: str) -> Bhd | MoneyFault:
         """The BHD amount the text holds, or a fault saying why it is not one."""
-        read = _read(text, 3, "BHD")
-        return Bhd(read) if isinstance(read, Decimal) else read
+        parsed_value = _read_decimal(text, 3, "BHD")
+        return Bhd(parsed_value) if isinstance(parsed_value, Decimal) else parsed_value
 
     @staticmethod
-    def zero() -> Bhd:
+    def make_zero() -> Bhd:
         """BHD 0.000."""
         return Bhd(Decimal("0.000"))
 
@@ -139,7 +139,7 @@ class Amount[M: (Aed, Bhd)]:
             raise ValueError(f"an amount is above zero, not {self.money.value}")
 
     @staticmethod
-    def of[N: (Aed, Bhd)](money: N) -> Amount[N] | NotPositive:
+    def make[N: (Aed, Bhd)](money: N) -> Amount[N] | NotPositive:
         """The money as an amount, or a fault when it is zero or below."""
         return Amount(money) if money.value > 0 else NotPositive(str(money.value))
 
@@ -155,11 +155,11 @@ class Direction(Enum):
 class CurrencyMismatch:
     """A value of one currency met where another was required."""
 
-    expected: str
-    found: str
+    expected_currency: str
+    found_currency: str
 
 
-def currency(money: Money) -> str:
+def get_currency(money: Money) -> str:
     """The currency code of a value."""
     match money:
         case Aed():
@@ -168,25 +168,27 @@ def currency(money: Money) -> str:
             return "BHD"
 
 
-def same_as[M: (Aed, Bhd)](like: M, money: Money) -> M | CurrencyMismatch:
+def try_narrow_currency[M: (Aed, Bhd)](sample: M, money: Money) -> M | CurrencyMismatch:
     """Narrow a value known only as ``Money`` to the currency of ``like``."""
-    if isinstance(money, type(like)):
+    if isinstance(money, type(sample)):
         return money
-    return CurrencyMismatch(expected=currency(like), found=currency(money))
+    return CurrencyMismatch(expected_currency=get_currency(sample), found_currency=get_currency(money))
 
 
 DAILY_RATE = Decimal("0.0004")
 
 
-def same[M: (Aed, Bhd)](like: M, money: Money) -> M:
+def narrow_currency[M: (Aed, Bhd)](sample: M, money: Money) -> M:
     """``like``'s currency's own value of ``money``; a mismatch is a bug the reader prevents."""
-    same = same_as(like, money)
-    if isinstance(same, CurrencyMismatch):
-        raise ValueError(f"an {same.found} effect on an {same.expected} account")  # the reader makes this unreachable
-    return same
+    narrowed_money = try_narrow_currency(sample, money)
+    if isinstance(narrowed_money, CurrencyMismatch):
+        raise ValueError(
+            f"an {narrowed_money.found_currency} effect on an {narrowed_money.expected_currency} account"
+        )  # the reader makes this unreachable
+    return narrowed_money
 
 
-def _minor_unit(money: Money) -> Decimal:
+def _get_minor_unit(money: Money) -> Decimal:
     """The currency's smallest unit: 0.01 for AED, 0.001 for BHD."""
     match money:
         case Aed():
@@ -195,14 +197,14 @@ def _minor_unit(money: Money) -> Decimal:
             return Decimal("0.001")
 
 
-def _round[M: (Aed, Bhd)](like: M, value: Decimal) -> M:
+def _round_money[M: (Aed, Bhd)](sample: M, value: Decimal) -> M:
     """A computed value, rounded half-even to the places of ``like``'s currency (AMB-006)."""
-    return type(like)(value.quantize(_minor_unit(like), rounding=ROUND_HALF_EVEN))
+    return type(sample)(value.quantize(_get_minor_unit(sample), rounding=ROUND_HALF_EVEN))
 
 
-def daily_interest[M: (Aed, Bhd)](balance: M) -> M:
+def compute_daily_interest[M: (Aed, Bhd)](balance: M) -> M:
     """One day's interest on a closing balance: zero unless the balance is above zero (AMB-005)."""
-    return _round(balance, balance.value * DAILY_RATE if balance.value > 0 else Decimal(0))
+    return _round_money(balance, balance.value * DAILY_RATE if balance.value > 0 else Decimal(0))
 
 
 @dataclass(frozen=True, slots=True)
@@ -213,89 +215,93 @@ class TooManyInstalments:
     count: int
 
 
-def split[M: (Aed, Bhd)](amount: Amount[M], count: InstalmentCount) -> tuple[Amount[M], ...] | TooManyInstalments:
+def split_amount[M: (Aed, Bhd)](
+    amount: Amount[M], count: InstalmentCount
+) -> tuple[Amount[M], ...] | TooManyInstalments:
     """Equal parts rounded down, the remainder on the last (AMB-020); each part at least one minor unit."""
     total = amount.money
-    part = type(total)((total.value / count.n).quantize(_minor_unit(total), rounding=ROUND_DOWN))
+    part = type(total)((total.value / count.number).quantize(_get_minor_unit(total), rounding=ROUND_DOWN))
     if part.value <= 0:
-        return TooManyInstalments(str(total.value), count=count.n)
-    last = type(total)(total.value - part.value * (count.n - 1))
-    return (*(Amount(part) for _ in range(count.n - 1)), Amount(last))
+        return TooManyInstalments(str(total.value), count=count.number)
+    last_part = type(total)(total.value - part.value * (count.number - 1))
+    return (*(Amount(part) for _ in range(count.number - 1)), Amount(last_part))
 
 
 AED_FEE = Decimal("25.00")
 AED_TO_BHD = Decimal("0.10238257")
 
 
-def overdraft_fee[M: (Aed, Bhd)](like: M) -> Amount[M]:
+def compute_overdraft_fee[M: (Aed, Bhd)](sample: M) -> Amount[M]:
     """The fee in ``like``'s currency: AED 25.00, and for BHD its conversion, rounded half-even (AMB-027)."""
-    match like:
+    match sample:
         case Aed():
-            return Amount(_round(like, AED_FEE))
+            return Amount(_round_money(sample, AED_FEE))
         case Bhd():
-            return Amount(_round(like, AED_FEE * AED_TO_BHD))
+            return Amount(_round_money(sample, AED_FEE * AED_TO_BHD))
 
 
-def split_of(
+def split_amount_of(
     amount: Amount[Aed] | Amount[Bhd], count: InstalmentCount
 ) -> tuple[Amount[Aed], ...] | tuple[Amount[Bhd], ...] | TooManyInstalments:
-    """``split`` for an amount whose currency is known only at run time."""
+    """``split_amount`` for an amount whose currency is known only at run time."""
     match amount.money:
         case Aed() as money:
-            return split(Amount(money), count)
+            return split_amount(Amount(money), count)
         case Bhd() as money:
-            return split(Amount(money), count)
+            return split_amount(Amount(money), count)
 
 
-def overdraft_fee_of(like: Money) -> Amount[Aed] | Amount[Bhd]:
-    """``overdraft_fee`` for a currency known only at run time."""
-    match like:
+def compute_overdraft_fee_of(sample: Money) -> Amount[Aed] | Amount[Bhd]:
+    """``compute_overdraft_fee`` for a currency known only at run time."""
+    match sample:
         case Aed():
-            return overdraft_fee(like)
+            return compute_overdraft_fee(sample)
         case Bhd():
-            return overdraft_fee(like)
+            return compute_overdraft_fee(sample)
 
 
-def amount_of(money: Money) -> Amount[Aed] | Amount[Bhd] | NotPositive:
+def make_amount_of(money: Money) -> Amount[Aed] | Amount[Bhd] | NotPositive:
     """``Amount.of`` for a currency known only at run time."""
     match money:
         case Aed():
-            return Amount.of(money)
+            return Amount.make(money)
         case Bhd():
-            return Amount.of(money)
+            return Amount.make(money)
 
 
-def rest_of(hold: Amount[Aed] | Amount[Bhd], taken: Amount[Aed] | Amount[Bhd]) -> Money:
+def compute_rest_of(hold: Amount[Aed] | Amount[Bhd], taken_amount: Amount[Aed] | Amount[Bhd]) -> Money:
     """What a hold keeps once an amount of its own currency is taken; a mismatch is a bug the reader prevents."""
-    match (hold.money, taken.money):
-        case (Aed() as kept, Aed() as out):
-            return kept - out
-        case (Bhd() as kept, Bhd() as out):
-            return kept - out
+    match (hold.money, taken_amount.money):
+        case (Aed() as hold_money, Aed() as taken_money):
+            return hold_money - taken_money
+        case (Bhd() as hold_money, Bhd() as taken_money):
+            return hold_money - taken_money
         case _:
-            raise ValueError(f"{currency(taken.money)} taken from {currency(hold.money)}")
+            raise ValueError(f"{get_currency(taken_amount.money)} taken from {get_currency(hold.money)}")
 
 
-def sum_of(first: Amount[Aed] | Amount[Bhd], second: Amount[Aed] | Amount[Bhd]) -> Amount[Aed] | Amount[Bhd]:
+def sum_amounts(
+    first_amount: Amount[Aed] | Amount[Bhd], second_amount: Amount[Aed] | Amount[Bhd]
+) -> Amount[Aed] | Amount[Bhd]:
     """Two amounts of one currency added, above zero as both are; a mismatch is a bug the reader prevents."""
-    match (first.money, second.money):
-        case (Aed() as one, Aed() as other):
-            return Amount(one + other)
-        case (Bhd() as one, Bhd() as other):
-            return Amount(one + other)
+    match (first_amount.money, second_amount.money):
+        case (Aed() as first_money, Aed() as second_money):
+            return Amount(first_money + second_money)
+        case (Bhd() as first_money, Bhd() as second_money):
+            return Amount(first_money + second_money)
         case _:
-            raise ValueError(f"{currency(first.money)} added to {currency(second.money)}")
+            raise ValueError(f"{get_currency(first_amount.money)} added to {get_currency(second_amount.money)}")
 
 
-def digits(money: Money) -> str:
+def format_digits(money: Money) -> str:
     """The value's text, for the renderer and messages: its places, no sign change, no separators."""
     return str(money.value)
 
 
-def below(money: Money, amount: Amount[Aed] | Amount[Bhd]) -> bool:
+def is_below(money: Money, amount: Amount[Aed] | Amount[Bhd]) -> bool:
     """Whether a balance is below an amount of its own currency; a mismatch is a bug the reader prevents."""
     match (money, amount.money):
         case (Aed(), Aed()) | (Bhd(), Bhd()):
             return money.value < amount.money.value
         case _:
-            raise ValueError(f"{currency(money)} compared with {currency(amount.money)}")
+            raise ValueError(f"{get_currency(money)} compared with {get_currency(amount.money)}")

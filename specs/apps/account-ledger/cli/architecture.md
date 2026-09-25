@@ -120,7 +120,7 @@ nothing.
 
 | Component        | Responsibility                                                                                    |
 | ---------------- | ------------------------------------------------------------------------------------------------- |
-| `cli`            | `run` checks the arguments, reads, parses, replays, renders, and maps every failure to a status   |
+| `cli`            | `run_cli` checks the arguments, reads, parses, replays, renders, and maps every failure to a code |
 | `stream_csv`     | parsing the stream file into incoming events, or the first fault with its line                    |
 | `render`         | the report as text: banners, box tables, amounts with `−` and separators, every note and error    |
 | `replay`         | the stream in listed order, closing each day on time, with the log and report of every day        |
@@ -130,7 +130,7 @@ nothing.
 | `fees`           | a fee for each day closing negative with none in force, refunded once the day recovers            |
 | `interest`       | a day's interest on a positive closing, adjusted when a closing changes, and its capitalization   |
 | `balances`       | closing and available, each recomputed over the log                                               |
-| `authorizations` | the authorization states, `decide`, `transition`, holds, and the records replayed from the log    |
+| `authorizations` | the states, `decide_authorization`, `apply_trigger`, holds, and the records replayed from the log |
 | `reversals`      | why a reversal is refused, in tech-docs 002's order, and which events the accepted ones undid     |
 | `event_log`      | the append-only tuple of entries, each kind holding only its outcome, and every `Rejection`       |
 | `events`         | the incoming event kinds, joined in `IncomingEvent`, and the fired kinds, in `FiredEvent`         |
@@ -154,23 +154,24 @@ events    IncomingEvent = Credit | Debit | Authorization | Settlement | Reversal
           FiredEvent = Instalment | Fee | FeeRefund | InterestAccrual | InterestAdjustment | Capitalization
 config    Account[M] = id + opening M     LedgerConfig = accounts, first_day, last_day, capitalization_days
 event_log LogEntry = Accepted | AuthorizationDecided | SettlementAccepted | Rejected | Duplicate
-          SettlementAccepted.effect = Captured(before, after) | ForcePosted
+          SettlementAccepted.effect = Captured(state_before, state_after) | ForcePosted
           Rejected.reason: Rejection = IdReused | AlreadyReversed | ReversesAReversal | UnknownTarget
                                        | MovedNoMoney | AlreadyUndone
           Log = tuple[LogEntry, ...]
-auth      AuthorizationState = Approved(hold) | PartiallySettled(captured, hold) | Declined(requested)
-                                 | Settled(captured)
-          transition(state, SettleFinal | SettlePartial) -> AuthorizationState | NoTransition
+auth      AuthorizationState = Approved(hold) | PartiallySettled(captured_amount, hold)
+                                 | Declined(requested_amount) | Settled(captured_amount)
+          apply_trigger(state, SettleFinal | SettlePartial) -> AuthorizationState | NoTransition
           AuthorizationRecord = the Authorization + its state now
-report    DayReport = day, processed: Processed..., closing, available, restated: Restatement...,
-                      authorizations: AuthorizationRecord..., errors, end_of_day: (Fired | Capitalized
-                      | NothingFired)...
-replay    Replay = reports: DayReport..., logs: Log...     report(day), log_at(day)
+report    DayReport = day, processed_events: Processed..., closing_balances, available_balances,
+                      restatements: Restatement..., authorizations: AuthorizationRecord..., errors,
+                      end_of_day: (Fired | Capitalized | NothingFired)...
+replay    Replay = reports: DayReport..., logs: Log...     find_report(day), find_log(day)
 stream    parse_stream(text, config) -> tuple[IncomingEvent, ...] | StreamError(line, message)
 ```
 
-`authorizations` is a hand-written state machine: `transition` is one `match` over the state and its trigger, ending in
-`assert_never`. A settlement whose `final` cell is `no` fires `SettlePartial`; any other fires `SettleFinal`. As built:
+`authorizations` is a hand-written state machine: `apply_trigger` is one `match` over the state and its trigger, ending
+in `assert_never`. A settlement whose `final` cell is `no` fires `SettlePartial`; any other fires `SettleFinal`. As
+built:
 
 ```text
              available >= 0 after the hold              SettleFinal, or SettlePartial reaching the hold
@@ -194,7 +195,7 @@ an authorization the log does not know, is accepted as a force-post: it debits i
 replay, for each event in listed order, D the day open
   1. the event is booked after D: close D (a and b), open D + 1, and look again; a day with no events closes too;
      no day closes after the window's last, so an event booked after the window reaches no day's log or report
-  2. otherwise: processing.process(log, event, D) ---> log + one entry (+ the instalments a credit fires)
+  2. otherwise: processing.process_event(log, event, D) ---> log + one entry (+ the instalments a credit fires)
        idempotency first; then by kind; a reversal checked against its target in order
        an event booked before D is late and is processed on D (AMB-015)
 replay, once the stream is spent: close every day left in the window
@@ -205,10 +206,10 @@ closing day D
        step 2  interest: each day first..D: daily interest of its base, less what was fired for it
                          -> InterestAccrual for D, InterestAdjustment for an earlier day
        step 3  capitalization, on a capitalization day: accrued interest above zero -> Capitalization
-  b. report.report(log, D, reported) ---> DayReport: what D processed and fired, its closings, and each earlier
-       closing that changed since last reported
+  b. report.build_report(log, D, reported_closings) ---> DayReport: what D processed and fired, its closings,
+       and each earlier closing that changed since last reported
 cli, after the last day
-  render.render(reports) ---> the whole text, then one write and one flush to standard output
+  render.render_reports(reports) ---> the whole text, then one write and one flush to standard output
 ```
 
 Every balance is recomputed from the log whenever it is asked for (D7), so a late event value-dated in the past changes
@@ -218,10 +219,10 @@ every later closing without any stored balance being updated.
 
 To read the code for the first time, follow one day through it, in this order:
 
-1. `cli.py`, `run`: where the program starts, and how every failure becomes an exit status.
+1. `cli.py`, `run_cli`: where the program starts, and how every failure becomes an exit status.
 2. `domain/replay.py`: the loop over events, where a later day's event closes the open day first, as the dynamic view
    above draws.
-3. `domain/processing.py`, `process`: what one incoming event adds to the log, duplicates caught first.
+3. `domain/processing.py`, `process_event`: what one incoming event adds to the log, duplicates caught first.
 4. `domain/end_of_day.py`, `close_day`: the three steps of a day's close, each in its own module.
 5. `domain/fees.py`: when a day is charged an overdraft fee, and when that fee is refunded.
 6. `domain/interest.py`: each day's interest, its adjustment when a closing changes, and its capitalization.

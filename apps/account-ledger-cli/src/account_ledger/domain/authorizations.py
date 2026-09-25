@@ -16,7 +16,17 @@ from account_ledger.domain.model.event_log import (
 )
 from account_ledger.domain.model.events import AnyAmount, Authorization, Capture, Settlement
 from account_ledger.domain.model.ids import Day
-from account_ledger.domain.model.money import Aed, Bhd, Money, NotPositive, amount_of, below, rest_of, same, sum_of
+from account_ledger.domain.model.money import (
+    Aed,
+    Bhd,
+    Money,
+    NotPositive,
+    compute_rest_of,
+    is_below,
+    make_amount_of,
+    narrow_currency,
+    sum_amounts,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -30,14 +40,14 @@ class Approved:
 class Declined:
     """Declined on arrival; it holds nothing."""
 
-    requested: AnyAmount
+    requested_amount: AnyAmount
 
 
 @dataclass(frozen=True, slots=True)
 class PartiallySettled:
     """Captured in part, still holding the rest."""
 
-    captured: AnyAmount
+    captured_amount: AnyAmount
     hold: AnyAmount
 
 
@@ -45,7 +55,7 @@ class PartiallySettled:
 class Settled:
     """Settled; it holds nothing more."""
 
-    captured: AnyAmount
+    captured_amount: AnyAmount
 
 
 type AuthorizationState = Approved | PartiallySettled | Declined | Settled
@@ -73,37 +83,39 @@ class NoTransition:
     """The table has no transition from this state for this trigger, so the state stands."""
 
 
-def transition(state: AuthorizationState, trigger: Trigger) -> AuthorizationState | NoTransition:
+def apply_trigger(state: AuthorizationState, trigger: Trigger) -> AuthorizationState | NoTransition:
     """The declared table (tech-docs 001): one case per source, trigger, and guard."""
     pair = state, trigger
     match pair:
-        case Approved(), SettleFinal(amount=a):
-            return Settled(a)
-        case Approved(hold=h), SettlePartial(amount=a) if below(a.money, h):
-            return PartiallySettled(a, _rest(h, a))
-        case Approved(), SettlePartial(amount=a):  # a >= h: it reaches the hold, so nothing is left to keep
-            return Settled(a)
-        case PartiallySettled(captured=c), SettleFinal(amount=a):
-            return Settled(sum_of(c, a))
-        case PartiallySettled(captured=c, hold=h), SettlePartial(amount=a) if below(a.money, h):
-            return PartiallySettled(sum_of(c, a), _rest(h, a))
-        case PartiallySettled(captured=c), SettlePartial(amount=a):  # a >= h
-            return Settled(sum_of(c, a))
+        case Approved(), SettleFinal(amount=amount):
+            return Settled(amount)
+        case Approved(hold=hold), SettlePartial(amount=amount) if is_below(amount.money, hold):
+            return PartiallySettled(amount, _compute_rest(hold, amount))
+        case Approved(), SettlePartial(amount=amount):  # amount >= hold: it reaches the hold, so nothing is left
+            return Settled(amount)
+        case PartiallySettled(captured_amount=captured_amount), SettleFinal(amount=amount):
+            return Settled(sum_amounts(captured_amount, amount))
+        case PartiallySettled(captured_amount=captured_amount, hold=hold), SettlePartial(amount=amount) if is_below(
+            amount.money, hold
+        ):
+            return PartiallySettled(sum_amounts(captured_amount, amount), _compute_rest(hold, amount))
+        case PartiallySettled(captured_amount=captured_amount), SettlePartial(amount=amount):  # amount >= hold
+            return Settled(sum_amounts(captured_amount, amount))
         case Settled() | Declined(), _:
             return NoTransition()
         case _:
             assert_never(pair)
 
 
-def _rest(hold: AnyAmount, taken: AnyAmount) -> AnyAmount:
+def _compute_rest(hold: AnyAmount, taken_amount: AnyAmount) -> AnyAmount:
     """The hold left after a partial capture, above zero as every hold is."""
-    rest = amount_of(rest_of(hold, taken))
+    rest = make_amount_of(compute_rest_of(hold, taken_amount))
     if isinstance(rest, NotPositive):
         raise ValueError(f"a hold is above zero, not {rest.text}")
     return rest
 
 
-def trigger_of(settlement: Settlement) -> Trigger:
+def derive_trigger(settlement: Settlement) -> Trigger:
     """The trigger a settlement fires, from its capture and amount."""
     match settlement.capture:
         case Capture.FINAL:
@@ -122,53 +134,53 @@ class AuthorizationRecord:
     state: AuthorizationState
 
 
-def decide(available: Money, amount: AnyAmount) -> Decision:
+def decide_authorization(available_balance: Money, amount: AnyAmount) -> Decision:
     """The decision on arrival, from the available balance before the hold (AMB-008, AMB-009)."""
-    return Decision.DECLINED if below(available, amount) else Decision.APPROVED
+    return Decision.DECLINED if is_below(available_balance, amount) else Decision.APPROVED
 
 
-def records(log: Log) -> tuple[AuthorizationRecord, ...]:
+def list_records(log: Log) -> tuple[AuthorizationRecord, ...]:
     """Every authorization known to the log, in the order first seen, with its state."""
-    found: list[AuthorizationRecord] = []
+    records: list[AuthorizationRecord] = []
     for entry in log:
         match entry:
             case AuthorizationDecided(event=event, decision=decision):
                 state = Approved(event.amount) if decision is Decision.APPROVED else Declined(event.amount)
-                found.append(AuthorizationRecord(event, state))
-            case SettlementAccepted(event=event, effect=Captured(after=after)):
-                found = [
-                    AuthorizationRecord(record.authorization, after) if _named_by(record, event) else record
-                    for record in found
+                records.append(AuthorizationRecord(event, state))
+            case SettlementAccepted(event=event, effect=Captured(state_after=state_after)):
+                records = [
+                    AuthorizationRecord(record.authorization, state_after) if _is_named_by(record, event) else record
+                    for record in records
                 ]
             case Accepted() | SettlementAccepted() | Rejected() | Duplicate():
                 pass  # a posting, a force-post, a refusal, or a retry moves no authorization
             case _:
                 assert_never(entry)
-    return tuple(found)
+    return tuple(records)
 
 
-def record_for(log: Log, settlement: Settlement) -> AuthorizationRecord | None:
+def find_record(log: Log, settlement: Settlement) -> AuthorizationRecord | None:
     """The authorization a settlement names, on its account, if the log knows it."""
-    return next((record for record in records(log) if _named_by(record, settlement)), None)
+    return next((record for record in list_records(log) if _is_named_by(record, settlement)), None)
 
 
-def _named_by(record: AuthorizationRecord, settlement: Settlement) -> bool:
+def _is_named_by(record: AuthorizationRecord, settlement: Settlement) -> bool:
     """Whether the settlement names this record's hold on the same account."""
-    opened = record.authorization
-    return opened.authorization == settlement.authorization and opened.account == settlement.account
+    authorization = record.authorization
+    return authorization.authorization == settlement.authorization and authorization.account == settlement.account
 
 
-def holds[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> M:
+def sum_holds[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> M:
     """The hold of every approved or partially settled authorization on the account whose value day is <= day
     (AMB-010, AMB-013)."""
-    total = type(account.opening).zero()
-    for record in records(log):
-        opened, state = record.authorization, record.state
-        if opened.account != account.id or opened.value_day > day:
+    total = type(account.opening).make_zero()
+    for record in list_records(log):
+        authorization, state = record.authorization, record.state
+        if authorization.account != account.id or authorization.value_day > day:
             continue
         match state:
             case Approved(hold=hold) | PartiallySettled(hold=hold):
-                total = total + same(total, hold.money)
+                total = total + narrow_currency(total, hold.money)
             case Declined() | Settled():
                 pass  # a declined authorization holds nothing, and a final settlement released the hold
             case _:

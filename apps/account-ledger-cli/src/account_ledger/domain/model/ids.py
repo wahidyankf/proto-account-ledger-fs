@@ -14,11 +14,11 @@ _INCOMING = re.compile(r"E[0-9]+")
 class InstalmentCount:
     """How many instalments a credit is posted in."""
 
-    n: int
+    number: int
 
     def __post_init__(self) -> None:
-        if self.n < 2:
-            raise ValueError(f"an instalment count is at least 2, not {self.n}")
+        if self.number < 2:
+            raise ValueError(f"an instalment count is at least 2, not {self.number}")
 
     @staticmethod
     def parse(text: str) -> InstalmentCount | IdFault:
@@ -51,16 +51,16 @@ class Day:
         """The day the text holds, or a fault for one that is not a whole number."""
         return Day(int(text)) if re.fullmatch(r"[0-9]+", text) else IdFault("day", text)
 
-    def next(self) -> Day:
+    def advance(self) -> Day:
         """The day after this one."""
         return Day(self.number + 1)
 
-    def through(self, last: Day) -> Iterator[Day]:
+    def span_to(self, last_day: Day) -> Iterator[Day]:
         """Each day from this one to ``last``, both included, in order."""
         day = self
-        while day <= last:
+        while day <= last_day:
             yield day
-            day = day.next()
+            day = day.advance()
 
 
 @dataclass(frozen=True, slots=True)
@@ -121,11 +121,11 @@ class InstalmentId:
     """An instalment a credit fired, such as E10-1."""
 
     parent: IncomingId
-    n: int
+    number: int
 
     def __post_init__(self) -> None:
-        if self.n < 1:
-            raise ValueError(f"an instalment is numbered from 1, not {self.n}")
+        if self.number < 1:
+            raise ValueError(f"an instalment is numbered from 1, not {self.number}")
 
 
 @dataclass(frozen=True, slots=True)
@@ -133,7 +133,7 @@ class FeeId:
     """FEE-001-D2@D5: an account's fee for a day, fired at the close of another."""
 
     account: AccountId
-    for_day: Day
+    covered_day: Day
     fired_day: Day
 
 
@@ -142,7 +142,7 @@ class RefundId:
     """REFUND-001-D2@D6: the refund of an account's fee for a day."""
 
     account: AccountId
-    for_day: Day
+    covered_day: Day
     fired_day: Day
 
 
@@ -151,7 +151,7 @@ class InterestId:
     """INT-001-D2@D5: an account's interest event for a day."""
 
     account: AccountId
-    for_day: Day
+    covered_day: Day
     fired_day: Day
 
 
@@ -175,43 +175,43 @@ _EVENT = re.compile(
 
 def parse_event_id(text: str) -> EventId | IdFault:
     """An incoming ID, an instalment, or a fired marker, as a reversal names its target (AMB-035)."""
-    found = _EVENT.fullmatch(text)
-    if found is None:
+    event_match = _EVENT.fullmatch(text)
+    if event_match is None:
         return IdFault("event ID", text)
-    group = found.group
+    group = event_match.group
     if group("incoming"):
-        incoming = IncomingId(group("incoming"))
-        return InstalmentId(incoming, int(group("part"))) if group("part") else incoming
+        incoming_id = IncomingId(group("incoming"))
+        return InstalmentId(incoming_id, int(group("part"))) if group("part") else incoming_id
     if group("kind"):
-        account, for_day, fired = (
+        account, covered_day, fired_day = (
             AccountId(f"ACC-{group('account')}"),
             Day(int(group("for_day"))),
             Day(int(group("fired"))),
         )
         match group("kind"):
             case "FEE":
-                return FeeId(account, for_day, fired)
+                return FeeId(account, covered_day, fired_day)
             case "REFUND":
-                return RefundId(account, for_day, fired)
+                return RefundId(account, covered_day, fired_day)
             case _:
-                return InterestId(account, for_day, fired)
+                return InterestId(account, covered_day, fired_day)
     return CapitalizationId(AccountId(f"ACC-{group('cap_account')}"), Day(int(group("cap_fired"))))
 
 
-def text(event_id: EventId) -> str:
+def format_id(event_id: EventId) -> str:
     """The ID as the report prints it; a marker is built from its parts, never stored as a string."""
     match event_id:
         case IncomingId(value):
             return value
-        case InstalmentId(parent, n):
-            return f"{parent.value}-{n}"
-        case FeeId(account, for_day, fired):
-            return f"FEE-{account.number}-D{for_day.number}@D{fired.number}"
-        case RefundId(account, for_day, fired):
-            return f"REFUND-{account.number}-D{for_day.number}@D{fired.number}"
-        case InterestId(account, for_day, fired):
-            return f"INT-{account.number}-D{for_day.number}@D{fired.number}"
-        case CapitalizationId(account, fired):
-            return f"CAP-{account.number}@D{fired.number}"
+        case InstalmentId(parent, number):
+            return f"{parent.value}-{number}"
+        case FeeId(account, covered_day, fired_day):
+            return f"FEE-{account.number}-D{covered_day.number}@D{fired_day.number}"
+        case RefundId(account, covered_day, fired_day):
+            return f"REFUND-{account.number}-D{covered_day.number}@D{fired_day.number}"
+        case InterestId(account, covered_day, fired_day):
+            return f"INT-{account.number}-D{covered_day.number}@D{fired_day.number}"
+        case CapitalizationId(account, fired_day):
+            return f"CAP-{account.number}@D{fired_day.number}"
         case _:
             assert_never(event_id)

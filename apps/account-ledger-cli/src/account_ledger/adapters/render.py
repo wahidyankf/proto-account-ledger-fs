@@ -36,8 +36,8 @@ from account_ledger.domain.model.events import (
     Settlement,
     Whole,
 )
-from account_ledger.domain.model.ids import AccountId, Day, text
-from account_ledger.domain.model.money import Direction, Money, currency, digits
+from account_ledger.domain.model.ids import AccountId, Day, format_id
+from account_ledger.domain.model.money import Direction, Money, format_digits, get_currency
 from account_ledger.domain.report import (
     Capitalized,
     DayReport,
@@ -57,64 +57,71 @@ EVENTS = ("Event", "Booked", "Type", "Account", "Detail", "Value date")
 APPLIED = ("Step", "Event", "Type", "Account", "Detail", "Value date")
 
 
-def render(reports: Sequence[DayReport]) -> str:
+def render_reports(reports: Sequence[DayReport]) -> str:
     """Every day's report, in order, each after one blank line, ending with a newline."""
-    return "\n\n".join(_day(report) for report in reports) + "\n"
+    return "\n\n".join(_format_day(report) for report in reports) + "\n"
 
 
-def _day(report: DayReport) -> str:
+def _format_day(report: DayReport) -> str:
     """One day's banner, then its events, its end-of-day steps, and its closing summary."""
     banner = f"{RULE}\nDay {report.day.number}\n{RULE}"
     blocks = (
-        _block("Events processed", _table(EVENTS, _events(report))),
-        _block("EOD applied", _table(APPLIED, [_applied(row) for row in report.end_of_day])),
-        _block("Closing summary", _table(_summary_header(report), _summary(report))),
+        _format_block("Events processed", _format_table(EVENTS, _build_event_rows(report))),
+        _format_block("EOD applied", _format_table(APPLIED, [_build_applied_row(row) for row in report.end_of_day])),
+        _format_block("Closing summary", _format_table(_build_summary_header(report), _build_summary_rows(report))),
     )
     return "\n\n".join((banner, *blocks))
 
 
-def _events(report: DayReport) -> list[Row]:
+def _build_event_rows(report: DayReport) -> list[Row]:
     """A row per event the day processed, each followed by the rows of the instalments it fired."""
     rows: list[Row] = []
-    for processed in report.processed:
-        rows.extend(_processed(processed))
+    for processed_event in report.processed_events:
+        rows.extend(_build_processed_rows(processed_event))
     return rows
 
 
-def _block(title: str, body: list[str]) -> str:
+def _format_block(title: str, body: list[str]) -> str:
     """A titled block; one with no rows prints two spaces and `none` (AMB-033)."""
     return "\n".join((title, *(body or ["  none"])))
 
 
-def _table(header: Row, rows: Sequence[Row]) -> list[str]:
+def _format_table(header: Row, rows: Sequence[Row]) -> list[str]:
     """A box of `+`, `-`, and `|`, every column left-aligned and as wide as its widest cell, header included."""
     if not rows:
         return []
     widths = [max(len(cell) for cell in column) for column in zip(header, *rows, strict=True)]
     border = "+" + "+".join("-" * (width + 2) for width in widths) + "+"
 
-    def line(row: Row) -> str:
+    def format_line(row: Row) -> str:
         """One table row, each cell padded to its column's width."""
         return "|" + "|".join(f" {cell.ljust(width)} " for cell, width in zip(row, widths, strict=True)) + "|"
 
-    return [border, line(header), border, *(line(row) for row in rows), border]
+    return [border, format_line(header), border, *(format_line(row) for row in rows), border]
 
 
-def _processed(processed: Processed) -> list[Row]:
+def _build_processed_rows(processed_event: Processed) -> list[Row]:
     """The event's row, then a row per instalment it fired, each printing as a credit."""
-    event, booked = processed.event, _day_cell(processed.event.booked)
-    row = (text(event.id), booked, _type(event), event.account.value, _detail(processed), _day_cell(event.value_day))
-    count = len(processed.instalments)
-    return [row, *(_instalment(part, booked, count) for part in processed.instalments)]
+    event, booked = processed_event.event, _format_day_cell(processed_event.event.booked)
+    row = (
+        format_id(event.id),
+        booked,
+        _format_type(event),
+        event.account.value,
+        _format_detail(processed_event),
+        _format_day_cell(event.value_day),
+    )
+    count = len(processed_event.instalments)
+    return [row, *(_build_instalment_row(part, booked, count) for part in processed_event.instalments)]
 
 
-def _instalment(part: Instalment, booked: str, count: int) -> Row:
+def _build_instalment_row(part: Instalment, booked: str, count: int) -> Row:
     """An instalment's row, printed as a credit booked with the credit that fired it."""
-    detail = f"{_money(part.amount)}, instalment {part.id.n} of {count}"
-    return (text(part.id), booked, "Credit", part.account.value, detail, _day_cell(part.value_day))
+    detail = f"{_format_money(part.amount)}, instalment {part.id.number} of {count}"
+    return (format_id(part.id), booked, "Credit", part.account.value, detail, _format_day_cell(part.value_day))
 
 
-def _type(event: IncomingEvent) -> str:
+def _format_type(event: IncomingEvent) -> str:
     """The event's kind as the Type column prints it."""
     match event:
         case Credit():
@@ -131,33 +138,37 @@ def _type(event: IncomingEvent) -> str:
             assert_never(event)
 
 
-def _detail(processed: Processed) -> str:
+def _format_detail(processed_event: Processed) -> str:
     """OUTPUT_TARGET's Detail text for an incoming event (tech-docs 003); a duplicate names what it repeats (D22)."""
-    event = processed.event
-    if isinstance(processed.entry, Duplicate):
-        return f"duplicate of {text(event.id)}, no effect"
+    event = processed_event.event
+    if isinstance(processed_event.entry, Duplicate):
+        return f"duplicate of {format_id(event.id)}, no effect"
     match event:
         case Credit(amount=amount, posting=posting):
-            return _money(amount) + _posting(posting)
+            return _format_money(amount) + _format_posting(posting)
         case Debit(amount=amount):
-            return _money(amount)
+            return _format_money(amount)
         case Authorization(authorization=hold, amount=amount):
-            return f"{hold.value}, hold {_money(amount)}"
+            return f"{hold.value}, hold {_format_money(amount)}"
         case Settlement(authorization=hold, amount=amount):
-            return f"{hold.value} {_settles(processed.entry)} {_money(amount)}{_kept(processed.entry)}"
-        case Reversal(reverses=target):
-            return f"reverses {text(target)}"
+            settlement_text, hold_text = (
+                _format_settlement(processed_event.entry),
+                _format_kept_hold(processed_event.entry),
+            )
+            return f"{hold.value} {settlement_text} {_format_money(amount)}{hold_text}"
+        case Reversal(target=target):
+            return f"reverses {format_id(target)}"
         case _:
             assert_never(event)
 
 
-def _posting(posting: Posting) -> str:
+def _format_posting(posting: Posting) -> str:
     """What a credit's detail adds for its posting: nothing when whole, the count when in instalments."""
     match posting:
         case Whole():
             return ""
         case Instalments(count=count):
-            return f" in {_count(count.n)} equal instalments"
+            return f" in {_format_count(count.number)} equal instalments"
         case _:
             assert_never(posting)
 
@@ -165,59 +176,83 @@ def _posting(posting: Posting) -> str:
 SPELLED = dict(zip(range(2, 11), ("two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"), strict=True))
 
 
-def _count(n: int) -> str:
+def _format_count(count: int) -> str:
     """An instalment count as an English word from two to ten, and as digits above (tech-docs 003)."""
-    return SPELLED.get(n, str(n))
+    return SPELLED.get(count, str(count))
 
 
-def _settles(entry: LogEntry) -> str:
+def _format_settlement(entry: LogEntry) -> str:
     """A settlement the table could not apply force-posts (AMB-012); any other settles for its amount."""
-    forced = isinstance(entry, SettlementAccepted) and isinstance(entry.effect, ForcePosted)
-    return "force-posts" if forced else "settles for"
+    is_force_post = isinstance(entry, SettlementAccepted) and isinstance(entry.effect, ForcePosted)
+    return "force-posts" if is_force_post else "settles for"
 
 
-def _kept(entry: LogEntry) -> str:
+def _format_kept_hold(entry: LogEntry) -> str:
     """A partial capture that leaves part of the hold says so (D22)."""
     match entry:
-        case SettlementAccepted(effect=Captured(after=PartiallySettled())):
+        case SettlementAccepted(effect=Captured(state_after=PartiallySettled())):
             return ", hold kept"
         case _:
             return ""
 
 
-def _applied(row: Fired | Capitalized | NothingFired) -> Row:
+def _build_applied_row(row: Fired | Capitalized | NothingFired) -> Row:
     """An end-of-day row: the step, the event it fired or `-`, and its detail or the note for nothing fired."""
     match row:
         case Fired(step=step, event=event):
-            kind, detail = _fired(event)
-            return (str(step.value), text(event.id), kind, event.account.value, detail, _day_cell(event.value_day))
+            kind, detail = _format_fired_event(event)
+            return (
+                str(step.value),
+                format_id(event.id),
+                kind,
+                event.account.value,
+                detail,
+                _format_day_cell(event.value_day),
+            )
         case Capitalized(event=event, days=days):
             step, kind = Step.CAPITALIZATION, "Interest capitalization"
-            detail = f"{_money(event.amount)}, accrued {_days(days)}"
-            return (str(step.value), text(event.id), kind, event.account.value, detail, _day_cell(event.value_day))
+            detail = f"{_format_money(event.amount)}, accrued {_format_days(days)}"
+            return (
+                str(step.value),
+                format_id(event.id),
+                kind,
+                event.account.value,
+                detail,
+                _format_day_cell(event.value_day),
+            )
         case NothingFired(step=step, accounts=accounts, note=note):
-            return (str(step.value), "-", _step(step), ", ".join(each.value for each in accounts), _note(note), "-")
+            return (
+                str(step.value),
+                "-",
+                _format_step(step),
+                ", ".join(account_id.value for account_id in accounts),
+                _format_note(note),
+                "-",
+            )
         case _:
             assert_never(row)
 
 
-def _fired(event: EndOfDayEvent) -> tuple[str, str]:
+def _format_fired_event(event: EndOfDayEvent) -> tuple[str, str]:
     """An end-of-day event's Type and Detail texts (tech-docs 003)."""
     match event:
         case Fee(id=fee, amount=amount):
-            return "Overdraft fee", f"{_money(amount)}, for {_day_cell(fee.for_day)}"
+            return "Overdraft fee", f"{_format_money(amount)}, for {_format_day_cell(fee.covered_day)}"
         case FeeRefund(fee=fee, amount=amount):
-            return "Fee refund", f"{_money(amount)}, for {_day_cell(fee.for_day)}"
+            return "Fee refund", f"{_format_money(amount)}, for {_format_day_cell(fee.covered_day)}"
         case InterestAccrual(id=interest, amount=amount):
-            return "Interest accrual", f"{_amount(amount.money)}, for {_day_cell(interest.for_day)}"
+            return "Interest accrual", f"{_format_amount(amount.money)}, for {_format_day_cell(interest.covered_day)}"
         case InterestAdjustment(id=interest, direction=direction, amount=amount):
             sign = MINUS if direction is Direction.DOWN else ""
-            return "Interest adjustment", f"{sign}{_amount(amount.money)}, for {_day_cell(interest.for_day)}"
+            return (
+                "Interest adjustment",
+                f"{sign}{_format_amount(amount.money)}, for {_format_day_cell(interest.covered_day)}",
+            )
         case _:
             assert_never(event)
 
 
-def _days(days: Sequence[Day]) -> str:
+def _format_days(days: Sequence[Day]) -> str:
     """`Days 1 to 6` for three or more in a row, `Days 5 and 6` for two, `Day 5` for one, else `Days 1, 2, and 4`."""
     numbers = [day.number for day in days]
     if len(numbers) == 1:
@@ -229,7 +264,7 @@ def _days(days: Sequence[Day]) -> str:
     return f"Days {', '.join(map(str, numbers[:-1]))}, and {numbers[-1]}"
 
 
-def _step(step: Step) -> str:
+def _format_step(step: Step) -> str:
     """The Type a step's row prints when the step fired nothing of its kind."""
     match step:
         case Step.FEES:
@@ -242,7 +277,7 @@ def _step(step: Step) -> str:
             assert_never(step)
 
 
-def _note(note: Note) -> str:
+def _format_note(note: Note) -> str:
     """The row a step prints when it fires nothing of its kind (tech-docs 002)."""
     match note:
         case Note.NO_FEE:
@@ -257,74 +292,78 @@ def _note(note: Note) -> str:
             assert_never(note)
 
 
-def _summary_header(report: DayReport) -> Row:
+def _build_summary_header(report: DayReport) -> Row:
     """`Item`, then a column per account, headed by its ID and currency."""
-    return ("Item", *(f"{account.value} ({currency(money)})" for account, money in report.closing.items()))
+    return ("Item", *(f"{account.value} ({get_currency(money)})" for account, money in report.closing_balances.items()))
 
 
-def _summary(report: DayReport) -> list[Row]:
+def _build_summary_rows(report: DayReport) -> list[Row]:
     """Restated closings, oldest day first, then the day's balances, authorizations, and errors (tech-docs 003)."""
-    accounts = tuple(report.closing)
-    restated = [
-        (f"Day {each.day.number} closing, restated", *(_or_dash(each.closing[account]) for account in accounts))
-        for each in report.restated
+    accounts = tuple(report.closing_balances)
+    restated_rows = [
+        (
+            f"Day {restatement.day.number} closing, restated",
+            *(_format_restated_amount(restatement.closing_balances[account]) for account in accounts),
+        )
+        for restatement in report.restatements
     ]
     return [
-        *restated,
-        ("Closing ledger balance", *(_amount(report.closing[account]) for account in accounts)),
-        ("Available balance", *(_amount(report.available[account]) for account in accounts)),
-        ("Authorizations", *(_authorizations(report.authorizations, account) for account in accounts)),
-        ("Errors", *(_errors(report.errors[account]) for account in accounts)),
+        *restated_rows,
+        ("Closing ledger balance", *(_format_amount(report.closing_balances[account]) for account in accounts)),
+        ("Available balance", *(_format_amount(report.available_balances[account]) for account in accounts)),
+        ("Authorizations", *(_format_authorizations(report.authorizations, account) for account in accounts)),
+        ("Errors", *(_format_errors(report.errors[account]) for account in accounts)),
     ]
 
 
-def _errors(entries: tuple[Rejected, ...]) -> str:
+def _format_errors(entries: tuple[Rejected, ...]) -> str:
     """The day's refusals for one account, joined by `; `, or `none` (AMB-014)."""
-    return "; ".join(_refusal(entry) for entry in entries) or "none"
+    return "; ".join(_format_refusal(entry) for entry in entries) or "none"
 
 
-def _authorizations(known: Sequence[AuthorizationRecord], account: AccountId) -> str:
+def _format_authorizations(records: Sequence[AuthorizationRecord], account: AccountId) -> str:
     """The account's authorizations with their states, joined by `; `, or `none`."""
-    states = [_state(record) for record in known if record.authorization.account == account]
+    states = [_format_state(record) for record in records if record.authorization.account == account]
     return "; ".join(states) or "none"
 
 
-def _refusal(rejected: Rejected) -> str:
+def _format_refusal(entry: Rejected) -> str:
     """A refusal's error text (tech-docs 001, D22)."""
-    return f"{text(rejected.event.id)} refused: {_reason(rejected.reason)}"
+    return f"{format_id(entry.event.id)} refused: {_format_reason(entry.reason)}"
 
 
-def _reason(reason: Rejection) -> str:
+def _format_reason(reason: Rejection) -> str:
     """Why the ledger refused an event, as the Errors row prints it."""
     match reason:
         case IdReused():
             return "ID already used with different content"
-        case AlreadyReversed(target=target, by=by):
-            return f"{text(target)} is already reversed by {text(by)}"
+        case AlreadyReversed(target=target, undoing_id=undoing_id):
+            return f"{format_id(target)} is already reversed by {format_id(undoing_id)}"
         case ReversesAReversal(target=target):
-            return f"{text(target)} is a reversal"
+            return f"{format_id(target)} is a reversal"
         case UnknownTarget(target=target):
-            return f"{text(target)} is not in the log"
+            return f"{format_id(target)} is not in the log"
         case MovedNoMoney(target=target):
-            return f"{text(target)} moved no money"
-        case AlreadyUndone(part=part, by=by):
-            return f"{text(part)} is already undone by {text(by)}"
+            return f"{format_id(target)} moved no money"
+        case AlreadyUndone(part=part, undoing_id=undoing_id):
+            return f"{format_id(part)} is already undone by {format_id(undoing_id)}"
         case _:
             assert_never(reason)
 
 
-def _state(record: AuthorizationRecord) -> str:
+def _format_state(record: AuthorizationRecord) -> str:
     """An authorization's state as OUTPUT_TARGET prints it, with no currency code (AMB-019)."""
     hold, state = record.authorization.authorization.value, record.state
     match state:
         case Approved(hold=amount):
-            return f"{hold} approved, hold {_amount(amount.money)}"
-        case PartiallySettled(captured=captured, hold=kept):
-            return f"{hold} partially settled for {_amount(captured.money)}, hold {_amount(kept.money)}"
-        case Declined(requested=amount):
-            return f"{hold} declined, {_amount(amount.money)}"
-        case Settled(captured=amount):
-            return f"{hold} settled for {_amount(amount.money)}"
+            return f"{hold} approved, hold {_format_amount(amount.money)}"
+        case PartiallySettled(captured_amount=captured_amount, hold=remaining_hold):
+            captured_text, hold_text = _format_amount(captured_amount.money), _format_amount(remaining_hold.money)
+            return f"{hold} partially settled for {captured_text}, hold {hold_text}"
+        case Declined(requested_amount=amount):
+            return f"{hold} declined, {_format_amount(amount.money)}"
+        case Settled(captured_amount=amount):
+            return f"{hold} settled for {_format_amount(amount.money)}"
         case _:
             assert_never(state)
 
@@ -332,24 +371,24 @@ def _state(record: AuthorizationRecord) -> str:
 MINUS = "\u2212"
 
 
-def _money(amount: AnyAmount) -> str:
+def _format_money(amount: AnyAmount) -> str:
     """An amount with its currency code, as a Detail cell prints it."""
-    return f"{currency(amount.money)} {_amount(amount.money)}"
+    return f"{get_currency(amount.money)} {_format_amount(amount.money)}"
 
 
-def _amount(money: Money) -> str:
+def _format_amount(money: Money) -> str:
     """Its currency's places, a comma every three digits, and `−` for a negative (tech-docs 003)."""
-    text = digits(money)
-    whole, places = text.removeprefix("-").split(".")
+    text = format_digits(money)
+    integer_part, places = text.removeprefix("-").split(".")
     sign = MINUS if text.startswith("-") else ""
-    return f"{sign}{int(whole):,}.{places}"
+    return f"{sign}{int(integer_part):,}.{places}"
 
 
-def _or_dash(money: Money | None) -> str:
+def _format_restated_amount(money: Money | None) -> str:
     """The amount, or `-` for a closing that did not change."""
-    return "-" if money is None else _amount(money)
+    return "-" if money is None else _format_amount(money)
 
 
-def _day_cell(day: Day) -> str:
+def _format_day_cell(day: Day) -> str:
     """A day as a table cell prints it: `Day N`."""
     return f"Day {day.number}"

@@ -51,8 +51,9 @@ processes stay in the shell and reach the core as arguments, as
 | domain event         | one frozen dataclass per event kind, joined in a union type                                                           |
 
 A `match` over a closed set ends with `case _: assert_never(value)`, so pyright reports a newly unhandled case. No type
-may represent an illegal value: its constructor raises on one, which only a bug reaches, and its `parse` or `of` returns
-a typed fault for input. State machines are hand-written: one `match` over the state and trigger unions is the table.
+may represent an illegal value: its constructor raises on one, which only a bug reaches, and its `parse` or `make`
+returns a typed fault for input. State machines are hand-written: one `match` over the state and trigger unions is the
+table.
 
 ## Failures
 

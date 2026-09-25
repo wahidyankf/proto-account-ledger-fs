@@ -15,12 +15,12 @@ from account_ledger.domain.model.money import (
     NotPositive,
     TooManyInstalments,
     TooManyPlaces,
-    daily_interest,
-    overdraft_fee,
-    same_as,
-    split,
+    compute_daily_interest,
+    compute_overdraft_fee,
+    split_amount,
+    try_narrow_currency,
 )
-from support.values import aed, bhd
+from support.values import make_aed, make_bhd
 
 
 def test_aed_refuses_more_than_two_places() -> None:
@@ -40,53 +40,57 @@ def test_bhd_refuses_more_than_three_places() -> None:
 
 def test_an_amount_must_be_above_zero() -> None:
     """An amount is money above zero; zero or below is a fault."""
-    assert Amount.of(aed("0.00")) == NotPositive("0.00")
-    assert Amount.of(aed("-400.00")) == NotPositive("-400.00")
-    assert Amount.of(aed("0.01")) == Amount(aed("0.01"))
+    assert Amount.make(make_aed("0.00")) == NotPositive("0.00")
+    assert Amount.make(make_aed("-400.00")) == NotPositive("-400.00")
+    assert Amount.make(make_aed("0.01")) == Amount(make_aed("0.01"))
     with pytest.raises(ValueError, match="an amount is above zero"):
-        Amount(aed("0.00"))
+        Amount(make_aed("0.00"))
 
 
 def test_aed_and_bhd_values_never_combine() -> None:
     """AED and BHD each combine only with their own kind, in the types and at run time."""
-    unknown: Money = bhd("1.000")
-    assert same_as(aed("1.00"), unknown) == CurrencyMismatch(expected="AED", found="BHD")
-    known: Money = aed("2.00")
-    assert same_as(aed("1.00"), known) == aed("2.00")
-    assert aed("1.00") + aed("2.50") == aed("3.50")
-    assert aed("1.00") - aed("2.50") == aed("-1.50")
-    assert -aed("1.00") == aed("-1.00")
-    assert aed("1.00") < aed("2.50")
-    assert bhd("1.000") + bhd("0.001") == bhd("1.001")
+    unknown_money: Money = make_bhd("1.000")
+    assert try_narrow_currency(make_aed("1.00"), unknown_money) == CurrencyMismatch(
+        expected_currency="AED", found_currency="BHD"
+    )
+    known_money: Money = make_aed("2.00")
+    assert try_narrow_currency(make_aed("1.00"), known_money) == make_aed("2.00")
+    assert make_aed("1.00") + make_aed("2.50") == make_aed("3.50")
+    assert make_aed("1.00") - make_aed("2.50") == make_aed("-1.50")
+    assert -make_aed("1.00") == make_aed("-1.00")
+    assert make_aed("1.00") < make_aed("2.50")
+    assert make_bhd("1.000") + make_bhd("0.001") == make_bhd("1.001")
     # The type gate refuses these mixes; the operators refuse them at run time too.
     with pytest.raises(TypeError):
-        aed("1.00") + bhd("1.000")  # pyright: ignore[reportOperatorIssue, reportUnusedExpression]
+        make_aed("1.00") + make_bhd("1.000")  # pyright: ignore[reportOperatorIssue, reportUnusedExpression]
     with pytest.raises(TypeError):
-        bhd("1.000") - aed("1.00")  # pyright: ignore[reportOperatorIssue, reportUnusedExpression]
+        make_bhd("1.000") - make_aed("1.00")  # pyright: ignore[reportOperatorIssue, reportUnusedExpression]
 
 
 def test_amb_006_daily_interest_rounds_half_even() -> None:
     """AMB-006: a day's interest rounds half-even to its currency's places, and is zero at or below zero."""
-    assert daily_interest(aed("312.50")) == aed("0.12")
-    assert daily_interest(aed("337.50")) == aed("0.14")
-    assert daily_interest(aed("285.00")) == aed("0.11")
-    assert daily_interest(bhd("10.000")) == bhd("0.004")
-    assert daily_interest(aed("0.00")) == aed("0.00")
-    assert daily_interest(aed("-370.00")) == aed("0.00")
+    assert compute_daily_interest(make_aed("312.50")) == make_aed("0.12")
+    assert compute_daily_interest(make_aed("337.50")) == make_aed("0.14")
+    assert compute_daily_interest(make_aed("285.00")) == make_aed("0.11")
+    assert compute_daily_interest(make_bhd("10.000")) == make_bhd("0.004")
+    assert compute_daily_interest(make_aed("0.00")) == make_aed("0.00")
+    assert compute_daily_interest(make_aed("-370.00")) == make_aed("0.00")
 
 
 def test_amb_020_ten_bhd_splits_3_333_3_333_3_334() -> None:
     """AMB-020: a split gives the remainder to the last part, and refuses more parts than minor units."""
-    assert split(Amount(bhd("10.000")), InstalmentCount(3)) == (
-        Amount(bhd("3.333")),
-        Amount(bhd("3.333")),
-        Amount(bhd("3.334")),
+    assert split_amount(Amount(make_bhd("10.000")), InstalmentCount(3)) == (
+        Amount(make_bhd("3.333")),
+        Amount(make_bhd("3.333")),
+        Amount(make_bhd("3.334")),
     )
-    assert split(Amount(aed("100.00")), InstalmentCount(4)) == tuple(Amount(aed("25.00")) for _ in range(4))
-    assert split(Amount(bhd("0.002")), InstalmentCount(3)) == TooManyInstalments("0.002", count=3)
+    assert split_amount(Amount(make_aed("100.00")), InstalmentCount(4)) == tuple(
+        Amount(make_aed("25.00")) for _ in range(4)
+    )
+    assert split_amount(Amount(make_bhd("0.002")), InstalmentCount(3)) == TooManyInstalments("0.002", count=3)
 
 
 def test_amb_027_the_bhd_fee_is_2_560() -> None:
     """AMB-027: the overdraft fee is AED 25.00, and BHD 2.560 at the configured rate."""
-    assert overdraft_fee(aed("0.00")) == Amount(aed("25.00"))
-    assert overdraft_fee(bhd("0.000")) == Amount(bhd("2.560"))
+    assert compute_overdraft_fee(make_aed("0.00")) == Amount(make_aed("25.00"))
+    assert compute_overdraft_fee(make_bhd("0.000")) == Amount(make_bhd("2.560"))

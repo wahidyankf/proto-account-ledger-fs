@@ -49,8 +49,8 @@ class AuthorizationDecided:
 class Captured:
     """The transition a settlement completed on its authorization: the past-tense event and its audit record."""
 
-    before: AuthorizationState
-    after: AuthorizationState
+    state_before: AuthorizationState
+    state_after: AuthorizationState
 
 
 @dataclass(frozen=True, slots=True)
@@ -72,7 +72,7 @@ class AlreadyReversed:
     """The target is already reversed by an accepted reversal (AMB-028)."""
 
     target: EventId
-    by: IncomingId
+    undoing_id: IncomingId
 
 
 @dataclass(frozen=True, slots=True)
@@ -101,7 +101,7 @@ class AlreadyUndone:
     """A part of the target's money is already undone another way, by the event named (AMB-035)."""
 
     part: EventId
-    by: EventId
+    undoing_id: EventId
 
 
 @dataclass(frozen=True, slots=True)
@@ -134,17 +134,17 @@ type Log = tuple[LogEntry, ...]
 type LoggedEvent = Credit | Debit | Reversal | FiredEvent | Authorization | Settlement  # any entry's event
 
 
-def append(log: Log, entry: LogEntry) -> Log:
+def append_entry(log: Log, entry: LogEntry) -> Log:
     """A new log with the entry at the end; nothing is ever changed or removed."""
     return (*log, entry)
 
 
-def first(log: Log, event_id: EventId) -> LogEntry | None:
+def find_first_entry(log: Log, event_id: EventId) -> LogEntry | None:
     """The first entry for an event ID, the one a reversal targets (AMB-028, AMB-035)."""
     return next((entry for entry in log if entry.event.id == event_id), None)
 
 
-def instalments_of(log: Log, credit: IncomingId) -> tuple[Instalment, ...]:
+def list_instalments(log: Log, credit: IncomingId) -> tuple[Instalment, ...]:
     """The instalments a credit fired, in order (AMB-017)."""
     return tuple(
         entry.event
@@ -153,8 +153,8 @@ def instalments_of(log: Log, credit: IncomingId) -> tuple[Instalment, ...]:
     )
 
 
-def counted(log: Log, account_id: AccountId) -> Iterator[LoggedEvent]:
-    """The events of the account's accepted entries; a hold is read by ``holds``, and a refusal moves nothing."""
+def list_counted_events(log: Log, account_id: AccountId) -> Iterator[LoggedEvent]:
+    """The events of the account's accepted entries; a hold is read by ``sum_holds``, and a refusal moves nothing."""
     for entry in log:
         match entry:
             case Accepted(event=event) | SettlementAccepted(event=event) if event.account == account_id:

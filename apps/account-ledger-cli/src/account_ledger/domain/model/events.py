@@ -99,7 +99,7 @@ class Reversal:
     booked: Day
     account: AccountId
     value_day: Day
-    reverses: EventId
+    target: EventId
 
 
 type IncomingEvent = Credit | Debit | Authorization | Settlement | Reversal
@@ -146,7 +146,7 @@ class InterestAccrual:
     amount: AnyAmount
 
     def __post_init__(self) -> None:
-        if self.id.for_day != self.id.fired_day:
+        if self.id.covered_day != self.id.fired_day:
             raise ValueError("an accrual is for the day it fires; an earlier day takes an adjustment")
 
 
@@ -161,7 +161,7 @@ class InterestAdjustment:
     amount: AnyAmount
 
     def __post_init__(self) -> None:
-        if self.id.for_day >= self.id.fired_day:
+        if self.id.covered_day >= self.id.fired_day:
             raise ValueError("an adjustment is for an earlier day; the day it fires takes an accrual")
 
 

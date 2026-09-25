@@ -1,25 +1,29 @@
-"""The shell at the unit layer: ``run`` with every effect injected."""
+"""The shell at the unit layer: ``run_cli`` with every effect injected."""
 
 import io
 
 import pytest
 
 from account_ledger import cli
-from account_ledger.adapters.render import render
-from account_ledger.cli import run
+from account_ledger.adapters.render import render_reports
+from account_ledger.cli import run_cli
 from account_ledger.domain.model.config import CHALLENGE
-from account_ledger.domain.replay import replay
-from support.brief_stream import BRIEF_CSV, brief_stream
+from account_ledger.domain.replay import replay_stream
+from support.brief_stream import BRIEF_CSV, build_brief_stream
 
 
 def test_a_stream_file_prints_its_report_and_exits_0() -> None:
-    """AC-01: `run` reads the named stream, replays it, and writes the report to standard output, exiting 0; the
+    """AC-01: `run_cli` reads the named stream, replays it, and writes the report to standard output, exiting 0; the
     end-to-end golden run compares that report with OUTPUT_TARGET."""
     out, err = io.StringIO(), io.StringIO()
 
-    exit_code = run(["streams/challenge.csv"], {"streams/challenge.csv": BRIEF_CSV}.__getitem__, out, err)
+    exit_code = run_cli(["streams/challenge.csv"], {"streams/challenge.csv": BRIEF_CSV}.__getitem__, out, err)
 
-    assert (out.getvalue(), err.getvalue(), exit_code) == (render(replay(brief_stream(), CHALLENGE).reports), "", 0)
+    assert (out.getvalue(), err.getvalue(), exit_code) == (
+        render_reports(replay_stream(build_brief_stream(), CHALLENGE).reports),
+        "",
+        0,
+    )
 
 
 USAGE = "usage: account-ledger-cli <stream.csv>\n"
@@ -35,7 +39,7 @@ def test_no_argument_is_a_usage_error_exiting_2(argv: list[str]) -> None:
     """AC-04: no argument, or more than one, prints the usage line to standard error and exits 2 (D13)."""
     out, err = io.StringIO(), io.StringIO()
 
-    exit_code = run(argv, read_brief, out, err)
+    exit_code = run_cli(argv, read_brief, out, err)
 
     assert (out.getvalue(), err.getvalue(), exit_code) == ("", USAGE, 2)
 
@@ -52,11 +56,11 @@ def test_an_unreadable_file_exits_2(fault: OSError, reason: str) -> None:
     for a missing file, and the operating system's message otherwise (tech-docs 003)."""
     out, err = io.StringIO(), io.StringIO()
 
-    def unreadable(path: str) -> str:
+    def fail_read(path: str) -> str:
         """A reader that fails as the operating system would."""
         raise fault
 
-    exit_code = run(["streams/missing.csv"], unreadable, out, err)
+    exit_code = run_cli(["streams/missing.csv"], fail_read, out, err)
 
     assert (out.getvalue(), err.getvalue(), exit_code) == ("", f"error: cannot read streams/missing.csv: {reason}\n", 2)
 
@@ -64,9 +68,9 @@ def test_an_unreadable_file_exits_2(fault: OSError, reason: str) -> None:
 def test_a_malformed_stream_exits_2_naming_the_line() -> None:
     """AC-03: a malformed stream prints `error: ` and the first fault with its line, prints no report, and exits 2."""
     out, err = io.StringIO(), io.StringIO()
-    malformed = BRIEF_CSV.replace("E2,1,DEBIT,ACC-001,950.00,", "E2,1,DEBIT,ACC-001,950.00x,")
+    malformed_csv = BRIEF_CSV.replace("E2,1,DEBIT,ACC-001,950.00,", "E2,1,DEBIT,ACC-001,950.00x,")
 
-    exit_code = run(["stream.csv"], lambda path: malformed, out, err)
+    exit_code = run_cli(["stream.csv"], lambda path: malformed_csv, out, err)
 
     assert (out.getvalue(), err.getvalue(), exit_code) == (
         "",
@@ -79,13 +83,13 @@ def test_an_internal_failure_exits_2_without_a_traceback(monkeypatch: pytest.Mon
     """AC-36: any other exception prints `error: internal failure: ` and its type, prints no report, and exits 2."""
     out, err = io.StringIO(), io.StringIO()
 
-    def broken(*_: object) -> object:
+    def fail_replay(*_: object) -> object:
         """A replay that fails with a bug."""
         raise ZeroDivisionError("a bug in the domain")
 
-    monkeypatch.setattr(cli, "replay", broken)
+    monkeypatch.setattr(cli, "replay_stream", fail_replay)
 
-    exit_code = run(["streams/challenge.csv"], read_brief, out, err)
+    exit_code = run_cli(["streams/challenge.csv"], read_brief, out, err)
 
     assert (out.getvalue(), err.getvalue(), exit_code) == ("", "error: internal failure: ZeroDivisionError\n", 2)
 
@@ -93,7 +97,7 @@ def test_an_internal_failure_exits_2_without_a_traceback(monkeypatch: pytest.Mon
 class ClosedPipe(io.StringIO):
     """Standard output whose reader has gone, as `| head` leaves it."""
 
-    def write(self, s: str, /) -> int:
+    def write(self, text: str, /) -> int:
         """A write that fails as one to a closed pipe does."""
         raise BrokenPipeError(32, "Broken pipe")
 
@@ -102,7 +106,7 @@ def test_a_closed_pipe_exits_141_quietly() -> None:
     """AC-36: standard output closed early ends the run quietly with 141, as a shell reports SIGPIPE (D13)."""
     err = io.StringIO()
 
-    exit_code = run(["streams/challenge.csv"], read_brief, ClosedPipe(), err)
+    exit_code = run_cli(["streams/challenge.csv"], read_brief, ClosedPipe(), err)
 
     assert (err.getvalue(), exit_code) == ("", 141)
 
@@ -111,10 +115,10 @@ def test_an_interrupt_exits_130() -> None:
     """AC-36: an interrupt ends the run quietly with 130, as a shell reports SIGINT (D13)."""
     out, err = io.StringIO(), io.StringIO()
 
-    def interrupted(path: str) -> str:
+    def interrupt_read(path: str) -> str:
         """A reader interrupted by Ctrl-C."""
         raise KeyboardInterrupt
 
-    exit_code = run(["streams/challenge.csv"], interrupted, out, err)
+    exit_code = run_cli(["streams/challenge.csv"], interrupt_read, out, err)
 
     assert (out.getvalue(), err.getvalue(), exit_code) == ("", "", 130)

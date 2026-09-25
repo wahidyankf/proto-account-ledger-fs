@@ -14,8 +14,8 @@ from account_ledger.domain.model.ids import (
     InstalmentId,
     InterestId,
     RefundId,
+    format_id,
     parse_event_id,
-    text,
 )
 
 
@@ -25,7 +25,7 @@ def test_day_refuses_a_malformed_value() -> None:
     assert Day.parse("1.5") == IdFault("day", "1.5")
     assert Day.parse("x") == IdFault("day", "x")
     assert Day.parse("6") == Day(6)
-    assert Day(5).next() == Day(6)
+    assert Day(5).advance() == Day(6)
     assert Day(1) <= Day(2)
     with pytest.raises(ValueError, match="a day is at least 0"):
         Day(-1)
@@ -53,8 +53,8 @@ def test_authorization_id_refuses_a_malformed_value() -> None:
 def test_event_id_refuses_a_malformed_value() -> None:
     """Every event ID form parses, the incoming ones and each marker the ledger fires; any other text is a fault."""
     acc_001 = AccountId("ACC-001")
-    for malformed in ("FEE-1", "E", "e7", "E7-", "FEE-001-D2", "CAP-001@D", "INT-01-D2@D5", "REFUND-001-D2@6"):
-        assert parse_event_id(malformed) == IdFault("event ID", malformed)
+    for malformed_id in ("FEE-1", "E", "e7", "E7-", "FEE-001-D2", "CAP-001@D", "INT-01-D2@D5", "REFUND-001-D2@6"):
+        assert parse_event_id(malformed_id) == IdFault("event ID", malformed_id)
     assert parse_event_id("E7") == IncomingId("E7")
     assert parse_event_id("E10-1") == InstalmentId(IncomingId("E10"), 1)
     assert parse_event_id("FEE-001-D2@D5") == FeeId(acc_001, Day(2), Day(5))
@@ -82,5 +82,5 @@ def test_a_marker_prints_its_kind_account_and_days() -> None:
     for marker in ("E7", "E10-3", "FEE-002-D2@D5", "REFUND-002-D2@D6", "INT-002-D5@D6", "CAP-002@D6"):
         event_id = parse_event_id(marker)
         assert not isinstance(event_id, IdFault)
-        assert text(event_id) == marker
-    assert text(FeeId(acc_002, Day(4), Day(5))) == "FEE-002-D4@D5"
+        assert format_id(event_id) == marker
+    assert format_id(FeeId(acc_002, Day(4), Day(5))) == "FEE-002-D4@D5"

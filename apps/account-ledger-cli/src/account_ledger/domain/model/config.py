@@ -30,7 +30,7 @@ class ConfigFault:
     reason: str
 
 
-def _fault(
+def _find_fault(
     accounts: tuple[AnyAccount, ...], first_day: Day, last_day: Day, capitalization_days: frozenset[Day]
 ) -> ConfigFault | None:
     """The first reason the configuration is invalid, or ``None`` when it is valid."""
@@ -57,25 +57,25 @@ class LedgerConfig:
     capitalization_days: frozenset[Day]
 
     def __post_init__(self) -> None:
-        fault = _fault(self.accounts, self.first_day, self.last_day, self.capitalization_days)
+        fault = _find_fault(self.accounts, self.first_day, self.last_day, self.capitalization_days)
         if fault is not None:
             raise ValueError(fault.reason)
 
     @staticmethod
-    def of(
+    def make(
         accounts: tuple[AnyAccount, ...], first_day: Day, last_day: Day, capitalization_days: frozenset[Day]
     ) -> LedgerConfig | ConfigFault:
         """The configuration, or the fault that makes it invalid."""
-        fault = _fault(accounts, first_day, last_day, capitalization_days)
+        fault = _find_fault(accounts, first_day, last_day, capitalization_days)
         return fault if fault is not None else LedgerConfig(accounts, first_day, last_day, capitalization_days)
 
-    def account(self, account_id: AccountId) -> AnyAccount | None:
+    def find_account(self, account_id: AccountId) -> AnyAccount | None:
         """The configured account with this ID, if the ledger holds it."""
         return next((account for account in self.accounts if account.id == account_id), None)
 
 
 CHALLENGE = LedgerConfig(
-    accounts=(Account(AccountId("ACC-001"), Aed.zero()), Account(AccountId("ACC-002"), Bhd.zero())),
+    accounts=(Account(AccountId("ACC-001"), Aed.make_zero()), Account(AccountId("ACC-002"), Bhd.make_zero())),
     first_day=Day(1),
     last_day=Day(6),
     capitalization_days=frozenset({Day(6)}),
