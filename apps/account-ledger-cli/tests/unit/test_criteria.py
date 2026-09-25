@@ -3,6 +3,7 @@
 A refused criterion is proven by a test of what the ledger does instead (REJECTED.md).
 """
 
+from account_ledger.challenge import CHALLENGE
 from account_ledger.domain.account.domain_events import (
     FeeCharged,
     InstalmentPosted,
@@ -17,7 +18,6 @@ from account_ledger.domain.account.states import (
 from account_ledger.domain.ledger.event_log import (
     find_history,
 )
-from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.events import Settlement
 from account_ledger.domain.model.ids import AuthorizationId, Day, IncomingId, InstalmentId
 from account_ledger.domain.model.money import Aed, AmountIn, Bhd

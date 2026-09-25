@@ -5,7 +5,6 @@ from account_ledger.domain.model.events import (
     Credit,
     Debit,
     IncomingEvent,
-    Instalments,
     Reversal,
     Settlement,
     SettlementKind,
@@ -13,6 +12,7 @@ from account_ledger.domain.model.events import (
 )
 from account_ledger.domain.model.ids import AccountId, AuthorizationId, Day, IncomingId, InstalmentCount
 from account_ledger.domain.model.money import AmountIn
+from support.streams import make_instalment_credit
 from support.values import make_aed, make_bhd
 
 ACC_001, ACC_002 = AccountId("ACC-001"), AccountId("ACC-002")
@@ -50,8 +50,8 @@ def build_brief_stream() -> tuple[IncomingEvent, ...]:
             IncomingId("E8"), Day(5), ACC_001, Day(5), AuthorizationId("Auth-B"), AmountIn(make_aed("90.00"))
         ),
         Reversal(IncomingId("E9"), Day(6), ACC_001, Day(2), IncomingId("E7")),
-        Credit(
-            IncomingId("E10"), Day(5), ACC_002, Day(5), AmountIn(make_bhd("10.000")), Instalments(InstalmentCount(3))
+        make_instalment_credit(
+            IncomingId("E10"), Day(5), ACC_002, Day(5), AmountIn(make_bhd("10.000")), InstalmentCount(3)
         ),
     )
 

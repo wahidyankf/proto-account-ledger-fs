@@ -12,12 +12,12 @@ from account_ledger.domain.ledger.event_log import (
     Log,
     find_history_of,
 )
-from account_ledger.domain.model.config import Account
+from account_ledger.domain.model.config import AccountOpening
 from account_ledger.domain.model.ids import AuthorizationId, IncomingId
 from support.streams import ACC_001
 
 
-def list_states(log: Log, hold: str, account: Account = ACC_001) -> list[AuthorizationState]:
+def list_states(log: Log, hold: str, account: AccountOpening = ACC_001) -> list[AuthorizationState]:
     """The state of every authorization with this authorization ID on the account, ACC-001 unless named, in the order
     first seen."""
     history = find_history_of(log, account)

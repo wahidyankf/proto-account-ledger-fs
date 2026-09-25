@@ -28,7 +28,7 @@ from account_ledger.domain.model.events import (
     Whole,
 )
 from account_ledger.domain.model.ids import Day
-from account_ledger.domain.model.money import Aed, Bhd, CurrencyMismatch, Money, sum_money
+from account_ledger.domain.model.money import Aed, Bhd, CurrencyMismatch, Money
 
 
 def _list_effects[M: (Aed, Bhd)](history: AccountHistoryIn[M]) -> list[tuple[Day, Money]]:
@@ -81,7 +81,7 @@ def _list_undone_amounts[M: (Aed, Bhd)](history: AccountHistoryIn[M], target: Lo
 def compute_closing[M: (Aed, Bhd)](history: AccountHistoryIn[M], day: Day) -> Result[M, CurrencyMismatch]:
     """The opening plus the effect of every counted entry with value date <= day."""
     effects = [effect for value_date, effect in _list_effects(history) if value_date <= day]
-    return sum_money(history.account.opening, effects)
+    return history.account.balance.add_all(effects)
 
 
 def compute_available[M: (Aed, Bhd)](history: AccountHistoryIn[M], day: Day) -> Result[M, CurrencyMismatch]:

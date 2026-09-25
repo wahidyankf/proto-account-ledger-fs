@@ -33,7 +33,6 @@ from account_ledger.domain.model.money import (
     Bhd,
     CurrencyMismatch,
     Money,
-    sum_money,
 )
 
 
@@ -213,4 +212,4 @@ def sum_holds[M: (Aed, Bhd)](history: AccountHistoryIn[M], day: Day) -> Result[M
                 pass  # a declined authorization holds nothing, and a final settlement released the hold
             case _:
                 assert_never(state)
-    return sum_money(type(history.account.opening).make_zero(), holds)
+    return type(history.account.balance).make_zero().add_all(holds)

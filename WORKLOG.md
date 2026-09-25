@@ -8,6 +8,7 @@ earlier work is claimed.
 
 | When                   | What                                                                                        |
 | ---------------------- | ------------------------------------------------------------------------------------------- |
+| 2026-09-25 19:18–19:37 | Restructure Phase 1: values without bases; take, directions, instalments; CHALLENGE moved   |
 | 2026-09-25 19:05–19:18 | Restructure Phase 0: baseline gates, corpus, inventory, literals, timings, audits recorded  |
 | 2026-09-25 18:12–19:05 | Plan quality gate: two repair cycles, the repaired draft chosen at the ceiling; R22 naming  |
 | 2026-09-25 17:12–18:12 | Restructure plan: research, pre-write gate R1 to R14, the six documents, R17 to R20 settled |

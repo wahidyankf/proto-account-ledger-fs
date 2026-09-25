@@ -39,12 +39,10 @@ from account_ledger.domain.model.events import (
     Credit,
     Debit,
     IncomingEvent,
-    Instalment,
-    Instalments,
     Reversal,
     Settlement,
 )
-from account_ledger.domain.model.ids import Day, InstalmentCount, InstalmentId
+from account_ledger.domain.model.ids import Day
 from account_ledger.domain.model.money import Aed, Bhd, CurrencyMismatch
 
 
@@ -53,10 +51,8 @@ def decide_event[M: (Aed, Bhd)](
 ) -> Result[tuple[LogEntry, ...], CurrencyMismatch]:
     """The entries the event's account records for it, plus the instalments a credit generates."""
     match event:
-        case Credit(posting=Instalments(count=count)):
-            return Ok((CreditPosted(event, today), *_generate_instalments(event, count, today)))
         case Credit():
-            return Ok((CreditPosted(event, today),))
+            return Ok((CreditPosted(event, today), *_generate_instalments(event, today)))
         case Debit():
             return Ok((DebitPosted(event, today),))
         case Reversal():
@@ -100,14 +96,9 @@ def _decide_effect(
             return Ok(SettlementForcePosted(settlement, today)) if isinstance(fault, CannotSettle) else Err(fault)
 
 
-def _generate_instalments(credit: Credit, count: InstalmentCount, today: Day) -> tuple[InstalmentPosted, ...]:
-    """The instalments a credit generates, in order, each posted with the credit's value date (AMB-017, AMB-020)."""
-    parts = credit.amount.split(count)
-    assert isinstance(parts, Ok)  # the stream reader refuses a credit it cannot split
-    return tuple(
-        InstalmentPosted(Instalment(InstalmentId(credit.id, number), credit.account, credit.value_date, part), today)
-        for number, part in enumerate(parts.value, start=1)
-    )
+def _generate_instalments(credit: Credit, today: Day) -> tuple[InstalmentPosted, ...]:
+    """The instalments a credit generates, in order, each posted today; none for a whole credit (AMB-017, AMB-020)."""
+    return tuple(InstalmentPosted(instalment, today) for instalment in credit.make_instalments())
 
 
 def _decide_reversal[M: (Aed, Bhd)](

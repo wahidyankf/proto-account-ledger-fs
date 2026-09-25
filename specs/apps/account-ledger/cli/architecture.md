@@ -59,16 +59,17 @@ The shell holds every effect and every raw value; the adapters translate between
 holds every business rule. The adapters and the domain are pure. Every dependency points inward: from the shell to the
 adapters and the domain, from the adapters to the domain's types, and, inside the domain, from stream processing to the
 ledger service and the report, from those to the Account aggregate, and from the aggregate to the values. Each layer is
-a place in the package: the shell is `cli.py` at its root, the adapters are `adapters/`, and the domain is `domain/`,
-with `stream_processing.py` and `report.py` at its root, the ledger service in `domain/ledger/`, the aggregate in
-`domain/account/`, and the values in `domain/model/`. Each domain package has its own `ruff.toml` that refuses any
-import of the layers above it, and every one refuses `account_ledger.adapters` and `account_ledger.cli` (TID251). The
-values decide nothing. Below them sits `common/`, the tools with no ledger meaning: every layer may import it, and its
-own `ruff.toml` refuses any import of the other three.
+a place in the package: the shell is `cli.py` and `challenge.py` at its root, the adapters are `adapters/`, and the
+domain is `domain/`, with `stream_processing.py` and `report.py` at its root, the ledger service in `domain/ledger/`,
+the aggregate in `domain/account/`, and the values in `domain/model/`. Each domain package has its own `ruff.toml` that
+refuses any import of the layers above it, and every one refuses `account_ledger.adapters` and `account_ledger.cli`
+(TID251). The values decide nothing. Below them sits `common/`, the tools with no ledger meaning: every layer may import
+it, and its own `ruff.toml` refuses any import of the other three.
 
 ```text
   shell      +--------------------------------------------------------------------------------+
   cli.py     | cli: run_cli(argv, read_text, out, err) -> exit code; main binds real effects   |
+  challenge  | challenge: CHALLENGE, the brief's configuration the CLI passes on                |
              +--------------------------------------------------------------------------------+
                   | text                   | events                 | reports
                   v                        |                        v
@@ -127,6 +128,7 @@ own `ruff.toml` refuses any import of the other three.
 | Component                | Responsibility                                                                            |
 | ------------------------ | ----------------------------------------------------------------------------------------- |
 | `cli`                    | `run_cli` checks arguments, reads, parses, processes, renders, and codes each failure     |
+| `challenge`              | `CHALLENGE`: ACC-001 in AED and ACC-002 in BHD, Days 1 to 6, capitalized on Day 6         |
 | `stream_csv`             | the stream file parsed into incoming events, or the first fault with its line             |
 | `render`                 | the report as text: banners, box tables, amounts with `−`, notes, and errors              |
 | `stream_processing`      | the stream in listed order, each day closed on time, with each day's log and report       |
@@ -144,9 +146,9 @@ own `ruff.toml` refuses any import of the other three.
 | `account/history`        | `AccountHistoryIn[M]`: one account and its own entries, and the queries about them        |
 | `account/domain_events`  | the domain events, one kind per fact the ledger records, and every `Rejection`            |
 | `account/states`         | the authorization states, one frozen dataclass each                                       |
-| `model/events`           | incoming event kinds, in `IncomingEvent`, and generated kinds, in `GeneratedEvent`        |
-| `model/config`           | the accounts, each typed by its currency, the window of days, and the capitalization days |
-| `model/money`            | `Aed` and `Bhd`, one type per currency; `AmountIn` above zero; split, fee, daily interest |
+| `model/events`           | incoming kinds, in `IncomingEvent`, generated kinds, in `GeneratedEvent`; instalments     |
+| `model/config`           | the accounts as opened, each typed by its currency, the window, and the capitalization    |
+| `model/money`            | `Aed` and `Bhd`, one type per currency; `AmountIn` above zero; split, take, fee, interest |
 | `model/ids`              | days, account and authorization IDs, incoming and generated IDs, instalment counts        |
 | `result`                 | `Ok` and `Err`, so every failure a caller can meet is a value; it knows no ledger         |
 
@@ -161,17 +163,20 @@ or an enum, and each constructor refuses an illegal value, so none can be built.
 ```text
 result    Result[T, E] = Ok[T] | Err[E]      every parse, make, check, or sum that can fail returns one
 money     Aed | Bhd = Money             AmountIn[M: (Aed, Bhd)], above zero    Direction: UP | DOWN
-          Aed, Bhd each a _MoneyBase: a value at its CURRENCY's PLACES; one implementation, operators on Self
-          Amount = AmountIn[Aed] | AmountIn[Bhd]
+          Aed, Bhd each a value at its CURRENCY's PLACES, with the same methods over one private function each:
+            make, parse, make_zero, require_same, add_all, compute_daily_interest, make_directed_amount, ...
+          Amount = AmountIn[Aed] | AmountIn[Bhd]    split(count), add(amount), take(amount) -> the rest or None
 ids       Day   AccountId   AuthorizationId   IncomingId   InstalmentCount
           EventId = IncomingId | InstalmentId | FeeId | RefundId | InterestId | CapitalizationId
-          AccountId, AuthorizationId, IncomingId each a _TextIdBase (PATTERN, KIND, SHAPE); FeeId, RefundId,
-          InterestId each a _DayEventIdBase (PREFIX); every event ID kind has format()
+          AccountId, AuthorizationId, IncomingId each hold PATTERN, KIND, SHAPE; FeeId, RefundId, InterestId
+          each hold PREFIX; every event ID kind has format()
 events    IncomingEvent = Credit | Debit | Authorization | Settlement | Reversal     each holds an Amount
           GeneratedEvent = Instalment | Fee | FeeRefund | InterestAccrual | InterestAdjustment | Capitalization
-          each incoming kind a _IncomingEventBase (id, booked, account, value_date); each generated kind a
-          _GeneratedEventBase[I] (id: I, account, value_date), I its own ID kind
-config    AccountIn[M] = id + opening M   LedgerConfig = accounts, first_day, last_day, capitalization_days
+          each incoming kind declares id, booked, account, value_date first; each generated kind id: its own
+          ID kind, account, value_date     Instalments(count, parts), made by Instalments.make(amount, count)
+          Credit.make_instalments()   InterestAccrual, InterestAdjustment: compute_signed_money()
+config    AccountOpeningIn[M] = id + balance M, the account as opened; AccountOpening, the union of both
+          LedgerConfig = accounts, first_day, last_day, capitalization_days
 account/domain_events
           LogEntry = the domain events, one kind per fact, each a _DomainEventBase[E]: event: E + processed_day:
             CreditPosted | DebitPosted | ReversalPosted | InstalmentPosted | FeeCharged | FeeRefunded
@@ -182,7 +187,7 @@ account/domain_events
           EventRejected.reason: Rejection = IdReused | AlreadyReversed | ReversesAReversal | UnknownTarget
                                             | TargetOnAnotherAccount | MovedNoMoney | AlreadyUndone
 account/history
-          AccountHistoryIn[M: (Aed, Bhd)] = account: AccountIn[M] + entries: LogEntry...   one account's own entries
+          AccountHistoryIn[M: (Aed, Bhd)] = account: AccountOpeningIn[M] + entries: LogEntry...   its own entries
           every account rule takes one; find_entry, list_instalments, list_counted_events ask it
 account/aggregate
           AccountAggregateIn[M] = AccountHistoryIn[M] + a method per rule a caller outside the aggregate uses
@@ -261,7 +266,7 @@ type in `domain/` belongs to it, and none outside `domain/` holds a ledger rule.
 
 | The brief says                     | The code has                                                                  |
 | ---------------------------------- | ----------------------------------------------------------------------------- |
-| an account, in its currency        | `AccountIn[M]`, with `M` either `Aed` or `Bhd`, and its `AccountId`           |
+| an account, in its currency        | `AccountOpeningIn[M]`, with `M` either `Aed` or `Bhd`, and its `AccountId`    |
 | an event in the stream             | `IncomingEvent`: `Credit`, `Debit`, `Authorization`, `Settlement`, `Reversal` |
 | the ledger, append-only            | `Log`, the one tuple of every account's domain events                         |
 | a hold                             | the `hold` of an `Approved` or a `PartiallySettled` authorization             |
@@ -271,12 +276,12 @@ type in `domain/` belongs to it, and none outside `domain/` holds a ledger rule.
 | a credit paid in instalments       | `Instalment`, one per `InstalmentCount`, recorded as `InstalmentPosted`       |
 
 A type generic over the currency ends in `In`, and the union over its currencies takes the plain noun, per the Python
-[naming](../../../../repo-governance/development/quality/stacks/python-standards/001-naming.md) rule: `AccountIn[Aed]`
-is an account in AED, and `Account` is either. A caller outside the aggregate asks it by method, such as
-`history.compute_closing(day)`; a method call works on the `AccountAggregate` union, so no caller needs to know the
-currency. Each method passes the history to the generic rule in its topic's module; a rule the modules share stays a
-function there, and one only its own module uses is private. Where an operation lives, and when kinds of one concept
-share a base, follows the Python
+[naming](../../../../repo-governance/development/quality/stacks/python-standards/001-naming.md) rule:
+`AccountOpeningIn[Aed]` is an account opened in AED, and `AccountOpening` is either. A caller outside the aggregate asks
+it by method, such as `history.compute_closing(day)`; a method call works on the `AccountAggregate` union, so no caller
+needs to know the currency. Each method passes the history to the generic rule in its topic's module; a rule the modules
+share stays a function there, and one only its own module uses is private. Where an operation lives, and when kinds of
+one concept share a base, follows the Python
 [operations](../../../../repo-governance/development/quality/stacks/python-standards/003-operations.md) rule.
 
 **The Account aggregate** is one account and its own entries in the log, `AccountAggregateIn[M]`: its history, with a

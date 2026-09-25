@@ -26,7 +26,7 @@ def assess_fees[M: (Aed, Bhd)](
     and a refund of the fee in force for a day that closes at or above zero (AMB-002, AMB-004). Each closing is read
     from the history as it grows, so a fee generated for an earlier day counts in the days after it (AMB-011)."""
     account = history.account
-    amount = account.opening.compute_overdraft_fee()
+    amount = account.balance.compute_overdraft_fee()
     entries: list[LogEntry] = []
     for day in first_day.span_to(today):
         fee = _map_fees_in_force(history).get(day)
@@ -75,5 +75,5 @@ def _map_fees_in_force[M: (Aed, Bhd)](history: AccountHistoryIn[M]) -> dict[Day,
 
 def _is_closing_below_zero[M: (Aed, Bhd)](history: AccountHistoryIn[M], day: Day) -> Result[bool, CurrencyMismatch]:
     """Whether the account's closing on the day is below zero, in its own currency."""
-    zero = type(history.account.opening).make_zero()
+    zero = type(history.account.balance).make_zero()
     return compute_closing(history, day).map(lambda closing: closing < zero)

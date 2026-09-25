@@ -1,8 +1,6 @@
 """Interest: each day's accrual on a positive closing, adjusted when a closing changes, and its capitalization
 (AMB-005, AMB-006, AMB-007, AMB-023)."""
 
-from typing import assert_never
-
 from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.account.balances import (
     compute_closing,
@@ -23,12 +21,11 @@ from account_ledger.domain.model.events import Capitalization, InterestAccrual, 
 from account_ledger.domain.model.ids import AccountId, CapitalizationId, Day, InterestId
 from account_ledger.domain.model.money import (
     Aed,
+    Amount,
     Bhd,
     CurrencyMismatch,
     Direction,
     Money,
-    compute_daily_interest,
-    sum_money,
 )
 
 
@@ -39,7 +36,13 @@ def accrue_interest[M: (Aed, Bhd)](
     adjustment of an earlier day, value-dated today (AMB-005)."""
     if isinstance(changes := _find_interest_changes(history, today, first_day), Err):
         return changes
-    return Ok(tuple(_record_interest_change(history.account.id, day, today, change) for day, change in changes.value))
+    return Ok(
+        tuple(
+            _record_interest_change(history.account.id, day, today, *directed)
+            for day, change in changes.value
+            if (directed := change.make_directed_amount()) is not None
+        )
+    )
 
 
 def _find_interest_changes[M: (Aed, Bhd)](
@@ -59,17 +62,13 @@ def _compute_interest_change[M: (Aed, Bhd)](history: AccountHistoryIn[M], day: D
     """The day's interest on its base, less what was generated for it."""
     if isinstance(base := _compute_interest_base(history, day), Err):
         return base
-    return _sum_interest_generated(history, day).map(lambda generated: compute_daily_interest(base.value) - generated)
+    return _sum_interest_generated(history, day).map(lambda generated: base.value.compute_daily_interest() - generated)
 
 
 def _record_interest_change(
-    account: AccountId, day: Day, today: Day, change: Money
+    account: AccountId, day: Day, today: Day, direction: Direction, amount: Amount
 ) -> InterestAccrued | InterestAdjusted:
     """A day's interest change as it is recorded today: an accrual for today, an adjustment for an earlier day."""
-    direction = Direction.UP if change.value > 0 else Direction.DOWN
-    made_amount = (change if direction is Direction.UP else -change).make_amount()
-    assert isinstance(made_amount, Ok)  # a change is never zero
-    amount = made_amount.value
     interest_id = InterestId(account, day, today)
     if (
         day == today
@@ -101,12 +100,12 @@ def _compute_accrued[M: (Aed, Bhd)](history: AccountHistoryIn[M]) -> Result[M, C
     for event in history.list_counted_events():
         match event:
             case InterestAccrual() | InterestAdjustment() if event.id not in undone_ids:
-                changes.append(_sign_interest(event))
+                changes.append(event.compute_signed_money())
             case Capitalization(id=capitalization_id, amount=amount) if capitalization_id not in undone_ids:
                 changes.append(-amount.money)
             case _:
                 pass
-    return sum_money(type(history.account.opening).make_zero(), changes)
+    return type(history.account.balance).make_zero().add_all(changes)
 
 
 def list_accrued_days[M: (Aed, Bhd)](
@@ -114,10 +113,10 @@ def list_accrued_days[M: (Aed, Bhd)](
 ) -> Result[tuple[Day, ...], CurrencyMismatch]:
     """The days whose interest a capitalization pays: each day whose interest events, generated since the account's
     previous capitalization, do not net to zero (tech-docs 003)."""
-    zero = type(history.account.opening).make_zero()
+    zero = type(history.account.balance).make_zero()
     accrued_days: list[Day] = []
     for day, changes in sorted(_map_interest_since_capitalization(history, capitalization).items()):
-        if isinstance(net_interest := sum_money(zero, changes), Err):
+        if isinstance(net_interest := zero.add_all(changes), Err):
             return net_interest
         if net_interest.value != zero:
             accrued_days.append(day)
@@ -137,7 +136,7 @@ def _map_interest_since_capitalization[M: (Aed, Bhd)](
             case Capitalization(id=capitalization_id) if capitalization_id not in undone_ids:
                 interest_by_day = {}
             case InterestAccrual() | InterestAdjustment() if event.id not in undone_ids:
-                interest_by_day.setdefault(event.id.for_day, []).append(_sign_interest(event))
+                interest_by_day.setdefault(event.id.for_day, []).append(event.compute_signed_money())
             case _:
                 pass
     return interest_by_day
@@ -156,28 +155,17 @@ def _compute_interest_base[M: (Aed, Bhd)](history: AccountHistoryIn[M], day: Day
                 capitalized_values.append(-amount.money)
             case _:
                 pass
-    return compute_closing(history, day).flat_map(lambda closing: sum_money(closing, capitalized_values))
+    return compute_closing(history, day).flat_map(lambda closing: closing.add_all(capitalized_values))
 
 
 def _sum_interest_generated[M: (Aed, Bhd)](history: AccountHistoryIn[M], day: Day) -> Result[M, CurrencyMismatch]:
     """The account's interest events for a day, net of their directions and reversals (tech-docs 002, step 2)."""
     undone_ids = list_reversed_targets(history)
     generated_values = [
-        _sign_interest(event)
+        event.compute_signed_money()
         for event in history.list_counted_events()
         if isinstance(event, InterestAccrual | InterestAdjustment)
         and event.id.for_day == day
         and event.id not in undone_ids
     ]
-    return sum_money(type(history.account.opening).make_zero(), generated_values)
-
-
-def _sign_interest(event: InterestAccrual | InterestAdjustment) -> Money:
-    """An interest event's amount, negative for an adjustment down."""
-    match event:
-        case InterestAdjustment(direction=Direction.DOWN, amount=amount):
-            return -amount.money
-        case InterestAccrual(amount=amount) | InterestAdjustment(amount=amount):
-            return amount.money
-        case _:
-            assert_never(event)
+    return type(history.account.balance).make_zero().add_all(generated_values)

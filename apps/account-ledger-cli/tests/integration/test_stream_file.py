@@ -3,8 +3,8 @@
 from pathlib import Path
 
 from account_ledger.adapters.stream_csv import parse_stream
+from account_ledger.challenge import CHALLENGE
 from account_ledger.common.result import Ok
-from account_ledger.domain.model.config import CHALLENGE
 from support.brief_stream import build_brief_stream
 
 STREAM = Path(__file__).resolve().parents[2] / "streams" / "challenge.csv"

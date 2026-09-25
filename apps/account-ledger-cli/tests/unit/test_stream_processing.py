@@ -1,6 +1,6 @@
 """Processing a stream: opening reports, days closing as booked days advance, empty and late days, the window's end."""
 
-from account_ledger.domain.model.config import CHALLENGE
+from account_ledger.challenge import CHALLENGE
 from account_ledger.domain.model.ids import AccountId, Day, IncomingId
 from account_ledger.domain.stream_processing import (
     process_stream,

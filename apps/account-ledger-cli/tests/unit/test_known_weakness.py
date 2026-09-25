@@ -4,7 +4,7 @@ from dataclasses import replace
 
 import pytest
 
-from account_ledger.domain.model.config import CHALLENGE
+from account_ledger.challenge import CHALLENGE
 from account_ledger.domain.model.ids import Day
 from account_ledger.domain.stream_processing import (
     process_stream,

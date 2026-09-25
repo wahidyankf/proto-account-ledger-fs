@@ -12,7 +12,7 @@ from account_ledger.domain.account.domain_events import (
     LogEntry,
     LoggedEvent,
 )
-from account_ledger.domain.model.config import AccountIn
+from account_ledger.domain.model.config import AccountOpeningIn
 from account_ledger.domain.model.events import Instalment
 from account_ledger.domain.model.ids import EventId, IncomingId
 from account_ledger.domain.model.money import Aed, Bhd
@@ -24,7 +24,7 @@ class AccountHistoryIn[M: (Aed, Bhd)]:
     reads a history, never the log, so it cannot see another account's entries. Its methods ask it only about its own
     entries; a rule that decides something lives in its topic's module."""
 
-    account: AccountIn[M]
+    account: AccountOpeningIn[M]
     entries: tuple[LogEntry, ...]
 
     def append(self, entry: LogEntry) -> AccountHistoryIn[M]:

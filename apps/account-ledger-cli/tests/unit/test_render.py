@@ -5,10 +5,10 @@ import re
 import pytest
 
 from account_ledger.adapters.render import render_reports
+from account_ledger.challenge import CHALLENGE
 from account_ledger.domain.account.domain_events import (
     Rejection,
 )
-from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.events import IncomingEvent, SettlementKind
 from account_ledger.domain.model.ids import AccountId, Day
 from account_ledger.domain.stream_processing import (

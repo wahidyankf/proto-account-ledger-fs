@@ -4,6 +4,7 @@ from dataclasses import replace
 
 import pytest
 
+from account_ledger.challenge import CHALLENGE
 from account_ledger.domain.account.domain_events import (
     AlreadyReversed,
     AlreadyUndone,
@@ -20,7 +21,7 @@ from account_ledger.domain.ledger.event_log import (
     find_history,
     find_history_of,
 )
-from account_ledger.domain.model.config import CHALLENGE, Account
+from account_ledger.domain.model.config import AccountOpening
 from account_ledger.domain.model.events import IncomingEvent
 from account_ledger.domain.model.ids import Day, FeeId, IncomingId, InstalmentId, RefundId
 from account_ledger.domain.model.money import AmountIn
@@ -188,7 +189,7 @@ UNDONE = {
 
 @pytest.mark.parametrize(("stream", "account", "day", "reason"), UNDONE.values(), ids=UNDONE.keys())
 def test_amb_035_money_already_undone_cannot_be_undone_again(
-    stream: tuple[IncomingEvent, ...], account: Account, day: Day, reason: AlreadyUndone
+    stream: tuple[IncomingEvent, ...], account: AccountOpening, day: Day, reason: AlreadyUndone
 ) -> None:
     """AMB-035: each event's money is undone at most once, whichever event undoes it: an instalment of a reversed
     credit, a credit one of whose instalments is reversed, or a fee already refunded."""

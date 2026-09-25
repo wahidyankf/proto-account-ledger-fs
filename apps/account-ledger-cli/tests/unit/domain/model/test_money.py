@@ -12,14 +12,12 @@ from account_ledger.domain.model.money import (
     AmountIn,
     Bhd,
     CurrencyMismatch,
+    Direction,
     Money,
     NotADecimal,
     NotPositive,
     TooManyInstalments,
     TooManyPlaces,
-    compute_daily_interest,
-    require_same_currency,
-    sum_money,
 )
 from support.values import make_aed, make_bhd
 
@@ -62,11 +60,11 @@ def test_an_amount_must_be_above_zero() -> None:
 def test_aed_and_bhd_values_never_combine() -> None:
     """AED and BHD each combine only with their own kind, in the types and at run time."""
     unknown_money: Money = make_bhd("1.000")
-    assert require_same_currency(make_aed("1.00"), unknown_money) == Err(
+    assert make_aed("1.00").require_same(unknown_money) == Err(
         CurrencyMismatch(expected_currency="AED", found_currency="BHD")
     )
     known_money: Money = make_aed("2.00")
-    assert require_same_currency(make_aed("1.00"), known_money) == Ok(make_aed("2.00"))
+    assert make_aed("1.00").require_same(known_money) == Ok(make_aed("2.00"))
     assert make_aed("1.00") + make_aed("2.50") == make_aed("3.50")
     assert make_aed("1.00") - make_aed("2.50") == make_aed("-1.50")
     assert -make_aed("1.00") == make_aed("-1.00")
@@ -84,8 +82,8 @@ def test_a_sum_or_comparison_across_currencies_returns_the_mismatch() -> None:
     a bug could bring one, since the reader keeps every effect in its account's currency."""
     aed_to_bhd = Err(CurrencyMismatch(expected_currency="AED", found_currency="BHD"))
     aed_amount, bhd_amount = AmountIn(make_aed("5.00")), AmountIn(make_bhd("1.000"))
-    assert sum_money(make_aed("1.00"), [make_aed("2.00"), make_aed("0.50")]) == Ok(make_aed("3.50"))
-    assert sum_money(make_aed("1.00"), [make_aed("2.00"), make_bhd("1.000")]) == aed_to_bhd
+    assert make_aed("1.00").add_all([make_aed("2.00"), make_aed("0.50")]) == Ok(make_aed("3.50"))
+    assert make_aed("1.00").add_all([make_aed("2.00"), make_bhd("1.000")]) == aed_to_bhd
     assert aed_amount.add(bhd_amount) == aed_to_bhd
     assert aed_amount.compute_rest(bhd_amount) == aed_to_bhd
     assert make_aed("1.00").is_below(bhd_amount) == aed_to_bhd
@@ -95,14 +93,30 @@ def test_a_sum_or_comparison_across_currencies_returns_the_mismatch() -> None:
     )
 
 
+def test_taking_all_of_a_hold_or_more_leaves_nothing() -> None:
+    """A settlement that takes the whole hold, or more, leaves no hold; one that takes less leaves the rest."""
+    hold = AmountIn(make_aed("100.00"))
+    assert hold.take(AmountIn(make_aed("100.00"))) == Ok(None)
+    assert hold.take(AmountIn(make_aed("120.00"))) == Ok(None)
+    assert hold.take(AmountIn(make_aed("30.00"))) == Ok(AmountIn(make_aed("70.00")))
+
+
+def test_a_zero_change_has_no_direction() -> None:
+    """An interest change above zero moves interest up by itself, one below moves it down by its size, and zero moves
+    nothing."""
+    assert make_aed("0.40").make_directed_amount() == (Direction.UP, AmountIn(make_aed("0.40")))
+    assert make_aed("-0.40").make_directed_amount() == (Direction.DOWN, AmountIn(make_aed("0.40")))
+    assert make_aed("0.00").make_directed_amount() is None
+
+
 def test_amb_006_daily_interest_rounds_half_even() -> None:
     """AMB-006: a day's interest rounds half-even to its currency's places, and is zero at or below zero."""
-    assert compute_daily_interest(make_aed("312.50")) == make_aed("0.12")
-    assert compute_daily_interest(make_aed("337.50")) == make_aed("0.14")
-    assert compute_daily_interest(make_aed("285.00")) == make_aed("0.11")
-    assert compute_daily_interest(make_bhd("10.000")) == make_bhd("0.004")
-    assert compute_daily_interest(make_aed("0.00")) == make_aed("0.00")
-    assert compute_daily_interest(make_aed("-370.00")) == make_aed("0.00")
+    assert make_aed("312.50").compute_daily_interest() == make_aed("0.12")
+    assert make_aed("337.50").compute_daily_interest() == make_aed("0.14")
+    assert make_aed("285.00").compute_daily_interest() == make_aed("0.11")
+    assert make_bhd("10.000").compute_daily_interest() == make_bhd("0.004")
+    assert make_aed("0.00").compute_daily_interest() == make_aed("0.00")
+    assert make_aed("-370.00").compute_daily_interest() == make_aed("0.00")
 
 
 def test_amb_020_ten_bhd_splits_3_333_3_333_3_334() -> None:

@@ -1,13 +1,12 @@
 """The stream reader: a valid stream parses to its events; each fault names its line."""
 
 from account_ledger.adapters.stream_csv import StreamError, parse_stream
+from account_ledger.challenge import CHALLENGE
 from account_ledger.common.result import Err, Ok
-from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.events import (
     Authorization,
     Credit,
     Debit,
-    Instalments,
     Reversal,
     Settlement,
     SettlementKind,
@@ -16,7 +15,7 @@ from account_ledger.domain.model.events import (
 from account_ledger.domain.model.ids import AccountId, AuthorizationId, Day, FeeId, IncomingId, InstalmentCount
 from account_ledger.domain.model.money import AmountIn
 from support.results import unwrap_ok
-from support.streams import HEADER, format_csv
+from support.streams import HEADER, format_csv, make_instalment_credit
 from support.values import make_aed, make_bhd
 
 ACC_001, ACC_002 = AccountId("ACC-001"), AccountId("ACC-002")
@@ -97,13 +96,8 @@ def test_a_valid_stream_parses_to_its_events() -> None:
                 SettlementKind.FINAL,
             ),
             Reversal(IncomingId("E9"), Day(6), ACC_001, Day(2), IncomingId("E7")),
-            Credit(
-                IncomingId("E10"),
-                Day(5),
-                ACC_002,
-                Day(5),
-                AmountIn(make_bhd("10.000")),
-                Instalments(InstalmentCount(3)),
+            make_instalment_credit(
+                IncomingId("E10"), Day(5), ACC_002, Day(5), AmountIn(make_bhd("10.000")), InstalmentCount(3)
             ),
         )
     )

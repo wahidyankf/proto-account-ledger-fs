@@ -9,7 +9,7 @@ import io
 from dataclasses import dataclass
 
 from account_ledger.common.result import Err, Ok, Result
-from account_ledger.domain.model.config import Account, LedgerConfig
+from account_ledger.domain.model.config import AccountOpening, LedgerConfig
 from account_ledger.domain.model.events import (
     Authorization,
     Credit,
@@ -118,14 +118,15 @@ def _parse_day(text: str, config: LedgerConfig) -> Result[Day, RowFault]:
             return Err(RowFault(f"day '{text}' is outside the window {window}"))
 
 
-def _parse_posting(text: str) -> Result[Posting, RowFault]:
-    """A whole credit for a blank cell, or the instalment count it holds."""
+def _parse_posting(text: str, amount: Amount) -> Result[Posting, RowFault]:
+    """A whole credit for a blank cell, or the amount in as many instalments as the cell counts; an amount that cannot
+    be split that many ways is refused."""
     if not text:
         return Ok(Whole())
-    return (
-        InstalmentCount.parse(text)
-        .map(Instalments)
-        .map_err(lambda _: RowFault(f"instalments must be a whole number from 2 to {MAX_INSTALMENTS}"))
+    if isinstance(count := InstalmentCount.parse(text), Err):
+        return Err(RowFault(f"instalments must be a whole number from 2 to {MAX_INSTALMENTS}"))
+    return Instalments.make(amount, count.value).map_err(
+        lambda _: RowFault(f"{amount.money.format_digits()} cannot be split into {count.value.number} instalments")
     )
 
 
@@ -156,7 +157,7 @@ def _parse_row(cells: dict[str, str], config: LedgerConfig) -> Result[IncomingEv
     fields, account = parsed_fields.value
     if kind == "REVERSAL":
         return _parse_reversal(cells["reference"], fields)
-    if isinstance(parsed_amount := _parse_amount(cells["amount"], account.opening), Err):
+    if isinstance(parsed_amount := _parse_amount(cells["amount"], account.balance), Err):
         return parsed_amount
     match kind:
         case "CREDIT":
@@ -180,7 +181,7 @@ def _check_columns(cells: dict[str, str], kind: str) -> Result[None, RowFault]:
 
 def _parse_common_fields(
     cells: dict[str, str], config: LedgerConfig
-) -> Result[tuple[_CommonFields, Account], RowFault]:
+) -> Result[tuple[_CommonFields, AccountOpening], RowFault]:
     """The row's common fields, and the account it names, which must be a configured account."""
     if isinstance(event_id := _check_id(IncomingId.parse(cells["event"])), Err):
         return event_id
@@ -206,12 +207,7 @@ def _parse_reversal(reference: str, fields: _CommonFields) -> Result[Reversal, R
 
 def _parse_credit(instalments: str, fields: _CommonFields, amount: Amount) -> Result[Credit, RowFault]:
     """A credit, whole or in instalments; one whose amount cannot be split that many ways is refused."""
-    if isinstance(parsed_posting := _parse_posting(instalments), Err):
-        return parsed_posting
-    posting = parsed_posting.value
-    if isinstance(posting, Instalments) and isinstance(amount.split(posting.count), Err):
-        return Err(RowFault(f"{amount.money.format_digits()} cannot be split into {posting.count.number} instalments"))
-    return Ok(Credit(*fields, amount, posting))
+    return _parse_posting(instalments, amount).map(lambda posting: Credit(*fields, amount, posting))
 
 
 def _parse_authorization_or_settlement(

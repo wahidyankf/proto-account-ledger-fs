@@ -20,6 +20,12 @@ first, above all [the target layout](tech-docs/001-target-layout.md) and
   tree. One surprise: the directory-map gate wanted `evidence/README.md`, now added. Last gate passed: Phase 0. Next
   item: Phase 1, the first. No budget partly spent.
 
+- **2026-09-25 19:37, Phase 1.** The values own their operations: `Aed` and `Bhd` without a base, `take` and
+  `make_directed_amount` test-first, the ID kinds and events flat, `Instalments(count, parts)` with its guard, the
+  configured account renamed `AccountOpeningIn`, and `CHALLENGE` in `challenge.py`. The gate passed: 159 passed and 1
+  xfailed, the corpus and literals equal, three names added. Last gate passed: Phase 1. Next item: Phase 2, the first.
+  No budget partly spent.
+
 ## Execution Checkout
 
 - **Working copy.** The main checkout at the repository root, on `main`, with no worktree and no task branch, per the
@@ -196,72 +202,107 @@ Pause safety: the baseline is on `origin/main`. Re-verify with `sh local-tmp/res
 Reshapes `domain/model/` as [the domain model](tech-docs/002-domain-model.md) states, moves `CHALLENGE` to the shell,
 and moves the value tests (R3, R4, R8, R14, R15).
 
-- [ ] [AI] Reorder `money.py`: constants, faults, private functions, then the types. Paths:
+- [x] [AI] Reorder `money.py`: constants, faults, private functions, then the types. Paths:
       `$SRC/domain/model/money.py`. Command: `pytest tests`. Proof: 156 passed, 1 xfailed, and
-      `grep -n "^class\|^[A-Z_]* = " $SRC/domain/model/money.py` in the new order. Acceptance: AC-06.
-- [ ] [AI] Give `Aed` and `Bhd` their own fields, `ClassVar`s, and methods, delete `_MoneyBase`, and add `require_same`,
+      `grep -n "^class\|^[A-Z_]* = " $SRC/domain/model/money.py` in the new order. Acceptance: AC-06. - Result: 156
+      passed, 1 xfailed; the grep shows the four constants, the seven faults, the private functions, then `_MoneyBase`,
+      `Aed`, `Bhd`, `Money`, `AmountIn`, `Amount`, and `Direction`, with the three public functions after them until the
+      next item deletes them.
+- [x] [AI] Give `Aed` and `Bhd` their own fields, `ClassVar`s, and methods, delete `_MoneyBase`, and add `require_same`,
       `add_all`, and `compute_daily_interest` as methods over private functions; switch every caller of
       `require_same_currency`, `sum_money`, and `compute_daily_interest` in `$SRC` and `$APP/tests` to the methods, and
       delete the three functions. Paths: `$SRC/domain/model/money.py`,
       `$SRC/domain/account/{authorizations,balances,fees,interest}.py`, `$APP/tests/unit/test_money.py`. Command:
       `pytest tests && (cd $APP && uv run --no-sync pyright)`. Proof: both pass;
       `grep -rn --include='*.py' "sum_money\|require_same_currency\|_MoneyBase" $SRC $APP/tests` prints nothing.
-      Acceptance: AC-06, AC-08.
-- [ ] [AI] RED: `test_taking_all_of_a_hold_or_more_leaves_nothing` in `$APP/tests/unit/test_money.py`: `take` of an
+      Acceptance: AC-06, AC-08. - Result: both pass, pyright 0 errors; the grep prints nothing. The daily-interest rule
+      is one private `_compute_daily_interest`, which both methods call, so the rule still exists once; the table's
+      `_round_money` is the function it calls.
+- [x] [AI] RED: `test_taking_all_of_a_hold_or_more_leaves_nothing` in `$APP/tests/unit/test_money.py`: `take` of an
       amount equal to the hold and of one above it gives `Ok(None)`, and of one below gives the rest. The RED adds a
       stub `AmountIn.take` returning `Ok(self)`. Command: `pytest tests/unit/test_money.py`. Proof: fails on its
-      assertion. Acceptance: AC-03, AC-06.
-- [ ] [AI] GREEN: `take` as [the domain model](tech-docs/002-domain-model.md#domainmodelmoneypy) states. Command:
-      `pytest tests`. Proof: passes. Acceptance: AC-06.
-- [ ] [AI] REFACTOR: docstring and definition order; `compute_rest` stays until Phase 2 replaces its one caller.
-      Command: `pytest tests`. Proof: passes. Acceptance: AC-06.
-- [ ] [AI] RED: `test_a_zero_change_has_no_direction`: `make_directed_amount` gives `(UP, 0.40)` for AED 0.40,
+      assertion. Acceptance: AC-03, AC-06. - Result: fails on its first assertion,
+      `Ok(AmountIn(money=Aed(value=Decimal('100.00')))) == Ok(None)`; 9 others pass.
+- [x] [AI] GREEN: `take` as [the domain model](tech-docs/002-domain-model.md#domainmodelmoneypy) states. Command:
+      `pytest tests`. Proof: passes. Acceptance: AC-06. - Result: 157 passed, 1 xfailed; pyright 0 errors. `take` builds
+      the rest only when `_is_positive` holds, which is today's guard, the amount below the hold.
+- [x] [AI] REFACTOR: docstring and definition order; `compute_rest` stays until Phase 2 replaces its one caller.
+      Command: `pytest tests`. Proof: passes. Acceptance: AC-06. - Result: `take` sits after `add` and before
+      `compute_rest`, its docstring as the domain model words it; nothing else to change; 157 passed.
+- [x] [AI] RED: `test_a_zero_change_has_no_direction`: `make_directed_amount` gives `(UP, 0.40)` for AED 0.40,
       `(DOWN, 0.40)` for AED −0.40, and `None` for zero. The RED adds a stub returning `None`. Command:
-      `pytest tests/unit/test_money.py`. Proof: fails on its assertion. Acceptance: AC-03, AC-06.
-- [ ] [AI] GREEN: `make_directed_amount` on both currencies. Command: `pytest tests`. Proof: passes. Acceptance: AC-06.
-- [ ] [AI] REFACTOR: `interest._record_interest_change` takes the direction and amount `make_directed_amount` gives, and
+      `pytest tests/unit/test_money.py`. Proof: fails on its assertion. Acceptance: AC-03, AC-06. - Result: fails on its
+      first assertion, `None == (<Direction.UP: 'up'>, AmountIn(money=Aed(value=Decimal('0.40'))))`.
+- [x] [AI] GREEN: `make_directed_amount` on both currencies. Command: `pytest tests`. Proof: passes. Acceptance:
+      AC-06. - Result: 158 passed, 1 xfailed; both methods call one private `_make_directed_amount`, which builds the
+      amount through `AmountIn.make`, the function `make_amount` calls.
+- [x] [AI] REFACTOR: `interest._record_interest_change` takes the direction and amount `make_directed_amount` gives, and
       `accrue_interest` skips `None`; its `assert` goes. Command: `pytest tests` and the corpus compare. Proof: passes;
-      equal. Acceptance: AC-02, AC-06.
-- [ ] [AI] Reshape `ids.py`: `IdFault` first; `_TextIdBase` and `_DayEventIdBase` deleted, each kind with its own fields
+      equal. Acceptance: AC-02, AC-06. - Result: 158 passed, 1 xfailed; the corpus compare prints nothing;
+      `grep -n "assert " interest.py` prints nothing.
+- [x] [AI] Reshape `ids.py`: `IdFault` first; `_TextIdBase` and `_DayEventIdBase` deleted, each kind with its own fields
       and `ClassVar`s over `_check_text`, `_parse_text`, and `_format_day_event_id`; `make` and `parse` classmethods on
       `Day` and `InstalmentCount`. Paths: `$SRC/domain/model/ids.py`. Command: `pytest tests`. Proof: passes;
-      `grep -n "Base" $SRC/domain/model/ids.py` prints nothing. Acceptance: AC-06, AC-07.
-- [ ] [AI] Flatten `events.py`: every kind declares its own fields in today's order; `_IncomingEventBase` and
+      `grep -n "Base" $SRC/domain/model/ids.py` prints nothing. Acceptance: AC-06, AC-07. - Result: 158 passed, 1
+      xfailed; the grep prints nothing; pyright, ruff, pylint, and vulture clean. The module now reads constants,
+      `IdFault`, the private functions, the types, then `EventId` and its parser, the order `money.py` follows.
+- [x] [AI] Flatten `events.py`: every kind declares its own fields in today's order; `_IncomingEventBase` and
       `_GeneratedEventBase` deleted; `compute_signed_money` on the two interest kinds replaces
       `interest._sign_interest`, deleted. Paths: `$SRC/domain/model/events.py`, `$SRC/domain/account/interest.py`.
-      Command: `pytest tests`. Proof: passes. Acceptance: AC-06, AC-07, AC-08.
-- [ ] [AI] `Instalments(count, parts)` with `Instalments.make`, and `Credit.make_instalments`; the stream reader and
+      Command: `pytest tests`. Proof: passes. Acceptance: AC-06, AC-07, AC-08. - Result: 158 passed, 1 xfailed; pyright
+      0 errors; the corpus compare prints nothing; `interest._sign_interest` and its three calls replaced by
+      `event.compute_signed_money()`.
+- [x] [AI] `Instalments(count, parts)` with `Instalments.make`, and `Credit.make_instalments`; the stream reader and
       `tests/support/brief_stream.py` and `streams.py` build postings through `make`; `decisions._generate_instalments`
       wraps `make_instalments` and loses its `assert`. Paths: `$SRC/domain/model/events.py`,
       `$SRC/adapters/stream_csv.py`, `$SRC/domain/account/decisions.py`, `$APP/tests/support/{brief_stream,streams}.py`.
       Command: `pytest tests` and the corpus compare. Proof: passes; equal, the `TooManyInstalments` input included.
-      Acceptance: AC-02, AC-06.
-- [ ] [AI] RED: `test_instalments_refuse_parts_whose_number_is_not_the_count` in the new
+      Acceptance: AC-02, AC-06. - Result: 158 passed, 1 xfailed; pyright 0 errors; the corpus compare prints nothing,
+      its one `cannot be split` input included; the literals compare equal. The reader's `_parse_posting` now takes the
+      amount and builds through `Instalments.make`; `decide_event's` two credit cases merge, since a whole credit makes
+      no instalments; the tests build an instalment credit through the new `support.streams.make_instalment_credit`,
+      which passes the amount once, so no test gains a literal.
+- [x] [AI] RED: `test_instalments_refuse_parts_whose_number_is_not_the_count` in the new
       `$APP/tests/unit/domain/model/test_events.py`: `Instalments(InstalmentCount(2), three parts)` raises `ValueError`.
-      Command: `pytest tests/unit/domain/model/test_events.py`. Proof: fails with `DID NOT RAISE`. Acceptance: AC-03.
-- [ ] [AI] GREEN: the guard in `Instalments.__post_init__`. Command: `pytest tests`. Proof: passes. Acceptance: AC-03.
-- [ ] [AI] REFACTOR: none beyond the docstring; recorded as such. Command: `pytest tests`. Proof: passes. Acceptance:
-      AC-03.
-- [ ] [AI] Rename `AccountIn` and `Account` in `config.py` to `AccountOpeningIn` and `AccountOpening`, field `opening`
+      Command: `pytest tests/unit/domain/model/test_events.py`. Proof: fails with `DID NOT RAISE`. Acceptance: AC-03. -
+      Result: fails with `DID NOT RAISE <class 'ValueError'>`.
+- [x] [AI] GREEN: the guard in `Instalments.__post_init__`. Command: `pytest tests`. Proof: passes. Acceptance: AC-03. -
+      Result: 159 passed, 1 xfailed; the guard names the count and the parts, `2 instalments hold 2 parts, not 3`.
+- [x] [AI] REFACTOR: none beyond the docstring; recorded as such. Command: `pytest tests`. Proof: passes. Acceptance:
+      AC-03. - Result: the class docstring names the guard; nothing else changed; 159 passed.
+- [x] [AI] Rename `AccountIn` and `Account` in `config.py` to `AccountOpeningIn` and `AccountOpening`, field `opening`
       to `balance`, and every user under `$SRC` and `$APP/tests`; move `CHALLENGE` to the new `$SRC/challenge.py`, and
       every importer to it. Paths: `$SRC/domain/model/config.py`, `$SRC/challenge.py`, and each user. Command:
       `pytest tests && grep -rn --include='*.py' "config import.*CHALLENGE" $SRC $APP/tests`. Proof: passes; the grep
-      prints nothing. Acceptance: AC-08, AC-13.
-- [ ] [AI] Remove `sign` from both verb lists in `$APP/pyproject.toml` once nothing uses it. Command:
-      `(cd $APP && uv run --no-sync pylint src tests)`. Proof: exit 0. Acceptance: AC-15.
-- [ ] [AI] Move the value tests with `/usr/bin/git mv`: `test_money.py`, `test_ids.py`, `test_config.py` from
+      prints nothing. Acceptance: AC-08, AC-13. - Result: 159 passed, 1 xfailed; the grep prints nothing; pyright, ruff,
+      pylint, and vulture clean. `challenge.py` imports only the model; the CLI and fifteen test modules import
+      `CHALLENGE` from it.
+- [x] [AI] Remove `sign` from both verb lists in `$APP/pyproject.toml` once nothing uses it. Command:
+      `(cd $APP && uv run --no-sync pylint src tests)`. Proof: exit 0. Acceptance: AC-15. - Result: exit 0;
+      `grep -c "|sign|" pyproject.toml` is 0.
+- [x] [AI] Move the value tests with `/usr/bin/git mv`: `test_money.py`, `test_ids.py`, `test_config.py` from
       `$APP/tests/unit/` to `$APP/tests/unit/domain/model/`, and `test_result.py` to `$APP/tests/unit/common/`. Command:
-      `pytest tests`. Proof: passes with the same count. Acceptance: AC-03, AC-13.
-- [ ] [AI] Update the architecture as built: L3's `model/` rows and `challenge`, L4's money, ids, events, and config
+      `pytest tests`. Proof: passes with the same count. Acceptance: AC-03, AC-13. - Result: 159 passed, 1 xfailed, the
+      count before the move; the inventory keeps every baseline name with its count.
+- [x] [AI] Update the architecture as built: L3's `model/` rows and `challenge`, L4's money, ids, events, and config
       blocks. Paths: `specs/apps/account-ledger/cli/architecture.md`. Proof: every name in those blocks exists (`grep`
-      each). Acceptance: AC-14.
+      each). Acceptance: AC-14. - Result: every type and function the L3 and L4 blocks name exists under `$SRC`; the
+      Domain Model table and naming sentence name `AccountOpeningIn` too, so no section names a removed type; the doc
+      sweep reports nothing.
 
 ### Phase 1 Gate
 
-- [ ] [AI] Run `sh local-tmp/restructure/gate.sh`. Proof: exit 0; the inventory lists exactly three added names.
-      Acceptance: AC-02, AC-03, AC-04, AC-06.
-- [ ] [AI] Commit as `refactor(cli): give each value its own operations, without a base` (and the new tests with it),
-      add the `WORKLOG.md` entry and the Execution Record line, and push. Proof: the hash and range. Acceptance: AC-16.
+- [x] [AI] Run `sh local-tmp/restructure/gate.sh`. Proof: exit 0; the inventory lists exactly three added names.
+      Acceptance: AC-02, AC-03, AC-04, AC-06. - Result: every code step exit 0 (test:quick with coverage 95%,
+      integration, e2e, the corpus equal, 115 names with their literals, 60 cited names found); the inventory adds
+      exactly the three new tests. The first run stopped at the Markdown check, on Prettier for this file and one
+      123-column line in the architecture; both fixed, then `check-md.sh` and `check:hygiene` exit 0. - Surprise:
+      `width.py` had checked only directories, so a file argument was silently skipped; it now takes files too
+      ([learnings](learnings.md)).
+- [x] [AI] Commit as `refactor(cli): give each value its own operations, without a base` (and the new tests with it),
+      add the `WORKLOG.md` entry and the Execution Record line, and push. Proof: the hash and range. Acceptance:
+      AC-16. - Result: committed with the WORKLOG entry and this Execution Record line, and pushed; the hash is in the
+      Phase 2 line.
 
 Pause safety: the values are reshaped on `origin/main`. Re-verify with `sh local-tmp/restructure/gate.sh`.
 
