@@ -10,6 +10,7 @@ from support.values import aed, bhd
 
 
 def test_an_empty_stream_reports_the_opening_balances_for_day_0_to_6() -> None:
+    """An empty stream still reports Day 0 to Day 6, each closing at the opening balances, with an empty log."""
     result = replay((), CHALLENGE)
 
     assert [report.day for report in result.reports] == [Day(n) for n in range(7)]

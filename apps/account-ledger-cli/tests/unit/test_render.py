@@ -139,6 +139,7 @@ def test_instalment_counts_print_as_words() -> None:
     above; each instalment prints its amount and its place, as OUTPUT_TARGET's E10 does."""
 
     def details(count: int) -> list[str]:
+        """The detail column of each event row for a BHD 10.000 credit in ``count`` instalments."""
         stream = (credit("E1", 1, "10.000", account="ACC-002", instalments=count),)
         return [detail for _, detail in _type_and_detail(_blocks(render((replay(stream, CHALLENGE).report(Day(1)),))))]
 
@@ -166,6 +167,7 @@ def test_authorization_states_print_as_output_target_shows() -> None:
     )
 
     def cells(day: int) -> list[str]:
+        """The Authorizations cells of the day's summary, one per account."""
         lines = render((replay(stream, CHALLENGE).report(Day(day)),)).split("\n")
         row = next(line for line in lines if line.startswith("| Authorizations"))
         return [cell.strip() for cell in row.strip("|").split("|")[1:]]
@@ -189,6 +191,7 @@ def test_capitalization_names_the_days_it_accrued() -> None:
     gapped = render((replay(gaps, CHALLENGE).report(Day(6)),)).split("\n")
 
     def details(lines: list[str]) -> list[str]:
+        """The detail column of each capitalization row."""
         return [line.split(" | ")[4].strip() for line in lines if line.startswith("| 3    | CAP-")]
 
     assert details(brief) == ["AED 0.76, accrued Days 1 to 6", "BHD 0.008, accrued Days 5 and 6"]
@@ -212,6 +215,7 @@ def test_the_texts_beyond_output_target_follow_its_patterns() -> None:
     lines = render(replay(stream, CHALLENGE).reports[1:3]).split("\n")
 
     def details(block: list[str]) -> list[str]:
+        """The detail column of each incoming event's row."""
         return [line.split(" | ")[4].strip() for line in block if line[:3] == "| E" and line[3].isdigit()]
 
     day_2 = lines.index("Day 2")
@@ -240,6 +244,7 @@ def test_a_partially_settled_authorization_prints_its_remaining_hold() -> None:
     day_3 = lines.index("Day 3")
 
     def cell(block: list[str], start: str, column: int) -> str:
+        """The cell in the given column of the first row that starts with ``start``."""
         return next(line for line in block if line.startswith(start)).split(" | ")[column].strip()
 
     assert cell(lines[:day_3], "| E3 ", 4) == "Auth-A settles for AED 120.00, hold kept"

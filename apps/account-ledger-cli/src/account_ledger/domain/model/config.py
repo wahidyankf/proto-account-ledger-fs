@@ -33,6 +33,7 @@ class ConfigFault:
 def _fault(
     accounts: tuple[AnyAccount, ...], first_day: Day, last_day: Day, capitalization_days: frozenset[Day]
 ) -> ConfigFault | None:
+    """The first reason the configuration is invalid, or ``None`` when it is valid."""
     if first_day > last_day:
         return ConfigFault(f"the first day {first_day.number} is after the last {last_day.number}")
     ids = [account.id for account in accounts]
@@ -64,6 +65,7 @@ class LedgerConfig:
     def of(
         accounts: tuple[AnyAccount, ...], first_day: Day, last_day: Day, capitalization_days: frozenset[Day]
     ) -> LedgerConfig | ConfigFault:
+        """The configuration, or the fault that makes it invalid."""
         fault = _fault(accounts, first_day, last_day, capitalization_days)
         return fault if fault is not None else LedgerConfig(accounts, first_day, last_day, capitalization_days)
 

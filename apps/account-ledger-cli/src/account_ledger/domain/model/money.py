@@ -31,6 +31,7 @@ type MoneyFault = NotADecimal | TooManyPlaces
 
 
 def _read(text: str, places: int, currency: str) -> Decimal | MoneyFault:
+    """The text as a decimal at the currency's places, or a fault for a non-number or too many places."""
     try:
         value = Decimal(text)
     except InvalidOperation:
@@ -44,6 +45,7 @@ def _read(text: str, places: int, currency: str) -> Decimal | MoneyFault:
 
 
 def _check(value: Decimal, places: int, currency: str) -> None:
+    """A guard that raises unless the value is finite at exactly the currency's places; only a bug reaches it."""
     if not value.is_finite() or value.as_tuple().exponent != -places:
         raise ValueError(f"{currency} holds exactly {places} places, not {value}")
 
@@ -59,11 +61,13 @@ class Aed:
 
     @staticmethod
     def parse(text: str) -> Aed | MoneyFault:
+        """The AED amount the text holds, or a fault saying why it is not one."""
         read = _read(text, 2, "AED")
         return Aed(read) if isinstance(read, Decimal) else read
 
     @staticmethod
     def zero() -> Aed:
+        """AED 0.00."""
         return Aed(Decimal("0.00"))
 
     def __add__(self, other: Aed) -> Aed:
@@ -91,11 +95,13 @@ class Bhd:
 
     @staticmethod
     def parse(text: str) -> Bhd | MoneyFault:
+        """The BHD amount the text holds, or a fault saying why it is not one."""
         read = _read(text, 3, "BHD")
         return Bhd(read) if isinstance(read, Decimal) else read
 
     @staticmethod
     def zero() -> Bhd:
+        """BHD 0.000."""
         return Bhd(Decimal("0.000"))
 
     def __add__(self, other: Bhd) -> Bhd:
@@ -134,6 +140,7 @@ class Amount[M: (Aed, Bhd)]:
 
     @staticmethod
     def of[N: (Aed, Bhd)](money: N) -> Amount[N] | NotPositive:
+        """The money as an amount, or a fault when it is zero or below."""
         return Amount(money) if money.value > 0 else NotPositive(str(money.value))
 
 
@@ -180,6 +187,7 @@ def same[M: (Aed, Bhd)](like: M, money: Money) -> M:
 
 
 def _minor_unit(money: Money) -> Decimal:
+    """The currency's smallest unit: 0.01 for AED, 0.001 for BHD."""
     match money:
         case Aed():
             return Decimal("0.01")

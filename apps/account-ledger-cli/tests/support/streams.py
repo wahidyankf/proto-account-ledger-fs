@@ -58,17 +58,20 @@ def _amount(account: str, text: str) -> AnyAmount:
 def credit(
     event: str, day: int, amount: str, value: int | None = None, account: str = "ACC-001", instalments: int = 0
 ) -> Credit:
+    """A credit on ACC-001 unless named, value-dated its booked day unless given, whole unless in instalments."""
     posting = Instalments(InstalmentCount(instalments)) if instalments else Whole()
     return Credit(IncomingId(event), Day(day), AccountId(account), Day(value or day), _amount(account, amount), posting)
 
 
 def debit(event: str, day: int, amount: str, value: int | None = None, account: str = "ACC-001") -> Debit:
+    """A debit on ACC-001 unless named, value-dated its booked day unless given."""
     return Debit(IncomingId(event), Day(day), AccountId(account), Day(value or day), _amount(account, amount))
 
 
 def authorization(
     event: str, day: int, hold: str, amount: str, value: int | None = None, account: str = "ACC-001"
 ) -> Authorization:
+    """An authorization for the hold, on ACC-001 unless named, value-dated its booked day unless given."""
     return Authorization(
         IncomingId(event),
         Day(day),
@@ -88,6 +91,7 @@ def settlement(
     account: str = "ACC-001",
     capture: Capture = Capture.FINAL,
 ) -> Settlement:
+    """A settlement of the hold, final unless partial, on ACC-001 unless named, value-dated its booked day."""
     return Settlement(
         IncomingId(event),
         Day(day),
@@ -100,6 +104,7 @@ def settlement(
 
 
 def reversal(event: str, day: int, reverses: str, value: int | None = None, account: str = "ACC-001") -> Reversal:
+    """A reversal of the event ID, on ACC-001 unless named, value-dated its booked day unless given."""
     target = parse_event_id(reverses)
     assert not isinstance(target, IdFault), target
     return Reversal(IncomingId(event), Day(day), AccountId(account), Day(value or day), target)

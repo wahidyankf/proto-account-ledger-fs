@@ -21,6 +21,7 @@ ACC_001, ACC_002 = AccountId("ACC-001"), AccountId("ACC-002")
 
 
 def test_a_valid_stream_parses_to_its_events() -> None:
+    """A valid stream parses to its events, in the order listed."""
     text = csv_text(
         [
             {
@@ -99,6 +100,7 @@ def fault_of(**cells: str) -> StreamError | None:
 
 
 def test_a_wrong_header_or_cell_count_is_refused() -> None:
+    """A wrong or missing header is refused on line 1, and a row with the wrong cell count on its own line."""
     header = ",".join(HEADER)
     assert parse_stream("event,booked\nE1,1\n", CHALLENGE) == StreamError(1, f"line 1: expected the header {header}")
     assert parse_stream(f"{header}\nE1,1,CREDIT,ACC-001,100.00,1,\n", CHALLENGE) == StreamError(
@@ -108,12 +110,14 @@ def test_a_wrong_header_or_cell_count_is_refused() -> None:
 
 
 def test_an_id_of_the_wrong_form_is_refused() -> None:
+    """An event, account, or hold ID of the wrong form is refused, naming the kind of ID."""
     assert fault_of(event="7") == StreamError(2, "line 2: event ID '7' is not valid")
     assert fault_of(account="ACC-1") == StreamError(2, "line 2: account ID 'ACC-1' is not valid")
     assert fault_of(type="AUTHORIZATION", reference="Auth A") == StreamError(2, "line 2: hold ID 'Auth A' is not valid")
 
 
 def test_an_unknown_type_or_account_is_refused() -> None:
+    """A type outside the five kinds, or an account the ledger does not hold, is refused."""
     assert fault_of(type="REFUND") == StreamError(
         2, "line 2: type 'REFUND' is not one of CREDIT, DEBIT, AUTHORIZATION, SETTLEMENT, REVERSAL"
     )
@@ -121,6 +125,7 @@ def test_an_unknown_type_or_account_is_refused() -> None:
 
 
 def test_an_amount_that_is_not_a_valid_amount_is_refused() -> None:
+    """An amount that is not a decimal, has too many places for its currency, or is not above zero is refused."""
     assert fault_of(amount="12.00x") == StreamError(2, "line 2: amount '12.00x' is not a decimal number")
     assert fault_of(amount="12.345") == StreamError(2, "line 2: amount '12.345' has more than 2 places for AED")
     assert fault_of(account="ACC-002", amount="1.0001") == StreamError(
@@ -131,6 +136,7 @@ def test_an_amount_that_is_not_a_valid_amount_is_refused() -> None:
 
 
 def test_a_missing_or_inapplicable_cell_is_refused() -> None:
+    """A column the kind requires but the row leaves empty, or fills but the kind does not take, is refused."""
     assert fault_of(event="") == StreamError(2, "line 2: column 'event' is required for CREDIT")
     assert fault_of(amount="") == StreamError(2, "line 2: column 'amount' is required for CREDIT")
     assert fault_of(type="SETTLEMENT") == StreamError(2, "line 2: column 'reference' is required for SETTLEMENT")
@@ -144,12 +150,14 @@ def test_a_missing_or_inapplicable_cell_is_refused() -> None:
 
 
 def test_a_day_outside_the_window_is_refused() -> None:
+    """A booked or value day outside the window, or not a whole number, is refused."""
     assert fault_of(booked="7") == StreamError(2, "line 2: day '7' is outside the window 1 to 6")
     assert fault_of(value_date="0") == StreamError(2, "line 2: day '0' is outside the window 1 to 6")
     assert fault_of(booked="1.5") == StreamError(2, "line 2: day '1.5' is outside the window 1 to 6")
 
 
 def test_a_reversal_reference_must_be_an_event_id() -> None:
+    """A reversal's reference must be an event ID, a fired marker included."""
     assert fault_of(type="REVERSAL", amount="", reference="Auth-A") == StreamError(
         2, "line 2: reference 'Auth-A' is not an event ID"
     )
@@ -159,11 +167,13 @@ def test_a_reversal_reference_must_be_an_event_id() -> None:
 
 
 def test_an_instalment_count_below_2_is_refused() -> None:
+    """An instalment count below 2, or not a whole number, is refused."""
     assert fault_of(instalments="1") == StreamError(2, "line 2: instalments must be at least 2")
     assert fault_of(instalments="two") == StreamError(2, "line 2: instalments must be at least 2")
 
 
 def test_more_instalments_than_minor_units_are_refused() -> None:
+    """A credit with more instalments than its amount has minor units is refused."""
     assert fault_of(account="ACC-002", amount="0.002", instalments="3") == StreamError(
         2, "line 2: 0.002 cannot be split into 3 instalments"
     )
@@ -176,6 +186,7 @@ def test_a_final_cell_other_than_yes_or_no_is_refused() -> None:
     settlement = "E5,4,SETTLEMENT,ACC-001,185.00,4,Auth-A,,"
 
     def capture(cell: str) -> Capture:
+        """The capture a settlement row parses to when its `final` cell is ``cell``."""
         events = parse_stream(f"{header}\n{settlement}{cell}\n", CHALLENGE)
         assert not isinstance(events, StreamError), events
         (event,) = events

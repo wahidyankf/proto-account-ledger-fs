@@ -22,6 +22,7 @@ def accrue_interest(log: Log, account: AnyAccount, today: Day, first: Day) -> Lo
 
 
 def _changes(log: Log, account: AnyAccount, today: Day, first: Day) -> list[tuple[Day, Money]]:
+    """Each day from ``first`` to ``today`` whose interest differs from what has fired, with the difference."""
     # Both branches read alike; each narrows the account to one currency for the generic call.
     if is_aed(account):
         return list(_changed(log, account, today, first))
@@ -29,6 +30,7 @@ def _changes(log: Log, account: AnyAccount, today: Day, first: Day) -> list[tupl
 
 
 def _changed[M: (Aed, Bhd)](log: Log, account: Account[M], today: Day, first: Day) -> Iterator[tuple[Day, M]]:
+    """Each day from ``first`` to ``today`` whose interest differs from what has fired, in the account's currency."""
     for day in first.through(today):
         change = daily_interest(interest_base(log, account, day)) - interest_fired(log, account, day)
         if change.value != 0:
@@ -36,6 +38,7 @@ def _changed[M: (Aed, Bhd)](log: Log, account: Account[M], today: Day, first: Da
 
 
 def _interest_event(account: AccountId, day: Day, today: Day, change: Money) -> InterestAccrual | InterestAdjustment:
+    """The event that fires a day's interest change: an accrual for today, an adjustment for an earlier day."""
     if change.value > 0:
         direction, amount = Direction.UP, amount_of(change)
     else:
@@ -57,6 +60,7 @@ def capitalize_interest(log: Log, account: AnyAccount, today: Day) -> Log:
 
 
 def _accrued(log: Log, account: AnyAccount) -> Money:
+    """The interest the account has accrued and not yet capitalized."""
     # Both branches read alike; each narrows the account to one currency for the generic call.
     if is_aed(account):
         return accrued(log, account)

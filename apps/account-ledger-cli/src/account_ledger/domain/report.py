@@ -144,6 +144,7 @@ def _processed(log: Log, day: Day) -> tuple[Processed, ...]:
 
 
 def _incoming(entry: LogEntry) -> IncomingEvent | None:
+    """The entry's event if it came from the stream, or ``None`` if the ledger fired it."""
     match entry.event:
         case Credit() | Debit() | Authorization() | Settlement() | Reversal() as event:
             return event
@@ -164,6 +165,7 @@ def _end_of_day(log: Log, day: Day, config: LedgerConfig) -> tuple[Fired | Capit
 def _fee_rows(
     fired: Sequence[LoggedEvent], everyone: tuple[AccountId, ...]
 ) -> list[Fired | Capitalized | NothingFired]:
+    """Step 1: each fee or refund fired, then a note when no fee was."""
     fees = [event for event in fired if isinstance(event, Fee | FeeRefund)]
     rows: list[Fired | Capitalized | NothingFired] = [Fired(Step.FEES, event) for event in fees]
     if not any(isinstance(event, Fee) for event in fees):
@@ -174,6 +176,7 @@ def _fee_rows(
 def _interest_rows(
     fired: Sequence[LoggedEvent], everyone: tuple[AccountId, ...]
 ) -> list[Fired | Capitalized | NothingFired]:
+    """Step 2: each account's interest events fired, then a note for each account that accrued none."""
     rows: list[Fired | Capitalized | NothingFired] = []
     for account in everyone:
         interest = [e for e in fired if isinstance(e, InterestAccrual | InterestAdjustment) and e.account == account]
@@ -186,6 +189,7 @@ def _interest_rows(
 def _capitalization_rows(
     log: Log, fired: Sequence[LoggedEvent], accounts: tuple[AnyAccount, ...]
 ) -> list[Fired | Capitalized | NothingFired]:
+    """Step 3: each account's capitalization with the days it gathers, or a note when none was paid."""
     rows: list[Fired | Capitalized | NothingFired] = []
     for account in accounts:
         paid = [event for event in fired if isinstance(event, Capitalization) and event.account == account.id]
@@ -205,6 +209,7 @@ def _errors(log: Log, day: Day, account_id: AccountId) -> tuple[Rejected, ...]:
 
 
 def _restated(log: Log, day: Day, config: LedgerConfig, reported: Reported) -> tuple[Restatement, ...]:
+    """Each earlier closing that now differs from the one last reported, oldest first (AMB-022)."""
     restated: list[Restatement] = []
     for earlier in sorted(each for each in reported if each < day):
         changed: dict[AccountId, Money | None] = {}

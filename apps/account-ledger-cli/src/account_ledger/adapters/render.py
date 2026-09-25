@@ -63,6 +63,7 @@ def render(reports: Sequence[DayReport]) -> str:
 
 
 def _day(report: DayReport) -> str:
+    """One day's banner, then its events, its end-of-day steps, and its closing summary."""
     banner = f"{RULE}\nDay {report.day.number}\n{RULE}"
     blocks = (
         _block("Events processed", _table(EVENTS, _events(report))),
@@ -93,6 +94,7 @@ def _table(header: Row, rows: Sequence[Row]) -> list[str]:
     border = "+" + "+".join("-" * (width + 2) for width in widths) + "+"
 
     def line(row: Row) -> str:
+        """One table row, each cell padded to its column's width."""
         return "|" + "|".join(f" {cell.ljust(width)} " for cell, width in zip(row, widths, strict=True)) + "|"
 
     return [border, line(header), border, *(line(row) for row in rows), border]
@@ -107,11 +109,13 @@ def _processed(processed: Processed) -> list[Row]:
 
 
 def _instalment(part: Instalment, booked: str, count: int) -> Row:
+    """An instalment's row, printed as a credit booked with the credit that fired it."""
     detail = f"{_money(part.amount)}, instalment {part.id.n} of {count}"
     return (text(part.id), booked, "Credit", part.account.value, detail, _day_cell(part.value_day))
 
 
 def _type(event: IncomingEvent) -> str:
+    """The event's kind as the Type column prints it."""
     match event:
         case Credit():
             return "Credit"
@@ -148,6 +152,7 @@ def _detail(processed: Processed) -> str:
 
 
 def _posting(posting: Posting) -> str:
+    """What a credit's detail adds for its posting: nothing when whole, the count when in instalments."""
     match posting:
         case Whole():
             return ""
@@ -181,6 +186,7 @@ def _kept(entry: LogEntry) -> str:
 
 
 def _applied(row: Fired | Capitalized | NothingFired) -> Row:
+    """An end-of-day row: the step, the event it fired or `-`, and its detail or the note for nothing fired."""
     match row:
         case Fired(step=step, event=event):
             kind, detail = _fired(event)
@@ -252,6 +258,7 @@ def _note(note: Note) -> str:
 
 
 def _summary_header(report: DayReport) -> Row:
+    """`Item`, then a column per account, headed by its ID and currency."""
     return ("Item", *(f"{account.value} ({currency(money)})" for account, money in report.closing.items()))
 
 
@@ -277,6 +284,7 @@ def _errors(entries: tuple[Rejected, ...]) -> str:
 
 
 def _authorizations(known: Sequence[AuthorizationRecord], account: AccountId) -> str:
+    """The account's authorizations with their states, joined by `; `, or `none`."""
     states = [_state(record) for record in known if record.authorization.account == account]
     return "; ".join(states) or "none"
 
@@ -287,6 +295,7 @@ def _refusal(rejected: Rejected) -> str:
 
 
 def _reason(reason: Rejection) -> str:
+    """Why the ledger refused an event, as the Errors row prints it."""
     match reason:
         case IdReused():
             return "ID already used with different content"
@@ -337,8 +346,10 @@ def _amount(money: Money) -> str:
 
 
 def _or_dash(money: Money | None) -> str:
+    """The amount, or `-` for a closing that did not change."""
     return "-" if money is None else _amount(money)
 
 
 def _day_cell(day: Day) -> str:
+    """A day as a table cell prints it: `Day N`."""
     return f"Day {day.number}"

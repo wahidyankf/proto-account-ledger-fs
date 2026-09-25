@@ -45,6 +45,8 @@ type Posting = Whole | Instalments
 
 @dataclass(frozen=True, slots=True)
 class Credit:
+    """Money in, posted whole or in instalments."""
+
     id: IncomingId
     booked: Day
     account: AccountId
@@ -55,6 +57,8 @@ class Credit:
 
 @dataclass(frozen=True, slots=True)
 class Debit:
+    """Money out, posted at once."""
+
     id: IncomingId
     booked: Day
     account: AccountId
@@ -64,6 +68,8 @@ class Debit:
 
 @dataclass(frozen=True, slots=True)
 class Authorization:
+    """A request to hold an amount, approved or declined against the available balance."""
+
     id: IncomingId
     booked: Day
     account: AccountId
@@ -74,6 +80,8 @@ class Authorization:
 
 @dataclass(frozen=True, slots=True)
 class Settlement:
+    """A capture against an authorization's hold, final or partial (AMB-013)."""
+
     id: IncomingId
     booked: Day
     account: AccountId
@@ -85,6 +93,8 @@ class Settlement:
 
 @dataclass(frozen=True, slots=True)
 class Reversal:
+    """An undo of an earlier event, named by its ID."""
+
     id: IncomingId
     booked: Day
     account: AccountId

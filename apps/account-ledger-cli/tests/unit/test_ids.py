@@ -20,6 +20,7 @@ from account_ledger.domain.model.ids import (
 
 
 def test_day_refuses_a_malformed_value() -> None:
+    """A day is a whole number from 0; any other text is a fault, and a negative day is a bug."""
     assert Day.parse("-1") == IdFault("day", "-1")
     assert Day.parse("1.5") == IdFault("day", "1.5")
     assert Day.parse("x") == IdFault("day", "x")
@@ -31,6 +32,7 @@ def test_day_refuses_a_malformed_value() -> None:
 
 
 def test_account_id_refuses_a_malformed_value() -> None:
+    """An account ID is `ACC-` and three digits; any other text is a fault."""
     assert AccountId.parse("ACC-1") == IdFault("account ID", "ACC-1")
     assert AccountId.parse("acc-001") == IdFault("account ID", "acc-001")
     assert AccountId.parse("ACC-002") == AccountId("ACC-002")
@@ -40,6 +42,7 @@ def test_account_id_refuses_a_malformed_value() -> None:
 
 
 def test_authorization_id_refuses_a_malformed_value() -> None:
+    """A hold ID is `Auth-` and letters or digits; any other text is a fault."""
     assert AuthorizationId.parse("Auth-") == IdFault("hold ID", "Auth-")
     assert AuthorizationId.parse("Auth-A B") == IdFault("hold ID", "Auth-A B")
     assert AuthorizationId.parse("Auth-Z") == AuthorizationId("Auth-Z")
@@ -48,6 +51,7 @@ def test_authorization_id_refuses_a_malformed_value() -> None:
 
 
 def test_event_id_refuses_a_malformed_value() -> None:
+    """Every event ID form parses, the incoming ones and each marker the ledger fires; any other text is a fault."""
     acc_001 = AccountId("ACC-001")
     for malformed in ("FEE-1", "E", "e7", "E7-", "FEE-001-D2", "CAP-001@D", "INT-01-D2@D5", "REFUND-001-D2@6"):
         assert parse_event_id(malformed) == IdFault("event ID", malformed)
@@ -64,6 +68,7 @@ def test_event_id_refuses_a_malformed_value() -> None:
 
 
 def test_instalment_count_refuses_a_malformed_value() -> None:
+    """An instalment count is a whole number of 2 or more; any other text is a fault."""
     assert InstalmentCount.parse("1") == IdFault("instalment count", "1")
     assert InstalmentCount.parse("three") == IdFault("instalment count", "three")
     assert InstalmentCount.parse("3") == InstalmentCount(3)
@@ -72,6 +77,7 @@ def test_instalment_count_refuses_a_malformed_value() -> None:
 
 
 def test_a_marker_prints_its_kind_account_and_days() -> None:
+    """Every event ID prints back as the text it was parsed from."""
     acc_002 = AccountId("ACC-002")
     for marker in ("E7", "E10-3", "FEE-002-D2@D5", "REFUND-002-D2@D6", "INT-002-D5@D6", "CAP-002@D6"):
         event_id = parse_event_id(marker)

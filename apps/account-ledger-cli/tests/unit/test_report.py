@@ -42,6 +42,7 @@ def test_amb_019_every_known_authorization_is_listed_with_its_state() -> None:
     result = replay(brief_stream(), CHALLENGE)
 
     def listed(day: int) -> list[tuple[AuthorizationId, AuthorizationState]]:
+        """Each authorization the day's report lists, with its state then."""
         return [(record.authorization.authorization, record.state) for record in result.report(Day(day)).authorizations]
 
     assert listed(1) == []

@@ -19,12 +19,15 @@ class Replay:
     logs: tuple[Log, ...]
 
     def report(self, day: Day) -> DayReport:
+        """The report for the day."""
         return self.reports[self._index(day)]
 
     def log_at(self, day: Day) -> Log:
+        """The log as it stood at the day's close."""
         return self.logs[self._index(day)]
 
     def _index(self, day: Day) -> int:
+        """Where the day sits in the reports and the logs alike."""
         return [each.day for each in self.reports].index(day)
 
 
@@ -42,6 +45,7 @@ def replay(stream: tuple[IncomingEvent, ...], config: LedgerConfig) -> Replay:
     reported: Reported = {}
 
     def close(day: Day) -> None:
+        """The day's close: its end of day runs, then its report and its log are kept."""
         nonlocal log, reported
         log = close_day(log, day, config)
         day_report = report(log, day, config, reported)

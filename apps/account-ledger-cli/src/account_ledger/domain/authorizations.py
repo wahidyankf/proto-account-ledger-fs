@@ -153,6 +153,7 @@ def record_for(log: Log, settlement: Settlement) -> AuthorizationRecord | None:
 
 
 def _named_by(record: AuthorizationRecord, settlement: Settlement) -> bool:
+    """Whether the settlement names this record's hold on the same account."""
     opened = record.authorization
     return opened.authorization == settlement.authorization and opened.account == settlement.account
 

@@ -12,6 +12,7 @@ ACC_001 = Account(AccountId("ACC-001"), aed("0.00"))
 
 
 def test_ledger_config_refuses_an_inverted_window() -> None:
+    """An inverted window, a repeated account, or a capitalization day outside the window is refused."""
     assert LedgerConfig.of((ACC_001,), Day(6), Day(1), frozenset()) == ConfigFault(
         "the first day 6 is after the last 1"
     )

@@ -24,6 +24,7 @@ from support.values import aed, bhd
 
 
 def test_aed_refuses_more_than_two_places() -> None:
+    """AED holds two places: a third is refused, fewer are padded, and a non-number is a fault."""
     assert Aed.parse("12.345") == TooManyPlaces("12.345", places=2, currency="AED")
     assert Aed.parse("12.5") == Aed.parse("12.50")
     assert Aed.parse("12.00x") == NotADecimal("12.00x")
@@ -32,11 +33,13 @@ def test_aed_refuses_more_than_two_places() -> None:
 
 
 def test_bhd_refuses_more_than_three_places() -> None:
+    """BHD holds three places: a fourth is refused, and fewer are padded."""
     assert Bhd.parse("10.0001") == TooManyPlaces("10.0001", places=3, currency="BHD")
     assert Bhd.parse("10") == Bhd.parse("10.000")
 
 
 def test_an_amount_must_be_above_zero() -> None:
+    """An amount is money above zero; zero or below is a fault."""
     assert Amount.of(aed("0.00")) == NotPositive("0.00")
     assert Amount.of(aed("-400.00")) == NotPositive("-400.00")
     assert Amount.of(aed("0.01")) == Amount(aed("0.01"))
@@ -45,6 +48,7 @@ def test_an_amount_must_be_above_zero() -> None:
 
 
 def test_aed_and_bhd_values_never_combine() -> None:
+    """AED and BHD each combine only with their own kind, in the types and at run time."""
     unknown: Money = bhd("1.000")
     assert same_as(aed("1.00"), unknown) == CurrencyMismatch(expected="AED", found="BHD")
     known: Money = aed("2.00")
@@ -62,6 +66,7 @@ def test_aed_and_bhd_values_never_combine() -> None:
 
 
 def test_amb_006_daily_interest_rounds_half_even() -> None:
+    """AMB-006: a day's interest rounds half-even to its currency's places, and is zero at or below zero."""
     assert daily_interest(aed("312.50")) == aed("0.12")
     assert daily_interest(aed("337.50")) == aed("0.14")
     assert daily_interest(aed("285.00")) == aed("0.11")
@@ -71,6 +76,7 @@ def test_amb_006_daily_interest_rounds_half_even() -> None:
 
 
 def test_amb_020_ten_bhd_splits_3_333_3_333_3_334() -> None:
+    """AMB-020: a split gives the remainder to the last part, and refuses more parts than minor units."""
     assert split(Amount(bhd("10.000")), InstalmentCount(3)) == (
         Amount(bhd("3.333")),
         Amount(bhd("3.333")),
@@ -81,5 +87,6 @@ def test_amb_020_ten_bhd_splits_3_333_3_333_3_334() -> None:
 
 
 def test_amb_027_the_bhd_fee_is_2_560() -> None:
+    """AMB-027: the overdraft fee is AED 25.00, and BHD 2.560 at the configured rate."""
     assert overdraft_fee(aed("0.00")) == Amount(aed("25.00"))
     assert overdraft_fee(bhd("0.000")) == Amount(bhd("2.560"))

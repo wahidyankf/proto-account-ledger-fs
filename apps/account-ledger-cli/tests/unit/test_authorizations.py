@@ -133,6 +133,7 @@ def test_amb_013_a_partial_capture_reaching_the_hold_settles(captures: tuple[str
 
 
 def aed_amount(text: str) -> Amount[Aed]:
+    """An AED amount for the transition table."""
     return Amount(aed(text))
 
 

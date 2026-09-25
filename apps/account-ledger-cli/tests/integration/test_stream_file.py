@@ -10,4 +10,5 @@ STREAM = Path(__file__).resolve().parents[2] / "streams" / "challenge.csv"
 
 
 def test_the_shipped_stream_is_the_brief() -> None:
+    """The shipped `streams/challenge.csv` parses to E1 to E10 exactly as the brief lists them."""
     assert parse_stream(STREAM.read_text(encoding="utf-8"), CHALLENGE) == brief_stream()

@@ -31,6 +31,7 @@ def run(argv: Sequence[str], read_text: Callable[[str], str], out: TextIO, err: 
 
 
 def _replay(argv: Sequence[str], read_text: Callable[[str], str], out: TextIO, err: TextIO) -> int:
+    """The exit code: 0 for a written report, 2 for a wrong argument count, an unreadable file, or a bad stream."""
     if len(argv) != 1:
         err.write(f"{USAGE}\n")
         return 2
@@ -66,4 +67,5 @@ def main() -> int:
 
 
 def _read(path: str) -> str:
+    """The stream file's text, read as UTF-8."""
     return Path(path).read_text(encoding="utf-8")

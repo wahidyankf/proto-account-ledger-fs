@@ -18,6 +18,7 @@ from support.streams import ACC_001, auth_a_never_settled
 # The fix: a hold lifetime after which the end of day fires a hold-expiry event that releases the hold.
 @pytest.mark.xfail(strict=True, reason="AMB-018: holds never expire, so an unsettled hold is never released")
 def test_known_weakness_an_unsettled_hold_never_lapses() -> None:
+    """AMB-018: Auth-A, never settled, should lapse by Day 32, but its hold still reduces the available balance."""
     day_32 = replay(auth_a_never_settled(), replace(CHALLENGE, last_day=Day(32))).report(Day(32))
 
     assert day_32.available[ACC_001.id] == day_32.closing[ACC_001.id]

@@ -53,6 +53,7 @@ def test_an_unreadable_file_exits_2(fault: OSError, reason: str) -> None:
     out, err = io.StringIO(), io.StringIO()
 
     def unreadable(path: str) -> str:
+        """A reader that fails as the operating system would."""
         raise fault
 
     exit_code = run(["streams/missing.csv"], unreadable, out, err)
@@ -79,6 +80,7 @@ def test_an_internal_failure_exits_2_without_a_traceback(monkeypatch: pytest.Mon
     out, err = io.StringIO(), io.StringIO()
 
     def broken(*_: object) -> object:
+        """A replay that fails with a bug."""
         raise ZeroDivisionError("a bug in the domain")
 
     monkeypatch.setattr(cli, "replay", broken)
@@ -92,6 +94,7 @@ class ClosedPipe(io.StringIO):
     """Standard output whose reader has gone, as `| head` leaves it."""
 
     def write(self, s: str, /) -> int:
+        """A write that fails as one to a closed pipe does."""
         raise BrokenPipeError(32, "Broken pipe")
 
 
@@ -109,6 +112,7 @@ def test_an_interrupt_exits_130() -> None:
     out, err = io.StringIO(), io.StringIO()
 
     def interrupted(path: str) -> str:
+        """A reader interrupted by Ctrl-C."""
         raise KeyboardInterrupt
 
     exit_code = run(["streams/challenge.csv"], interrupted, out, err)

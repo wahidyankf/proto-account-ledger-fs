@@ -79,10 +79,12 @@ class RowFault:
 
 
 def _id[T](value: T | IdFault) -> T | RowFault:
+    """The parsed value, or a fault naming the kind of ID and the text it refused."""
     return RowFault(f"{value.kind} '{value.text}' is not valid") if isinstance(value, IdFault) else value
 
 
 def _amount(text: str, like: Money) -> AnyAmount | RowFault:
+    """An amount in the account's currency, or a fault saying why the text is not one."""
     match like:
         case Aed():
             money = Aed.parse(text)
@@ -102,6 +104,7 @@ def _amount(text: str, like: Money) -> AnyAmount | RowFault:
 
 
 def _day(text: str, config: LedgerConfig) -> Day | RowFault:
+    """A day inside the ledger's window, or a fault naming the window."""
     day = Day.parse(text)
     if isinstance(day, IdFault) or not config.first_day <= day <= config.last_day:
         return RowFault(f"day '{text}' is outside the window {config.first_day.number} to {config.last_day.number}")
@@ -109,6 +112,7 @@ def _day(text: str, config: LedgerConfig) -> Day | RowFault:
 
 
 def _posting(text: str) -> Posting | RowFault:
+    """A whole credit for a blank cell, or the instalment count it holds."""
     if not text:
         return Whole()
     count = InstalmentCount.parse(text)
@@ -177,6 +181,7 @@ def _head(cells: dict[str, str], config: LedgerConfig) -> tuple[_Head, AnyAccoun
 
 
 def _reversal(reference: str, head: _Head) -> Reversal | RowFault:
+    """A reversal of the event its reference names, which must be an event ID."""
     target = parse_event_id(reference)
     if isinstance(target, IdFault):
         return RowFault(f"reference '{target.text}' is not an event ID")

@@ -51,6 +51,7 @@ def _in_force(log: Log, account_id: AccountId) -> dict[Day, Fee]:
 
 
 def _negative(log: Log, account: AnyAccount, day: Day) -> bool:
+    """Whether the account's closing on the day is below zero."""
     # Both branches read alike; each narrows the account to one currency for the generic call.
     if is_aed(account):
         return _below_zero(log, account, day)
@@ -58,4 +59,5 @@ def _negative(log: Log, account: AnyAccount, day: Day) -> bool:
 
 
 def _below_zero[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> bool:
+    """Whether the account's closing on the day is below zero, in its own currency."""
     return closing(log, account, day) < type(account.opening).zero()

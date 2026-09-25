@@ -22,6 +22,7 @@ class InstalmentCount:
 
     @staticmethod
     def parse(text: str) -> InstalmentCount | IdFault:
+        """The count the text holds, or a fault for one below 2 or not a whole number."""
         if re.fullmatch(r"[0-9]+", text) and int(text) >= 2:
             return InstalmentCount(int(text))
         return IdFault("instalment count", text)
@@ -47,9 +48,11 @@ class Day:
 
     @staticmethod
     def parse(text: str) -> Day | IdFault:
+        """The day the text holds, or a fault for one that is not a whole number."""
         return Day(int(text)) if re.fullmatch(r"[0-9]+", text) else IdFault("day", text)
 
     def next(self) -> Day:
+        """The day after this one."""
         return Day(self.number + 1)
 
     def through(self, last: Day) -> Iterator[Day]:
@@ -72,6 +75,7 @@ class AccountId:
 
     @staticmethod
     def parse(text: str) -> AccountId | IdFault:
+        """The account ID the text holds, or a fault for one not of the form `ACC-001`."""
         return AccountId(text) if _ACCOUNT.fullmatch(text) else IdFault("account ID", text)
 
     @property
@@ -92,6 +96,7 @@ class AuthorizationId:
 
     @staticmethod
     def parse(text: str) -> AuthorizationId | IdFault:
+        """The hold ID the text holds, or a fault for one not of the form `Auth-A`."""
         return AuthorizationId(text) if _HOLD.fullmatch(text) else IdFault("hold ID", text)
 
 
@@ -107,6 +112,7 @@ class IncomingId:
 
     @staticmethod
     def parse(text: str) -> IncomingId | IdFault:
+        """The event ID the text holds, or a fault for one not of the form `E1`."""
         return IncomingId(text) if _INCOMING.fullmatch(text) else IdFault("event ID", text)
 
 
