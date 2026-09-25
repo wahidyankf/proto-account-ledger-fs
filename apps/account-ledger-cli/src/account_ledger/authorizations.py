@@ -140,6 +140,8 @@ def records(log: Log) -> tuple[AuthorizationRecord, ...]:
                 ]
             case Accepted() | SettlementAccepted() | Rejected() | Duplicate():
                 pass  # a posting, a force-post, a refusal, or a retry moves no authorization
+            case _:
+                assert_never(entry)
     return tuple(found)
 
 

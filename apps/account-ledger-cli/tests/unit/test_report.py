@@ -1,5 +1,7 @@
 """The day report as data: restated closings (AMB-022), authorizations (AMB-019), errors (AMB-014), and rows."""
 
+from typing import assert_never
+
 import pytest
 
 from account_ledger.authorizations import Approved, AuthorizationState, Declined, Settled
@@ -108,6 +110,8 @@ def rows(day_report: DayReport) -> list[tuple[int, str, tuple[str, ...]]]:
                 found.append((Step.CAPITALIZATION.value, text(event.id), (event.account.value,)))
             case NothingFired(step=step, accounts=accounts, note=note):
                 found.append((step.value, note.value, tuple(account.value for account in accounts)))
+            case _:
+                assert_never(row)
     return found
 
 

@@ -201,6 +201,8 @@ def _step(step: Step) -> str:
             return "Interest accrual"
         case Step.CAPITALIZATION:
             return "Interest capitalization"
+        case _:
+            assert_never(step)
 
 
 def _summary_header(report: DayReport) -> Row:
