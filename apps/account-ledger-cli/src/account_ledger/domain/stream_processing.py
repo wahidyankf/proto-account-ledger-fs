@@ -49,6 +49,36 @@ class _ProcessingState:
     reported_closings: ReportedClosings
     day: Day
 
+    def process_event(self, event: IncomingEvent, config: LedgerConfig) -> Result[_ProcessingState, CurrencyMismatch]:
+        """The state with the event processed on the current day."""
+        return process_event(self.log, event, self.day, config).map(lambda log: replace(self, log=log))
+
+    def close_days_before(self, booked: Day | None, config: LedgerConfig) -> Result[_ProcessingState, CurrencyMismatch]:
+        """Close each day before ``booked``, or every day left in the window when there is none."""
+        state = self
+        while state.day <= config.last_day and (booked is None or booked > state.day):
+            if isinstance(closed_state := state.close_current_day(config), Err):
+                return closed_state
+            state = closed_state.value
+        return Ok(state)
+
+    def close_current_day(self, config: LedgerConfig) -> Result[_ProcessingState, CurrencyMismatch]:
+        """The current day's close: its end of day runs, its report and log are kept, and the next day opens."""
+        if isinstance(closed_log := close_day(self.log, self.day, config), Err):
+            return closed_log
+        log = closed_log.value
+        if isinstance(day_report := build_report(log, self.day, config, self.reported_closings), Err):
+            return day_report
+        return Ok(
+            _ProcessingState(
+                log,
+                (*self.reports, day_report.value),
+                (*self.logs, log),
+                update_reported(self.reported_closings, day_report.value),
+                self.day.advance(),
+            )
+        )
+
 
 def process_stream(
     stream: tuple[IncomingEvent, ...], config: LedgerConfig
@@ -64,39 +94,9 @@ def process_stream(
         return opening_report
     state = _ProcessingState((), (opening_report.value,), ((),), {}, config.first_day)
     for event in stream:
-        if isinstance(closed_state := _close_days_before(state, event.booked, config), Err):
-            return closed_state
-        state = closed_state.value
-        if isinstance(processed_log := process_event(state.log, event, state.day, config), Err):
-            return processed_log
-        state = replace(state, log=processed_log.value)
-    return _close_days_before(state, None, config).map(lambda final: ProcessedStream(final.reports, final.logs))
-
-
-def _close_days_before(
-    state: _ProcessingState, booked: Day | None, config: LedgerConfig
-) -> Result[_ProcessingState, CurrencyMismatch]:
-    """Close each day before ``booked``, or every day left in the window when there is none."""
-    while state.day <= config.last_day and (booked is None or booked > state.day):
-        if isinstance(closed_state := _close_current_day(state, config), Err):
-            return closed_state
-        state = closed_state.value
-    return Ok(state)
-
-
-def _close_current_day(state: _ProcessingState, config: LedgerConfig) -> Result[_ProcessingState, CurrencyMismatch]:
-    """The current day's close: its end of day runs, its report and log are kept, and the next day opens."""
-    if isinstance(closed_log := close_day(state.log, state.day, config), Err):
-        return closed_log
-    log = closed_log.value
-    if isinstance(day_report := build_report(log, state.day, config, state.reported_closings), Err):
-        return day_report
-    return Ok(
-        _ProcessingState(
-            log,
-            (*state.reports, day_report.value),
-            (*state.logs, log),
-            update_reported(state.reported_closings, day_report.value),
-            state.day.advance(),
-        )
-    )
+        if isinstance(processed_state := state.close_days_before(event.booked, config), Err):
+            return processed_state
+        if isinstance(processed_state := processed_state.value.process_event(event, config), Err):
+            return processed_state
+        state = processed_state.value
+    return state.close_days_before(None, config).map(lambda final: ProcessedStream(final.reports, final.logs))
