@@ -124,8 +124,8 @@ def test_a_currency_mismatch_exits_2_naming_both_currencies() -> None:
 
 
 def test_an_unknown_account_exits_2_naming_it() -> None:
-    """AC-36: processing that returns an account the ledger does not hold, which only a bug brings since the stream
-    reader refuses one first, prints `error: internal: ` with the account, prints no report, and exits 2."""
+    """AC-36: processing that returns an account the ledger does not hold, which only a bug brings since the event
+    source refuses one first, prints `error: internal: ` with the account, prints no report, and exits 2."""
     out, err = io.StringIO(), io.StringIO()
     run_with_unknown_account = FailingRun(Err(UnknownAccount(AccountId("ACC-003"))))
 
