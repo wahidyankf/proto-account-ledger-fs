@@ -1,5 +1,9 @@
 """Result: each combinator acts on its own side and hands the other back unchanged."""
 
+from dataclasses import FrozenInstanceError
+
+import pytest
+
 from account_ledger.common.result import Err, Ok, Result
 
 
@@ -43,3 +47,14 @@ def test_ok_and_err_compare_by_side_and_content() -> None:
     assert Err(1) != Ok(1)
     assert Ok(1) != Ok(2)
     assert (repr(Ok(1)), repr(Err("bad"))) == ("Ok(1)", "Err('bad')")
+
+
+@pytest.mark.parametrize("result", [Ok(1), Err("bad")])
+@pytest.mark.parametrize("name", ["value", "error", "_value", "_error", "extra"])
+def test_ok_and_err_refuse_every_write_and_delete(result: Result[int, str], name: str) -> None:
+    """Neither side can be changed once made, not even through its private slot, as a frozen dataclass cannot."""
+    with pytest.raises(FrozenInstanceError):
+        setattr(result, name, 2)
+    with pytest.raises(FrozenInstanceError):
+        delattr(result, name)
+    assert result in (Ok(1), Err("bad"))

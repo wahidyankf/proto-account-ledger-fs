@@ -26,6 +26,8 @@ go uncaught hides the failure until it ends the run.
   - a value object's constructor raises on an illegal value, which a bug alone can pass it, since code builds values
     through `parse` or `make`;
   - an `assert` states an invariant only a bug breaks;
+  - a hand-written immutable class, such as `Ok` or `Err`, refuses every write and delete in `__setattr__` and
+    `__delattr__` with `FrozenInstanceError`, as a frozen dataclass does;
   - an operator given a foreign type returns `NotImplemented`, so Python raises `TypeError`.
 - **The shell:** apart from those wrappers, only the shell catches. It catches `BrokenPipeError` and `KeyboardInterrupt`
   as signals, and `Exception` as the floor tier's last resort. No code uses a bare `except:`.

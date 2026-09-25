@@ -6,10 +6,13 @@ apart with ``match`` or an ``isinstance`` early return, or chains it: ``map`` an
 side and pass the result on unchanged. Each method acts on its own side and hands the other back as it is.
 
 Both are hand-written rather than dataclasses: each exposes its content only through a read-only property, so pyright
-infers them covariant, and an ``Ok[bool]`` is an ``Ok[int]``; a frozen dataclass would be invariant.
+infers them covariant, and an ``Ok[bool]`` is an ``Ok[int]``; a frozen dataclass would be invariant. Each still refuses
+every write and delete at runtime, its private slot included, with ``FrozenInstanceError`` as a frozen dataclass does;
+typing the value ``Never`` keeps pyright refusing a write to any other name too.
 """
 
 from collections.abc import Callable
+from dataclasses import FrozenInstanceError
 from typing import Never, final
 
 
@@ -19,10 +22,11 @@ class Ok[T]:
 
     __slots__ = ("_value",)
     __match_args__ = ("value",)
+    _value: T
 
     def __init__(self, value: T) -> None:
         """Hold the success's value."""
-        self._value = value
+        object.__setattr__(self, "_value", value)
 
     @property
     def value(self) -> T:
@@ -59,6 +63,12 @@ class Ok[T]:
         """This success, unchanged: there is no fault to see."""
         return self
 
+    def __setattr__(self, name: str, value: Never) -> Never:
+        raise FrozenInstanceError(f"cannot assign to field {name!r}")
+
+    def __delattr__(self, name: str) -> Never:
+        raise FrozenInstanceError(f"cannot delete field {name!r}")
+
     def __eq__(self, other: object) -> bool:
         return isinstance(other, Ok) and self._content == other._content
 
@@ -72,10 +82,11 @@ class Err[E]:
 
     __slots__ = ("_error",)
     __match_args__ = ("error",)
+    _error: E
 
     def __init__(self, error: E) -> None:
         """Hold the failure's fault."""
-        self._error = error
+        object.__setattr__(self, "_error", error)
 
     @property
     def error(self) -> E:
@@ -111,6 +122,12 @@ class Err[E]:
         """This failure, unchanged, once ``action`` has seen its fault."""
         action(self._error)
         return self
+
+    def __setattr__(self, name: str, value: Never) -> Never:
+        raise FrozenInstanceError(f"cannot assign to field {name!r}")
+
+    def __delattr__(self, name: str) -> Never:
+        raise FrozenInstanceError(f"cannot delete field {name!r}")
 
     def __eq__(self, other: object) -> bool:
         return isinstance(other, Err) and self._content == other._content
