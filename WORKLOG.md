@@ -8,6 +8,7 @@ earlier work is claimed.
 
 | When                   | What                                                                                        |
 | ---------------------- | ------------------------------------------------------------------------------------------- |
+| 2026-09-25 22:24–22:36 | Re-check against the brief: doc figures corrected; four abandoned approaches added          |
 | 2026-09-25 22:04–22:22 | Layout: a blank line parts each step of a body; the Python standards gain a Layout module   |
 | 2026-09-25 21:15–21:37 | Restructure archival: execution check BLOCKED, repaired, then PASS; RC4 fired; archived     |
 | 2026-09-25 21:04–21:14 | Restructure Phase 8: every criterion verified; corpus, mutations, and timings recorded      |

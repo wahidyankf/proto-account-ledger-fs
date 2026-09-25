@@ -6,7 +6,7 @@ Each entry has the same six parts:
 
 - **Where** the brief is ambiguous, quoted where it can be.
 - **Why it is problematic**: what the readings disagree on, and which figures or criteria that moves.
-- **Options**: the readings, with the one currently recommended marked and its reason.
+- **Options**: the readings, with the one recommended before the decision marked and its reason.
 - **Status**: **Open** until the entry is settled, then **Resolved**.
 - **Resolution**: the reading chosen, left blank while the entry is open.
 - **Rationale**: why that reading was chosen over the others, left blank while the entry is open.
@@ -108,7 +108,7 @@ option, so none gives criterion 2's "exactly one overdraft fee", which [REJECTED
 
 **Why it is problematic.** The phrase "the day assessed" can mean the day whose closing is negative (Day 2) or the day
 the check runs (Day 5). The fees for Days 2 and 4 are charged either way (AMB-002); the choice moves them between value
-dates. Dated Day 2 and Day 4, they restate Day 2 to −395.00, Day 3 to +5.00, and Day 4 to −360.00; dated Day 5, those
+dates. Dated Day 2 and Day 4, they restate Day 2 to −395.00, Day 3 to +5.00, and Day 4 to −385.00; dated Day 5, those
 days stay at −370.00, +30.00, and −335.00, and Day 5 carries three fees. Day 5's closing is −410.00 either way; if
 interest is computed from final balances (AMB-005), Day 3's interest differs too.
 
@@ -323,7 +323,8 @@ that moment. _Test:_ `test_amb_009_a_later_credit_the_same_day_does_not_change_a
 
 **Rationale.** A card network needs the answer when the card is presented, not at the end of the day, so the ledger can
 only weigh what preceded the request. A credit arriving later that day cannot rescue a decline, which is how card
-authorization works. In this stream Auth-A is approved against 50.00 and Auth-B declined against −425.00.
+authorization works. In this stream Auth-A is approved against 250.00, leaving 50.00 available, and Auth-B declined,
+since it would leave −425.00.
 
 ## AMB-010 — What a value date means on an authorization
 
@@ -486,8 +487,8 @@ possibly its interest change.
 
 | Option                             | Day 5 report | Day 6 report           | Interest |
 | ---------------------------------- | ------------ | ---------------------- | -------- |
-| Sort by booked day (E10 before E9) | 10.000       | 10.000                 | 0.008    |
-| Listed order; E10 late, backdated  | 0.000        | 10.000; Day 5 restated | 0.008    |
+| Sort by booked day (E10 before E9) | 10.000       | 10.008                 | 0.008    |
+| Listed order; E10 late, backdated  | 0.000        | 10.008; Day 5 restated | 0.008    |
 | Listed order; E10 rejected         | 0.000        | 0.000, plus an error   | 0.000    |
 
 In the late-arrival option, E10 is processed on Day 6 with value date Day 5, so Day 6's report restates Day 5 to 10.000

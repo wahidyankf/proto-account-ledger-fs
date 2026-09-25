@@ -90,3 +90,33 @@ The criteria were first drafted as Gherkin in `ACCEPTANCE_CRITERIA.feature`, and
 scenario at three test levels with pytest-bdd. Both are abandoned for plain pytest (AMB-026): every criterion has at
 least one named test whose docstring quotes the brief, so step bindings would add a second language and a mapping layer
 without adding a reader. The feature file was deleted once each criterion named its test.
+
+### Replaying day by day
+
+The first replay looped over the days and, inside each, took the events booked by then, which hid what closes a day. It
+is abandoned for a loop over the events (AMB-001): an event booked after the open day first closes that day and every
+empty day before its own, and once the stream is spent, the days left in the window close. The report did not change.
+`test_amb_001_a_day_without_events_still_closes` and `test_amb_001_an_event_booked_after_the_window_reaches_no_day` pin
+what both loops did.
+
+### Faults as bare unions and exceptions
+
+Each parser and constructor first returned either its value or a bare fault, and a currency mismatch, which the stream
+reader makes unreachable, raised an exception. Both are abandoned for a returned `Result`, `Ok` or `Err` with a named
+fault, so that pyright makes every caller handle the failure and exceptions are left for bugs. A mismatch now travels up
+to the shell, which prints it as an internal error and exits with status 2.
+
+### Functions reached through currency dispatchers
+
+The account rules and the money operations were first free functions generic over the currency, each reached through an
+`_of` function that matched `Aed` or `Bhd` first, because pyright cannot call a generic function on a union. They are
+abandoned for methods on each type, such as `account.compute_closing(day)` and `amount.split(count)`: a method call
+works on the union, so the dispatchers went.
+
+### Shared base classes
+
+For about three hours, seven frozen bases shared fields and behaviour: one for `Aed` and `Bhd`, two for the ID kinds,
+one each for the incoming, generated, and domain events, and one for the settlement inputs. They are abandoned for
+composition: a change to a base reaches every kind, wanted or not, so each kind now declares its own fields, and
+behaviour two kinds share is one private function both call. Lint now refuses any base but `Protocol`, `Generic`,
+`Enum`, or an exception class.

@@ -1,9 +1,9 @@
 # Numbers
 
 Every constant the ledger and its known-weakness test use, where it comes from, and why it has that value and not half
-of it. A value marked open depends on an entry still open in [AMBIGUITIES](AMBIGUITIES.md), which holds its options and
-reasoning; a value marked proposed is a chosen value no ambiguity covers, not yet confirmed; a value marked resolved
-follows a settled entry there. Figures here follow the resolutions in AMBIGUITIES.
+of it. A chosen value marked resolved follows the settled entry it names in [AMBIGUITIES](AMBIGUITIES.md), which holds
+its options and reasoning; one marked in place is a value no ambiguity covers, set in the code or its gates; one marked
+test only is used by the known-weakness test alone. Figures here follow the resolutions in AMBIGUITIES.
 
 A **given** constant is fixed by the [challenge brief](challenge-raw.md); halving it would break a non-negotiable rule,
 so its entry says what the value drives instead. A **chosen** constant is a design decision and carries its own reason.
@@ -53,9 +53,9 @@ choice here: this is the given rate, represented without error.
 
 ### Decimal working precision
 
-Python's default context of 28 significant digits. A balance of 10¹² at three decimals is 16 digits, and multiplying it
-by a four-digit rate needs 20. At 14 digits (half), intermediate products for large balances would be rounded silently
-before the deliberate quantize step.
+Python's default context of 28 significant digits. An amount just below 10¹² at three decimals is 15 digits, and
+multiplying it by the rate keeps 16: 999,999,999,999.999 × 0.0004 = 399,999,999.9999996. At 14 digits (half),
+intermediate products for large balances would be rounded silently before the deliberate quantize step.
 
 ### Amount limit
 
