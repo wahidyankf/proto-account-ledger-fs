@@ -19,6 +19,10 @@ applies. It implements [Explicit Over Implicit](../../../principles/explicit-ove
 - **Toolchain:** each project is a uv project with `.python-version`, `requires-python`, and a committed `uv.lock`,
   following [Native-First Toolchain](../../workflow/native-first-toolchain.md).
 - **Lint and format:** `ruff check` and `ruff format --check` report nothing.
+- **Complexity:** each function's McCabe complexity must stay at 10 or below (ruff `C901`) and its nesting at 3 blocks
+  or below (`PLR1702`). This makes a function that gathers too many branches or nests too deep get split while it is
+  still small. `PLR1702` is a preview rule, so the configuration sets `explicit-preview-rules` to keep every other
+  preview rule off.
 - **Types:** pyright in `strict` mode reports zero errors and warnings; every signature is annotated.
 - **Suppressions:** `Any`, `cast()`, `# type: ignore`, and `# noqa` each take the narrowest scope and state their
   reason, as [Lint Strictness](../checks/lint-strictness.md) requires.
