@@ -874,8 +874,9 @@ the same content, such as E9 delivered twice, is the same event (AMB-034): it ha
 reversal of an event already reversed, such as an E12 that reverses E7 after E9, is refused, recorded in the log with
 its outcome (AMB-014), and printed as that day's error. A reversal whose target is itself a reversal is refused the same
 way; a mistaken reversal is corrected by a new debit or credit that names what it corrects. Neither case occurs in this
-stream, so no figure moves. _Tests:_ `test_amb_028_a_reversal_of_a_reversal_is_refused` and
-`test_amb_028_a_second_reversal_of_the_same_event_is_refused`.
+stream, so no figure moves. _Tests:_ `test_amb_028_a_reversal_of_a_reversal_is_refused`,
+`test_amb_028_a_second_reversal_of_the_same_event_is_refused`, and
+`test_amb_034_a_repeated_reversal_or_settlement_is_a_duplicate`.
 
 **Rationale.** In production a reversal names the event it undoes, and each event is undone at most once. A reversal
 sent again after a timeout is routine, so treating it as an error would raise false alarms, while a second, different
@@ -903,8 +904,9 @@ silent on it.
 final settlement already released, posts its debit and releases no hold, as E6 does (AMB-012). The same settlement
 delivered again is a retry and has no effect (AMB-034), and one after a settlement marked partial meets the hold that
 remains (AMB-013). Neither case occurs in this stream, so no figure moves. _Tests:_
-`test_amb_029_a_settlement_after_a_final_one_is_force_posted` and
-`test_amb_029_a_settlement_against_a_declined_authorization_is_force_posted`.
+`test_amb_029_a_settlement_after_a_final_one_is_force_posted`,
+`test_amb_029_a_settlement_against_a_declined_authorization_is_force_posted`, and
+`test_amb_034_a_repeated_reversal_or_settlement_is_a_duplicate`.
 
 **Rationale.** E6 is honoured though the ledger has never seen its authorization, so a merchant whose authorization the
 ledger does know cannot be treated worse; refusing it would give the weaker claim the better outcome. Second captures
@@ -1051,8 +1053,10 @@ with the same content in every field, is appended with the outcome duplicate (AM
 error; one whose ID is already in the log with different content, the booked day included, is refused, recorded with its
 outcome (AMB-014), and printed as that day's error. The rule covers every event, from the brief or fired by the ledger,
 and AMB-028's rule for a repeated reversal is this rule applied to a reversal. Nothing repeats in this stream, so no
-figure moves. _Tests:_ `test_amb_034_a_repeated_event_is_logged_as_a_duplicate_with_no_effect` and
-`test_amb_034_a_reused_id_with_different_content_is_refused`.
+figure moves. _Tests:_ `test_amb_034_a_repeated_event_is_logged_as_a_duplicate_with_no_effect`,
+`test_amb_034_a_repeated_reversal_or_settlement_is_a_duplicate`,
+`test_amb_034_a_reused_id_with_different_content_is_refused`, and
+`test_amb_034_the_same_event_booked_another_day_is_refused`.
 
 **Rationale.** An event already carries an ID, so it is the natural key: a retry after a timeout delivers the same ID
 and content and must not move a balance twice, and an alarm for it would be false. The same ID with different content
