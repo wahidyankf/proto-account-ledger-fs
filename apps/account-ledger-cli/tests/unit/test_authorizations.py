@@ -2,7 +2,7 @@
 
 import pytest
 
-from account_ledger.core.authorizations import (
+from account_ledger.domain.authorizations import (
     Approved,
     AuthorizationState,
     Declined,
@@ -14,13 +14,13 @@ from account_ledger.core.authorizations import (
     Trigger,
     transition,
 )
-from account_ledger.core.balances import closing
-from account_ledger.core.config import CHALLENGE
-from account_ledger.core.event_log import ForcePosted, SettlementAccepted
-from account_ledger.core.events import Capture
-from account_ledger.core.ids import Day
-from account_ledger.core.money import Aed, Amount
-from account_ledger.core.replay import replay
+from account_ledger.domain.balances import closing
+from account_ledger.domain.config import CHALLENGE
+from account_ledger.domain.event_log import ForcePosted, SettlementAccepted
+from account_ledger.domain.events import Capture
+from account_ledger.domain.ids import Day
+from account_ledger.domain.money import Aed, Amount
+from account_ledger.domain.replay import replay
 from support.states import settlements_of, state_of
 from support.streams import ACC_001, authorization, credit, settlement
 from support.values import aed

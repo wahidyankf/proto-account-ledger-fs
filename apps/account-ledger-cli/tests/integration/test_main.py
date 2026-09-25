@@ -8,8 +8,8 @@ import pytest
 
 from account_ledger.adapters.render import render
 from account_ledger.cli import main
-from account_ledger.core.config import CHALLENGE
-from account_ledger.core.replay import replay
+from account_ledger.domain.config import CHALLENGE
+from account_ledger.domain.replay import replay
 from support.brief_stream import brief_stream
 
 APP = Path(__file__).resolve().parents[2]

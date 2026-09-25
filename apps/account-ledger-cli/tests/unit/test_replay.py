@@ -1,8 +1,8 @@
 """The driver: opening reports, days closing as booked days advance, late events, and the log at each day."""
 
-from account_ledger.core.config import CHALLENGE
-from account_ledger.core.ids import AccountId, Day, IncomingId
-from account_ledger.core.replay import replay
+from account_ledger.domain.config import CHALLENGE
+from account_ledger.domain.ids import AccountId, Day, IncomingId
+from account_ledger.domain.replay import replay
 from support.brief_stream import brief_stream
 from support.values import aed, bhd
 

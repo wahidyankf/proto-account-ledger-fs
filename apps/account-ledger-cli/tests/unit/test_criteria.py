@@ -3,14 +3,14 @@
 A refused criterion is proven by a test of what the ledger does instead (REJECTED.md).
 """
 
-from account_ledger.core.authorizations import Approved, Declined, Settled, records
-from account_ledger.core.balances import closing
-from account_ledger.core.config import CHALLENGE
-from account_ledger.core.event_log import Accepted, Captured, ForcePosted, SettlementAccepted
-from account_ledger.core.events import Fee, Instalment, Settlement
-from account_ledger.core.ids import AuthorizationId, Day, IncomingId, InstalmentId
-from account_ledger.core.money import Aed, Amount, Bhd
-from account_ledger.core.replay import replay
+from account_ledger.domain.authorizations import Approved, Declined, Settled, records
+from account_ledger.domain.balances import closing
+from account_ledger.domain.config import CHALLENGE
+from account_ledger.domain.event_log import Accepted, Captured, ForcePosted, SettlementAccepted
+from account_ledger.domain.events import Fee, Instalment, Settlement
+from account_ledger.domain.ids import AuthorizationId, Day, IncomingId, InstalmentId
+from account_ledger.domain.money import Aed, Amount, Bhd
+from account_ledger.domain.replay import replay
 from support.brief_stream import brief_stream
 from support.states import settlements_of, state_of
 from support.streams import (

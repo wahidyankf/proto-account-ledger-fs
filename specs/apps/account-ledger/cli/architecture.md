@@ -54,11 +54,12 @@ standard streams, in UTF-8 whatever the locale, since the report prints the minu
 
 ## L3 — Components
 
-The shell holds every effect and every raw value; the adapters translate between text and the core's types; the core
-holds every business rule. The adapters and the core are pure. Every dependency points inward, from the shell to the
-adapters and the core, from the adapters to the core's types, and, inside the core, from the driver down to the types.
-Each layer is a place in the package: the shell is `cli.py` at its root, the adapters are `adapters/`, and the core is
-`core/`, whose own `ruff.toml` refuses any import of `account_ledger.adapters` or `account_ledger.cli` (TID251).
+The shell holds every effect and every raw value; the adapters translate between text and the domain's types; the domain
+holds every business rule. The adapters and the domain are pure. Every dependency points inward, from the shell to the
+adapters and the domain, from the adapters to the domain's types, and, inside the domain, from the driver down to the
+types. Each layer is a place in the package: the shell is `cli.py` at its root, the adapters are `adapters/`, and the
+domain is `domain/`, whose own `ruff.toml` refuses any import of `account_ledger.adapters` or `account_ledger.cli`
+(TID251).
 
 ```text
   shell      +--------------------------------------------------------------------------------+
@@ -73,8 +74,8 @@ Each layer is a place in the package: the shell is `cli.py` at its root, the ada
              +--------------------------+  |  +--------------------------+
                   | builds the types       |        | reads report, event_log, and the types
   ---------------------------------------------------------------------------------------------------
-  core                                     v
-  core/                       +--------------------------+
+  domain                                   v
+  domain/                     +--------------------------+
                               | replay (driver)          |
                               | the stream in listed     |
                               | order, each day closed   |

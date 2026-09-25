@@ -1,10 +1,10 @@
 """The report as text: layout, tables, amounts, and every Type and Detail text (tech-docs 003)."""
 
 from account_ledger.adapters.render import render
-from account_ledger.core.config import CHALLENGE
-from account_ledger.core.events import Capture
-from account_ledger.core.ids import Day
-from account_ledger.core.replay import replay
+from account_ledger.domain.config import CHALLENGE
+from account_ledger.domain.events import Capture
+from account_ledger.domain.ids import Day
+from account_ledger.domain.replay import replay
 from support.brief_stream import brief_stream
 from support.streams import authorization, credit, debit, reversal, settlement
 

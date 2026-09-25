@@ -3,9 +3,9 @@
 from collections.abc import Sequence
 from typing import assert_never
 
-from account_ledger.core.authorizations import Approved, AuthorizationRecord, Declined, PartiallySettled, Settled
-from account_ledger.core.event_log import Captured, Duplicate, ForcePosted, LogEntry, SettlementAccepted
-from account_ledger.core.events import (
+from account_ledger.domain.authorizations import Approved, AuthorizationRecord, Declined, PartiallySettled, Settled
+from account_ledger.domain.event_log import Captured, Duplicate, ForcePosted, LogEntry, SettlementAccepted
+from account_ledger.domain.events import (
     AnyAmount,
     Authorization,
     Credit,
@@ -22,9 +22,9 @@ from account_ledger.core.events import (
     Settlement,
     Whole,
 )
-from account_ledger.core.ids import AccountId, Day, text
-from account_ledger.core.money import Direction, Money, currency, digits
-from account_ledger.core.report import Capitalized, DayReport, EndOfDayEvent, Fired, NothingFired, Processed, Step
+from account_ledger.domain.ids import AccountId, Day, text
+from account_ledger.domain.money import Direction, Money, currency, digits
+from account_ledger.domain.report import Capitalized, DayReport, EndOfDayEvent, Fired, NothingFired, Processed, Step
 
 RULE = "=" * 120
 

@@ -1,6 +1,6 @@
 """Domain values for tests, built through the same ``parse`` functions the stream reader uses."""
 
-from account_ledger.core.money import Aed, Bhd
+from account_ledger.domain.money import Aed, Bhd
 
 
 def aed(text: str) -> Aed:

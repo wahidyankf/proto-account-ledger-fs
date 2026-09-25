@@ -3,8 +3,8 @@
 from dataclasses import dataclass
 from typing import TypeIs
 
-from account_ledger.core.ids import AccountId, Day
-from account_ledger.core.money import Aed, Bhd
+from account_ledger.domain.ids import AccountId, Day
+from account_ledger.domain.money import Aed, Bhd
 
 
 @dataclass(frozen=True, slots=True)

@@ -1,9 +1,0 @@
-# The core is pure: every dependency points inward, so nothing here reaches the adapters or the shell.
-extend = "../../../pyproject.toml"
-
-[lint]
-extend-select = ["TID251"]
-
-[lint.flake8-tidy-imports.banned-api]
-"account_ledger.adapters".msg = "the core never imports an adapter; the shell composes them"
-"account_ledger.cli".msg = "the core never imports the shell"

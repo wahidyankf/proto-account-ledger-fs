@@ -7,8 +7,8 @@ import pytest
 from account_ledger import cli
 from account_ledger.adapters.render import render
 from account_ledger.cli import run
-from account_ledger.core.config import CHALLENGE
-from account_ledger.core.replay import replay
+from account_ledger.domain.config import CHALLENGE
+from account_ledger.domain.replay import replay
 from support.brief_stream import BRIEF_CSV, brief_stream
 
 
@@ -79,7 +79,7 @@ def test_an_internal_failure_exits_2_without_a_traceback(monkeypatch: pytest.Mon
     out, err = io.StringIO(), io.StringIO()
 
     def broken(*_: object) -> object:
-        raise ZeroDivisionError("a bug in the core")
+        raise ZeroDivisionError("a bug in the domain")
 
     monkeypatch.setattr(cli, "replay", broken)
 

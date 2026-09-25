@@ -4,9 +4,9 @@ from dataclasses import replace
 
 import pytest
 
-from account_ledger.core.config import CHALLENGE
-from account_ledger.core.ids import Day
-from account_ledger.core.replay import replay
+from account_ledger.domain.config import CHALLENGE
+from account_ledger.domain.ids import Day
+from account_ledger.domain.replay import replay
 from support.streams import ACC_001, auth_a_never_settled
 
 

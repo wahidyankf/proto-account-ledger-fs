@@ -1,8 +1,8 @@
 """Reading entries and authorization states out of a log, for the tests."""
 
-from account_ledger.core.authorizations import AuthorizationState, records
-from account_ledger.core.event_log import Log, LogEntry, SettlementAccepted
-from account_ledger.core.ids import AuthorizationId, IncomingId
+from account_ledger.domain.authorizations import AuthorizationState, records
+from account_ledger.domain.event_log import Log, LogEntry, SettlementAccepted
+from account_ledger.domain.ids import AuthorizationId, IncomingId
 
 
 def state_of(log: Log, hold: str) -> list[AuthorizationState]:

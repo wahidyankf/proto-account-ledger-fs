@@ -2,15 +2,15 @@
 
 from dataclasses import replace
 
-from account_ledger.core.authorizations import Settled
-from account_ledger.core.balances import closing, holds
-from account_ledger.core.config import CHALLENGE
-from account_ledger.core.event_log import Accepted
-from account_ledger.core.events import Fee
-from account_ledger.core.ids import Day
-from account_ledger.core.money import Amount
-from account_ledger.core.replay import replay
-from account_ledger.core.report import Capitalized
+from account_ledger.domain.authorizations import Settled
+from account_ledger.domain.balances import closing, holds
+from account_ledger.domain.config import CHALLENGE
+from account_ledger.domain.event_log import Accepted
+from account_ledger.domain.events import Fee
+from account_ledger.domain.ids import Day
+from account_ledger.domain.money import Amount
+from account_ledger.domain.replay import replay
+from account_ledger.domain.report import Capitalized
 from support.brief_stream import brief_stream
 from support.states import state_of
 from support.streams import (
