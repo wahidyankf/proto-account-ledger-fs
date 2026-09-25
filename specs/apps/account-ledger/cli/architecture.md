@@ -38,7 +38,7 @@ interrupt 130, as the application README publishes.
 | one Python 3.14 process, one package                         |
 | reached as python -m account_ledger PATH, or its Nx run      |
 +--------------------------------------------------------------+
-         | reads the path in argv          | writes UTF-8 whatever the locale, since − is printed
+         | reads the path in argv          | writes UTF-8 whatever the locale
          v                                 v
 +-----------------------------+   +-------------------------------------+
 | the stream file             |   | standard streams                    |
@@ -48,6 +48,9 @@ interrupt 130, as the application README publishes.
 | streams/challenge.csv       |
 +-----------------------------+
 ```
+
+The program is the one container: it reads the one stream file its argument names and writes nothing but its two
+standard streams, in UTF-8 whatever the locale, since the report prints the minus sign U+2212.
 
 ## L3 — Components
 
