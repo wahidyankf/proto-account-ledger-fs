@@ -32,10 +32,10 @@ events inside the same six days, each repeated under new IDs, is processed in 0.
 
 The state grows without bound in three places:
 
-- **The log.** It holds every entry since the first day, and every query reads all of its account's entries. - **The
-  window.** Fees and interest are re-judged for every day since the first, so each close does more work than the last,
-  forever. - **The snapshots.** Processing keeps the log as it stood at every day's close, so memory grows with days ×
-  entries.
+- **The log.** It holds every entry since the first day, and every query reads all of its account's entries.
+- **The window.** Fees and interest are re-judged for every day since the first, so each close does more work than the
+  last, forever.
+- **The snapshots.** Processing keeps the log as it stood at every day's close, so memory grows with days × entries.
 
 The cheapest structural change that defers this is a projection: a running total of each account's movements by value
 day, updated on every append, with each closing read as a prefix sum over it. It belongs to the Account aggregate, kept
