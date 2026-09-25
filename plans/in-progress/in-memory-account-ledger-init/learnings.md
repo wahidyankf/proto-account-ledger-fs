@@ -82,5 +82,29 @@ Each entry records when, what was found, why it matters, and, once routed, its o
   Repository's Binding, landed through Rules Propagation on 2026-09-25 at 06:55. Kept: no rule mapped tests to clauses,
   only to entries.
 
+### L8 — A `git add` naming a deleted path stops before the rest (2026-09-25 06:36, logged 07:15)
+
+- **Found.** Phase 9's `git add` listed `ACCEPTANCE_CRITERIA.feature`, already staged as deleted by `git rm`; git
+  refused the pathspec, and the commit that followed took only the deletion, so `58e690d` holds one file and `02ce7aa`
+  the rest.
+- **Why it matters.** A commit that runs after a failed stage looks complete from its message.
+- **Owner.** Discarded: specific to one command. Chaining the stage and the commit with `&&`, as every later commit did,
+  stops at the failure, and no rule would add protection that operator does not.
+
+### L9 — An editor's format-on-save rewrapped `cli.py` during a gate (2026-09-25 06:34, logged 07:15)
+
+- **Found.** While `check:hygiene` ran, `cli.py` was reformatted at 88 columns, against the app's `line-length = 120`;
+  none of the gates formats Python, so the change came from outside the run. It was layout only, backed up to
+  `local-tmp/cli.py.reformatted-0634`, and restored from HEAD.
+- **Owner.** Discarded: the relevance gate. The subject is a tool outside this repository, and `ruff format --check` in
+  `test:quick` already fails such a change before it can be pushed.
+
+### L10 — The Phase 9 WORKLOG item was ticked late (2026-09-25 06:48, logged 07:15)
+
+- **Found.** The Phase 9 WORKLOG row landed with its commit, but its delivery item stayed unticked until the Phase 10
+  close.
+- **Owner.** Discarded: already covered. The row itself was written on time, and the Execution Check reads every item's
+  state, as it did here.
+
 [capture]: ../../../repo-governance/conventions/structure/plans/008-knowledge-capture-and-archival.md
 [triage]: ../../../repo-governance/conventions/structure/plans/017-learning-triage.md

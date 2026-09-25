@@ -88,6 +88,33 @@ first.
   four sections, its scale figures measured; the Gherkin search found no live requirement; every AC-29 choice located.
   Gate 06:45–06:47, every command exit 0; unit coverage 96%. Last gate passed: Phase 10. Next: archival.
 - Phase 10 commit: `7f75045`, pushed as `02ce7aa..7f75045`.
+- Commits of Phases 0 to 3, which these lines lacked: Phase 0 `c5afbb0` (04:07), Phase 1 `6daf504` (04:17), Phase 2
+  `ad8daaf` (04:21), Phase 3 `bd5722b` (04:42), each pushed as the next range began.
+- Archival triage (06:49–06:55): RC1 to RC4 given dated Not triggered dispositions; L1 and L7 routed to governance and
+  L2 to L6 discarded; committed as `ea45d71`, pushed `7f75045..ea45d71`.
+- The Phase 9 and 10 gate runs of test:quick, test:integration, and test:e2e were Nx cache replays ("existing outputs
+  match the cache"), valid by input hash since no app input changed after Phase 8; the record did not say so. The runs
+  after the execution check's repairs skip the cache.
+- Execution Check, first run (started 06:56, reported by 07:06): BLOCKS ARCHIVAL. Blocking: S1, unit tests read
+  OUTPUT_TARGET.md and compared whole-brief blocks, against tech-docs 004; R1, AC-20's released hold unasserted; R2,
+  AC-22's marker and BHD −3.560 closing unasserted; R3, AC-14's empty errors unasserted. Non-blocking: S2 (007 stale),
+  S3 (two AMB-035 clauses untested), C1 (missing hashes), D1 (stale texts, L2 view a table), D2 (three matches without
+  `assert_never`), D3 (render constants absent from NUMBERS), G1 (cache replays), K1 (three surprises not logged).
+- Repairs, 07:06 to 07:19. S1: test_render.py asserts each rule on small streams with literal fragments, test_cli.py and
+  test_main.py compare with the rendered replay, only test:e2e reads OUTPUT_TARGET.md, and project.json drops it from
+  the other test targets' inputs (`nx show projects --affected --files=OUTPUT_TARGET.md` still lists the project). R1 to
+  R3: the three tests assert the missing clauses. S3:
+  `test_amb_035_a_reversed_settlement_leaves_its_authorization_settled` and
+  `test_amb_035_a_reversed_instalment_stays_reversed`, named in AMB-035. Every added assertion passed on arrival, since
+  the behaviour existed, and each failed on its assertion under a mutation, restored: over-hold final settlement kept as
+  PartiallySettled; fee value-dated a day late (`-1.000 != -3.560`); a duplicate counted as an error;
+  `no new fee assessed` changed; `hold AED` in the approved text; every reversal reopening its authorization; a close
+  re-firing a reversed instalment. D2: `assert_never` ends `trigger_of`, `_moved` (both matches), and
+  `_signed_interest`. S2, D1, D3, K1: 007 as built, the root README's specs row, the L2 view as a diagram, NUMBERS'
+  report rule width and spelled counts, L8 to L10 logged and discarded.
+- Fresh gate after the repairs, 07:16–07:19, `--skip-nx-cache`: test:quick 0 after one ruff import-order fix (113
+  passed, 1 xfailed; coverage 95%, the unreachable `assert_never` lines the difference); test:integration 0 (2 passed);
+  test:e2e 0 (6 passed); check:hygiene 0; check-md 0; internal-link, heading-hierarchy, naming 0; word-budget 0.
 
 ## Execution Checkout
 
@@ -2701,6 +2728,8 @@ execution check alone (D11).
     0; neither needs a harness adapter regenerated.
 - [ ] [AI] Run [Execution Check](../../../repo-governance/workflows/plan/plan-execution-check.md) and record its
       terminal verdict; archival needs a permitting one. Proof: the verdict. Acceptance: AC-30.
+  - First run, started 06:56 and reported by 07:06: BLOCKS ARCHIVAL, on S1 and R1 to R3; each finding and its repair is
+    in the Execution Record. Rerun pending after the repairs are committed.
 - [ ] [AI] Run [Dev Artifact Clean-Up](../../../repo-governance/workflows/maintenance/dev-artifact-clean-up.md) and
       record what it removed. Proof: the record.
 - [ ] [AI] Move the plan to `plans/done/YYYY-MM-DD__in-memory-account-ledger-init/` with the completion date; update
