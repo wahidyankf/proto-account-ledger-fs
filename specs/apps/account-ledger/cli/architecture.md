@@ -32,11 +32,22 @@ interrupt 130, as the application README publishes.
 
 ## L2 — Containers
 
-| Container            | What it is                              | How it is reached                                |
-| -------------------- | --------------------------------------- | ------------------------------------------------ |
-| `account-ledger-cli` | one Python 3.14 process, one package    | `python -m account_ledger PATH`, or its Nx `run` |
-| the stream file      | a UTF-8 CSV, header row, one event each | the path in `argv`; `streams/challenge.csv`      |
-| standard streams     | the process's output and error          | UTF-8 whatever the locale, since `−` is printed  |
+```text
++--------------------------------------------------------------+
+| account-ledger-cli                                           |
+| one Python 3.14 process, one package                         |
+| reached as python -m account_ledger PATH, or its Nx run      |
++--------------------------------------------------------------+
+         | reads the path in argv          | writes UTF-8 whatever the locale, since − is printed
+         v                                 v
++-----------------------------+   +-------------------------------------+
+| the stream file             |   | standard streams                    |
+| UTF-8 CSV, a header row,    |   | standard output: the report         |
+| one event a row             |   | standard error: usage and errors    |
+| the brief's is              |   +-------------------------------------+
+| streams/challenge.csv       |
++-----------------------------+
+```
 
 ## L3 — Components
 
