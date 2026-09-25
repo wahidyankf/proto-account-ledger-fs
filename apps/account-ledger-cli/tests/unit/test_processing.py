@@ -10,6 +10,7 @@ from account_ledger.domain.model.event_log import (
     DuplicateIgnored,
     EventRejected,
     IdReused,
+    find_history,
 )
 from account_ledger.domain.model.ids import Day
 from account_ledger.domain.stream_processing import process_stream
@@ -36,7 +37,7 @@ def test_amb_034_a_repeated_event_is_logged_as_a_duplicate_with_no_effect() -> N
     log = result.find_log(Day(1))
 
     assert list_entries(log, "E1") == [CreditPosted(e1, Day(1)), DuplicateIgnored(e1, Day(1))]
-    assert unwrap_ok(compute_closing(log, ACC_001, Day(1))) == make_aed("100.00")
+    assert unwrap_ok(compute_closing(find_history(log, ACC_001), Day(1))) == make_aed("100.00")
     assert dict(result.find_report(Day(1)).errors) == {ACC_001.id: (), ACC_002.id: ()}
 
 
@@ -59,9 +60,12 @@ def test_amb_034_a_repeated_reversal_or_settlement_is_a_duplicate(kind: str) -> 
     log = result.find_log(Day(1))
 
     assert list_entries(log, "E4")[1:] == [DuplicateIgnored(repeated_event, Day(1))]
-    assert (unwrap_ok(compute_closing(log, ACC_001, Day(1))), unwrap_ok(sum_holds(log, ACC_001, Day(1)))) == (
-        unwrap_ok(compute_closing(single_log, ACC_001, Day(1))),
-        unwrap_ok(sum_holds(single_log, ACC_001, Day(1))),
+    assert (
+        unwrap_ok(compute_closing(find_history(log, ACC_001), Day(1))),
+        unwrap_ok(sum_holds(find_history(log, ACC_001), Day(1))),
+    ) == (
+        unwrap_ok(compute_closing(find_history(single_log, ACC_001), Day(1))),
+        unwrap_ok(sum_holds(find_history(single_log, ACC_001), Day(1))),
     )
     assert dict(result.find_report(Day(1)).errors) == {ACC_001.id: (), ACC_002.id: ()}
 
@@ -77,7 +81,7 @@ def test_amb_034_the_same_event_booked_another_day_is_refused() -> None:
         CreditPosted(first_credit, Day(1)),
         EventRejected(retried_credit, Day(2), IdReused()),
     ]
-    assert unwrap_ok(compute_closing(log, ACC_001, Day(2))) == make_aed("100.00")
+    assert unwrap_ok(compute_closing(find_history(log, ACC_001), Day(2))) == make_aed("100.00")
 
 
 def test_amb_034_a_reused_id_with_different_content_is_refused() -> None:
@@ -90,4 +94,4 @@ def test_amb_034_a_reused_id_with_different_content_is_refused() -> None:
         CreditPosted(first_credit, Day(1)),
         EventRejected(reused_credit, Day(1), IdReused()),
     ]
-    assert unwrap_ok(compute_closing(log, ACC_001, Day(1))) == make_aed("100.00")
+    assert unwrap_ok(compute_closing(find_history(log, ACC_001), Day(1))) == make_aed("100.00")

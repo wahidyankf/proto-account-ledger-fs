@@ -4,8 +4,9 @@ from dataclasses import dataclass
 from typing import assert_never
 
 from account_ledger.common.result import Err, Ok, Result
-from account_ledger.domain.model.config import Account
 from account_ledger.domain.model.event_log import (
+    AccountHistory,
+    AnyHistory,
     AuthorizationApproved,
     AuthorizationDeclined,
     CreditPosted,
@@ -18,10 +19,10 @@ from account_ledger.domain.model.event_log import (
     InterestAccrued,
     InterestAdjusted,
     InterestCapitalized,
-    Log,
     ReversalPosted,
     SettlementApplied,
     SettlementForcePosted,
+    is_aed_history,
 )
 from account_ledger.domain.model.events import AnyAmount, Authorization, Settlement, SettlementKind
 from account_ledger.domain.model.ids import Day
@@ -181,10 +182,10 @@ def decide_authorization(
     )
 
 
-def list_records(log: Log) -> tuple[AuthorizationRecord, ...]:
-    """Every authorization known to the log, in the order first seen, with its state."""
+def list_records[M: (Aed, Bhd)](history: AccountHistory[M]) -> tuple[AuthorizationRecord, ...]:
+    """Every authorization known to the account's history, in the order first seen, with its state."""
     records: list[AuthorizationRecord] = []
-    for entry in log:
+    for entry in history.entries:
         match entry:
             case AuthorizationApproved(event=event):
                 records.append(AuthorizationRecord(event, Approved(event.amount)))
@@ -217,9 +218,16 @@ def list_records(log: Log) -> tuple[AuthorizationRecord, ...]:
     return tuple(records)
 
 
-def find_record(log: Log, settlement: Settlement) -> AuthorizationRecord | None:
-    """The authorization a settlement names, on its account, if the log knows it."""
-    return next((record for record in list_records(log) if _is_referenced_by(record, settlement)), None)
+def list_records_of(history: AnyHistory) -> tuple[AuthorizationRecord, ...]:
+    """``list_records`` for an account whose currency is known only at run time."""
+    if is_aed_history(history):
+        return list_records(history)
+    return list_records(history)
+
+
+def find_record[M: (Aed, Bhd)](history: AccountHistory[M], settlement: Settlement) -> AuthorizationRecord | None:
+    """The authorization a settlement names, if the account's history knows it."""
+    return next((record for record in list_records(history) if _is_referenced_by(record, settlement)), None)
 
 
 def _is_referenced_by(record: AuthorizationRecord, settlement: Settlement) -> bool:
@@ -228,13 +236,13 @@ def _is_referenced_by(record: AuthorizationRecord, settlement: Settlement) -> bo
     return authorization.authorization == settlement.authorization and authorization.account == settlement.account
 
 
-def sum_holds[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> Result[M, CurrencyMismatch]:
+def sum_holds[M: (Aed, Bhd)](history: AccountHistory[M], day: Day) -> Result[M, CurrencyMismatch]:
     """The hold of every approved or partially settled authorization on the account whose value date is <= day
     (AMB-010, AMB-013)."""
     holds: list[Money] = []
-    for record in list_records(log):
+    for record in list_records(history):
         authorization, state = record.authorization, record.state
-        if authorization.account != account.id or authorization.value_date > day:
+        if authorization.value_date > day:
             continue
         match state:
             case Approved(hold=hold) | PartiallySettled(hold=hold):
@@ -243,4 +251,4 @@ def sum_holds[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> Result[
                 pass  # a declined authorization holds nothing, and a final settlement released the hold
             case _:
                 assert_never(state)
-    return sum_money(type(account.opening).make_zero(), holds)
+    return sum_money(type(history.account.opening).make_zero(), holds)

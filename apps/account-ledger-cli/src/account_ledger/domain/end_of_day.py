@@ -3,27 +3,28 @@
 from collections.abc import Callable
 
 from account_ledger.common.result import Err, Ok, Result
-from account_ledger.domain.fees import assess_fees
-from account_ledger.domain.interest import accrue_interest, capitalize_interest
-from account_ledger.domain.model.config import AnyAccount, LedgerConfig
-from account_ledger.domain.model.event_log import Log
+from account_ledger.domain.fees import assess_fees_of
+from account_ledger.domain.interest import accrue_interest_of, capitalize_interest_of
+from account_ledger.domain.model.config import LedgerConfig
+from account_ledger.domain.model.event_log import AnyHistory, Log, LogEntry, find_history_of
 from account_ledger.domain.model.ids import Day
 from account_ledger.domain.model.money import CurrencyMismatch
 
-type _Step = Callable[[Log, AnyAccount], Result[Log, CurrencyMismatch]]
+type _Step = Callable[[AnyHistory], Result[tuple[LogEntry, ...], CurrencyMismatch]]
 
 
 def close_day(log: Log, today: Day, config: LedgerConfig) -> Result[Log, CurrencyMismatch]:
-    """The log with every event the close of ``today`` generates: each step runs for every account before the next."""
+    """The log with every event the close of ``today`` generates: each step runs on every account's history before the
+    next step, so the log holds each step's events together, in account order."""
     steps: list[_Step] = [
-        lambda step_log, account: assess_fees(step_log, account, today, config.first_day),
-        lambda step_log, account: accrue_interest(step_log, account, today, config.first_day),
+        lambda history: assess_fees_of(history, today, config.first_day),
+        lambda history: accrue_interest_of(history, today, config.first_day),
     ]
     if today in config.capitalization_days:
-        steps.append(lambda step_log, account: capitalize_interest(step_log, account, today))
+        steps.append(lambda history: capitalize_interest_of(history, today))
     for step in steps:
         for account in config.accounts:
-            if isinstance(stepped_log := step(log, account), Err):
-                return stepped_log
-            log = stepped_log.value
+            if isinstance(entries := step(find_history_of(log, account)), Err):
+                return entries
+            log = (*log, *entries.value)
     return Ok(log)

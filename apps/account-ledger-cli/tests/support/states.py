@@ -1,18 +1,27 @@
 """Reading entries and authorization states out of a log, for the tests."""
 
-from account_ledger.domain.authorizations import AuthorizationState, list_records
+from account_ledger.domain.authorizations import AuthorizationState, list_records_of
+from account_ledger.domain.model.config import AnyAccount
 from account_ledger.domain.model.event_log import (
     Log,
     LogEntry,
     SettlementApplied,
     SettlementForcePosted,
+    find_history_of,
 )
 from account_ledger.domain.model.ids import AuthorizationId, IncomingId
+from support.streams import ACC_001
 
 
-def list_states(log: Log, hold: str) -> list[AuthorizationState]:
-    """The state of every authorization with this authorization ID, in the order first seen."""
-    return [record.state for record in list_records(log) if record.authorization.authorization == AuthorizationId(hold)]
+def list_states(log: Log, hold: str, account: AnyAccount = ACC_001) -> list[AuthorizationState]:
+    """The state of every authorization with this authorization ID on the account, ACC-001 unless named, in the order
+    first seen."""
+    history = find_history_of(log, account)
+    return [
+        record.state
+        for record in list_records_of(history)
+        if record.authorization.authorization == AuthorizationId(hold)
+    ]
 
 
 def list_settlements(log: Log, event: str) -> list[SettlementApplied | SettlementForcePosted]:

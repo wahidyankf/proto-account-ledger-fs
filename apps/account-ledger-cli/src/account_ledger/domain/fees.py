@@ -3,43 +3,65 @@ AMB-004, AMB-011, AMB-027)."""
 
 from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.balances import compute_closing
-from account_ledger.domain.model.config import Account, AnyAccount, is_aed
-from account_ledger.domain.model.event_log import FeeCharged, FeeRefunded, Log, ReversalPosted, append_entry
+from account_ledger.domain.model.event_log import (
+    AccountHistory,
+    AnyHistory,
+    FeeCharged,
+    FeeRefunded,
+    LogEntry,
+    ReversalPosted,
+    is_aed_history,
+)
 from account_ledger.domain.model.events import Fee, FeeRefund, Reversal
-from account_ledger.domain.model.ids import AccountId, Day, FeeId, RefundId
+from account_ledger.domain.model.ids import Day, FeeId, RefundId
 from account_ledger.domain.model.money import Aed, Bhd, CurrencyMismatch, compute_overdraft_fee_of
 
 
-def assess_fees(log: Log, account: AnyAccount, today: Day, first_day: Day) -> Result[Log, CurrencyMismatch]:
+def assess_fees[M: (Aed, Bhd)](
+    history: AccountHistory[M], today: Day, first_day: Day
+) -> Result[tuple[LogEntry, ...], CurrencyMismatch]:
     """For each day so far, in order: a fee, value-dated today, for a day that closes negative with no fee in force,
     and a refund of the fee in force for a day that closes at or above zero (AMB-002, AMB-004). Each closing is read
-    from the log as it grows, so a fee generated for an earlier day counts in the days after it (AMB-011)."""
+    from the history as it grows, so a fee generated for an earlier day counts in the days after it (AMB-011)."""
+    account = history.account
     amount = compute_overdraft_fee_of(account.opening)
+    entries: list[LogEntry] = []
     for day in first_day.span_to(today):
-        fee = _map_fees_in_force(log, account.id).get(day)
-        if isinstance(negative_closing := _is_closing_negative(log, account, day), Err):
+        fee = _map_fees_in_force(history).get(day)
+        if isinstance(negative_closing := _is_closing_below_zero(history, day), Err):
             return negative_closing
+        entry: LogEntry | None = None
         if negative_closing.value:
             if fee is None:
-                log = append_entry(
-                    log, FeeCharged(Fee(FeeId(account.id, day, today), account.id, today, amount), today)
-                )
+                entry = FeeCharged(Fee(FeeId(account.id, day, today), account.id, today, amount), today)
         elif fee is not None:
-            refund = FeeRefund(RefundId(account.id, day, today), account.id, today, fee.id, fee.amount)
-            log = append_entry(log, FeeRefunded(refund, today))
-    return Ok(log)
+            entry = FeeRefunded(
+                FeeRefund(RefundId(account.id, day, today), account.id, today, fee.id, fee.amount), today
+            )
+        if entry is not None:
+            history = history.append(entry)
+            entries.append(entry)
+    return Ok(tuple(entries))
 
 
-def _map_fees_in_force(log: Log, account_id: AccountId) -> dict[Day, Fee]:
+def assess_fees_of(history: AnyHistory, today: Day, first_day: Day) -> Result[tuple[LogEntry, ...], CurrencyMismatch]:
+    """``assess_fees`` for an account whose currency is known only at run time."""
+    # Both branches read alike; each gives the generic call a history of one known currency.
+    if is_aed_history(history):
+        return assess_fees(history, today, first_day)
+    return assess_fees(history, today, first_day)
+
+
+def _map_fees_in_force[M: (Aed, Bhd)](history: AccountHistory[M]) -> dict[Day, Fee]:
     """The account's fee in force for each day: one per day per account, until a refund names it or a reversal
     undoes it, and again once a reversal undoes that refund (AMB-002, AMB-004, AMB-035)."""
     fees: dict[Day, Fee] = {}
     refunded_fees: dict[RefundId, Fee] = {}
-    for entry in log:
+    for entry in history.entries:
         match entry:
-            case FeeCharged(event=fee) if fee.account == account_id:
+            case FeeCharged(event=fee):
                 fees[fee.id.for_day] = fee
-            case FeeRefunded(event=refund) if refund.account == account_id:
+            case FeeRefunded(event=refund):
                 refunded_fee = fees.pop(refund.fee.for_day, None)
                 if refunded_fee is not None:
                     refunded_fees[refund.id] = refunded_fee
@@ -48,7 +70,7 @@ def _map_fees_in_force(log: Log, account_id: AccountId) -> dict[Day, Fee]:
             ):
                 restored_fee = refunded_fees.pop(reversed_refund)  # a reversed refund puts its fee back in force
                 fees[restored_fee.id.for_day] = restored_fee
-            case ReversalPosted(event=Reversal(target=FeeId() as reversed_fee)) if reversed_fee.account == account_id:
+            case ReversalPosted(event=Reversal(target=FeeId() as reversed_fee)):
                 fee_in_force = fees.get(reversed_fee.for_day)
                 if fee_in_force is not None and fee_in_force.id == reversed_fee:
                     del fees[reversed_fee.for_day]  # a reversed fee is out of force, so its day is judged again
@@ -57,14 +79,7 @@ def _map_fees_in_force(log: Log, account_id: AccountId) -> dict[Day, Fee]:
     return fees
 
 
-def _is_closing_negative(log: Log, account: AnyAccount, day: Day) -> Result[bool, CurrencyMismatch]:
-    """Whether the account's closing on the day is below zero."""
-    # Both branches read alike; each gives the generic call an account of one known currency.
-    if is_aed(account):
-        return _is_closing_below_zero(log, account, day)
-    return _is_closing_below_zero(log, account, day)
-
-
-def _is_closing_below_zero[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> Result[bool, CurrencyMismatch]:
+def _is_closing_below_zero[M: (Aed, Bhd)](history: AccountHistory[M], day: Day) -> Result[bool, CurrencyMismatch]:
     """Whether the account's closing on the day is below zero, in its own currency."""
-    return compute_closing(log, account, day).map(lambda closing: closing < type(account.opening).make_zero())
+    zero = type(history.account.opening).make_zero()
+    return compute_closing(history, day).map(lambda closing: closing < zero)

@@ -101,7 +101,7 @@ refuses any import of the other three.
             |   authorizations  the states, decide, transition, holds, and records    |
             |   reversals       which reversal is refused, and which events one undid |
             +-------------------------------------------------------------------------+
-                                           |      every component above reads the log;
+                                           |      each rule reads one account's history;
                                            |      only processing and end_of_day append
   ---------------------------------------------------------------------------------------------------
   model                                    v
@@ -131,15 +131,15 @@ refuses any import of the other three.
 | `stream_csv`        | parsing the stream file into incoming events, or the first fault with its line                 |
 | `render`            | the report as text: banners, box tables, amounts with `−` and separators, notes, and errors    |
 | `stream_processing` | the stream in listed order, closing each day on time, with each day's log and report           |
-| `processing`        | one entry per incoming event: idempotency first, then by kind; `reversals` checks a reversal   |
-| `end_of_day`        | a day's close: `fees`, then `interest`'s accruals and adjustments, then its capitalization     |
+| `processing`        | idempotency and the cross-account check on the log, then the account decides from its history  |
+| `end_of_day`        | a day's close, one step at a time on every account: `fees`, `interest`, then capitalization    |
 | `report`            | a day as data: processed events, end-of-day rows, closings, restated ones, holds, and errors   |
 | `fees`              | a fee for each day closing negative with none in force, refunded once the day recovers         |
 | `interest`          | a day's interest on a positive closing, adjusted when a closing changes, and capitalized       |
-| `balances`          | closing and available, each recomputed over the log                                            |
-| `authorizations`    | states, `decide_authorization`, `apply_settlement`, holds, and records rebuilt from the log    |
+| `balances`          | closing and available, each recomputed over one account's history                              |
+| `authorizations`    | states, `decide_authorization`, `apply_settlement`, holds, and records rebuilt from a history  |
 | `reversals`         | why a reversal is refused, in tech-docs 002's order, and which events the accepted ones undid  |
-| `event_log`         | the append-only tuple of domain events, one kind per fact it records, and every `Rejection`    |
+| `event_log`         | the log of domain events, one kind per fact, each `Rejection`, and one account's history       |
 | `events`            | incoming event kinds, joined in `IncomingEvent`, and generated kinds, in `GeneratedEvent`      |
 | `config`            | the accounts, each typed by its currency, the window of days, and the capitalization days      |
 | `money`             | `Aed` and `Bhd`, one type per currency; `Amount` above zero; split, fee, and daily interest    |
@@ -244,7 +244,7 @@ To read the code for the first time, follow one day through it, in this order:
 4. `domain/end_of_day.py`, `close_day`: the three steps of a day's close, each in its own module.
 5. `domain/fees.py`: when a day is charged an overdraft fee, and when that fee is refunded.
 6. `domain/interest.py`: each day's interest, its adjustment when a closing changes, and its capitalization.
-7. `domain/balances.py`: the closing and available balances, worked out from the log.
+7. `domain/balances.py`: the closing and available balances, worked out from one account's history.
 8. `domain/authorizations.py`: how an authorization is decided, holds money, and moves from state to state.
 9. `domain/reversals.py`: when a reversal is refused, and which events the accepted ones undid.
 10. `domain/model/event_log.py`: every kind of entry the rules add, and every reason an event is rejected.

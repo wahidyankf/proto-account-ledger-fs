@@ -2,8 +2,9 @@
 
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, TypeIs
 
+from account_ledger.domain.model.config import Account, AnyAccount, is_aed
 from account_ledger.domain.model.events import (
     Authorization,
     Capitalization,
@@ -20,6 +21,7 @@ from account_ledger.domain.model.events import (
     Settlement,
 )
 from account_ledger.domain.model.ids import AccountId, Day, EventId, IncomingId
+from account_ledger.domain.model.money import Aed, Bhd
 
 if TYPE_CHECKING:  # authorizations reads the log, so the states are imported for annotations only
     from account_ledger.domain.authorizations import AuthorizationState
@@ -240,20 +242,62 @@ def find_first_entry(log: Log, event_id: EventId) -> LogEntry | None:
     return next((entry for entry in log if entry.event.id == event_id), None)
 
 
-def list_instalments(log: Log, credit: IncomingId) -> tuple[Instalment, ...]:
+@dataclass(frozen=True, slots=True)
+class AccountHistory[M: (Aed, Bhd)]:
+    """The Account aggregate's history: one account and its own entries, in log order. Every rule about one account
+    reads a history, never the log, so it cannot see another account's entries."""
+
+    account: Account[M]
+    entries: Log
+
+    def append(self, entry: LogEntry) -> AccountHistory[M]:
+        """This history with the entry at the end; nothing is ever changed or removed."""
+        assert entry.event.account == self.account.id  # a history holds only its own account's entries
+        return AccountHistory(self.account, (*self.entries, entry))
+
+
+type AnyHistory = AccountHistory[Aed] | AccountHistory[Bhd]
+
+
+def is_aed_history(history: AnyHistory) -> TypeIs[AccountHistory[Aed]]:
+    """Whether the history is an AED account's; when it is not, the type checker knows it is a BHD account's."""
+    return isinstance(history.account.opening, Aed)
+
+
+def find_history[M: (Aed, Bhd)](log: Log, account: Account[M]) -> AccountHistory[M]:
+    """The account's history: its own entries in the log, in log order."""
+    return AccountHistory(account, tuple(entry for entry in log if entry.event.account == account.id))
+
+
+def find_history_of(log: Log, account: AnyAccount) -> AnyHistory:
+    """``find_history`` for an account whose currency is known only at run time."""
+    # Both branches read alike; each gives the generic call an account of one known currency.
+    if is_aed(account):
+        return find_history(log, account)
+    return find_history(log, account)
+
+
+def list_instalments[M: (Aed, Bhd)](history: AccountHistory[M], credit: IncomingId) -> tuple[Instalment, ...]:
     """The instalments a credit generated, in order (AMB-017)."""
     return tuple(
-        entry.event for entry in log if isinstance(entry, InstalmentPosted) and entry.event.id.parent == credit
+        entry.event
+        for entry in history.entries
+        if isinstance(entry, InstalmentPosted) and entry.event.id.parent == credit
     )
 
 
-def list_counted_events(log: Log, account_id: AccountId) -> Iterator[LoggedEvent]:
+def list_instalments_of(history: AnyHistory, credit: IncomingId) -> tuple[Instalment, ...]:
+    """``list_instalments`` for an account whose currency is known only at run time."""
+    if is_aed_history(history):
+        return list_instalments(history, credit)
+    return list_instalments(history, credit)
+
+
+def list_counted_events[M: (Aed, Bhd)](history: AccountHistory[M]) -> Iterator[LoggedEvent]:
     """The events of the account's postings; a hold is read by ``sum_holds``, and a refusal or a retry moves nothing."""
-    for entry in log:
+    for entry in history.entries:
         match entry:
             case AuthorizationApproved() | AuthorizationDeclined() | EventRejected() | DuplicateIgnored():
                 pass
-            case _ if entry.event.account == account_id:
-                yield entry.event
             case _:
-                pass
+                yield entry.event

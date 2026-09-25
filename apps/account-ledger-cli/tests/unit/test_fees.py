@@ -6,6 +6,7 @@ from account_ledger.domain.balances import compute_closing
 from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.event_log import (
     FeeCharged,
+    find_history,
 )
 from account_ledger.domain.model.ids import Day
 from account_ledger.domain.model.money import Amount
@@ -42,7 +43,7 @@ def test_amb_027_a_bhd_account_is_charged_bhd_2_560() -> None:
     fees = [entry.event for entry in log if isinstance(entry, FeeCharged)]
     assert [fee.amount for fee in fees] == [Amount(make_bhd("2.560"))]
     assert list_fee_ids(log) == ["FEE-002-D1@D1"]
-    assert unwrap_ok(compute_closing(log, ACC_002, Day(1))) == make_bhd("-3.560")
+    assert unwrap_ok(compute_closing(find_history(log, ACC_002), Day(1))) == make_bhd("-3.560")
 
 
 def test_amb_035_a_fee_reversed_on_a_negative_day_is_charged_again() -> None:
