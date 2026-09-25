@@ -1,7 +1,7 @@
 ---
 description: >-
-  Fixes this repository's Python baseline: the pinned toolchain, ruff and strict pyright gates, a functional core, the
-  Python shapes for domain types and money, and how failures are expressed.
+  Fixes this repository's Python baseline: the pinned toolchain, ruff, strict pyright, and vulture gates, a functional
+  core, the Python shapes for domain types and money, and how failures are expressed.
 when_to_use: >-
   Use when creating, configuring, or reviewing a Python project here, or when modelling a domain value, an amount of
   money, or a failure in Python.
@@ -19,6 +19,8 @@ applies. It implements [Explicit Over Implicit](../../../principles/explicit-ove
 - **Toolchain:** each project is a uv project with `.python-version`, `requires-python`, and a committed `uv.lock`,
   following [Native-First Toolchain](../../workflow/native-first-toolchain.md).
 - **Lint and format:** `ruff check` and `ruff format --check` report nothing.
+- **Dead code:** vulture, reading `src` and `tests` together, reports nothing, so a name no code uses and code after a
+  `return` are deleted, not kept. Ruff and pyright read one module at a time and miss a public name no module uses.
 - **Complexity:** each function's McCabe complexity must stay at 10 or below (ruff `C901`) and its nesting at 3 blocks
   or below (`PLR1702`). This makes a function that gathers too many branches or nests too deep get split while it is
   still small. `PLR1702` is a preview rule, so the configuration sets `explicit-preview-rules` to keep every other
