@@ -2,7 +2,7 @@
 
 from typing import assert_never
 
-from account_ledger.domain.authorizations import Approved, Declined, PartiallySettled, Settled, records
+from account_ledger.domain.authorizations import holds
 from account_ledger.domain.model.config import Account, AnyAccount, is_aed
 from account_ledger.domain.model.event_log import Log, LoggedEvent, counted, first, instalments_of
 from account_ledger.domain.model.events import (
@@ -20,9 +20,8 @@ from account_ledger.domain.model.events import (
     Settlement,
     Whole,
 )
-from account_ledger.domain.model.ids import AccountId, CapitalizationId, Day
-from account_ledger.domain.model.money import Aed, Bhd, CurrencyMismatch, Direction, Money, same_as
-from account_ledger.domain.reversals import reversed_targets
+from account_ledger.domain.model.ids import AccountId, Day
+from account_ledger.domain.model.money import Aed, Bhd, Money, same
 
 
 def _effects(log: Log, account_id: AccountId) -> list[tuple[Day, Money]]:
@@ -71,25 +70,7 @@ def closing[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> M:
     total = account.opening
     for value_day, effect in _effects(log, account.id):
         if value_day <= day:
-            total = total + _same(total, effect)
-    return total
-
-
-def holds[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> M:
-    """The hold of every approved or partially settled authorization on the account whose value day is <= day
-    (AMB-010, AMB-013)."""
-    total = type(account.opening).zero()
-    for record in records(log):
-        opened, state = record.authorization, record.state
-        if opened.account != account.id or opened.value_day > day:
-            continue
-        match state:
-            case Approved(hold=hold) | PartiallySettled(hold=hold):
-                total = total + _same(total, hold.money)
-            case Declined() | Settled():
-                pass  # a declined authorization holds nothing, and a final settlement released the hold
-            case _:
-                assert_never(state)
+            total = total + same(total, effect)
     return total
 
 
@@ -103,91 +84,6 @@ def available_of(log: Log, account: AnyAccount, day: Day) -> Money:
     if is_aed(account):
         return available(log, account, day)
     return available(log, account, day)
-
-
-def accrued_days[M: (Aed, Bhd)](log: Log, account: Account[M], capitalization: CapitalizationId) -> tuple[Day, ...]:
-    """The days whose interest a capitalization pays: each day whose interest events, fired since the account's
-    previous capitalization, do not net to zero (tech-docs 003)."""
-    zero, undone = type(account.opening).zero(), reversed_targets(log, account.id)
-    net: dict[Day, M] = {}
-    for event in counted(log, account.id):
-        match event:
-            case Capitalization(id=paid) if paid == capitalization:
-                break
-            case Capitalization(id=paid) if paid not in undone:
-                net = {}
-            case InterestAccrual() | InterestAdjustment() if event.id not in undone:
-                day = event.id.for_day
-                net[day] = net.get(day, zero) + _same(zero, _signed_interest(event))
-            case _:
-                pass
-    return tuple(sorted(day for day, money in net.items() if money != zero))
-
-
-def accrued_days_of(log: Log, account: AnyAccount, capitalization: CapitalizationId) -> tuple[Day, ...]:
-    """``accrued_days`` for an account whose currency is known only at run time."""
-    if is_aed(account):
-        return accrued_days(log, account, capitalization)
-    return accrued_days(log, account, capitalization)
-
-
-def interest_base[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> M:
-    """The closing less any capitalization value-dated that day, which posts after the day's interest (AMB-023); one
-    whose reversal that closing already counts is out of it already (AMB-035)."""
-    total = closing(log, account, day)
-    undone = reversed_targets(log, account.id, by=day)
-    for event in counted(log, account.id):
-        match event:
-            case Capitalization(id=paid, value_day=value_day, amount=amount) if value_day == day and paid not in undone:
-                total = total - _same(total, amount.money)
-            case _:
-                pass
-    return total
-
-
-def accrued[M: (Aed, Bhd)](log: Log, account: Account[M]) -> M:
-    """The account's interest events, net of their directions, less its capitalizations, each less its reversals
-    (AMB-007, AMB-035)."""
-    total, undone = type(account.opening).zero(), reversed_targets(log, account.id)
-    for event in counted(log, account.id):
-        match event:
-            case InterestAccrual() | InterestAdjustment() if event.id not in undone:
-                total = total + _same(total, _signed_interest(event))
-            case Capitalization(id=paid, amount=amount) if paid not in undone:
-                total = total - _same(total, amount.money)
-            case _:
-                pass
-    return total
-
-
-def interest_fired[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> M:
-    """The account's interest events for a day, net of their directions and reversals (tech-docs 002, step 2)."""
-    total, undone = type(account.opening).zero(), reversed_targets(log, account.id)
-    for event in counted(log, account.id):
-        match event:
-            case InterestAccrual() | InterestAdjustment() if event.id.for_day == day and event.id not in undone:
-                total = total + _same(total, _signed_interest(event))
-            case _:
-                pass
-    return total
-
-
-def _signed_interest(event: InterestAccrual | InterestAdjustment) -> Money:
-    """An interest event's amount, negative for an adjustment down."""
-    match event:
-        case InterestAdjustment(direction=Direction.DOWN, amount=amount):
-            return -amount.money
-        case InterestAccrual(amount=amount) | InterestAdjustment(amount=amount):
-            return amount.money
-        case _:
-            assert_never(event)
-
-
-def _same[M: (Aed, Bhd)](like: M, money: Money) -> M:
-    same = same_as(like, money)
-    if isinstance(same, CurrencyMismatch):
-        raise ValueError(f"an {same.found} effect on an {same.expected} account")  # the reader makes this unreachable
-    return same
 
 
 def closing_of(log: Log, account: AnyAccount, day: Day) -> Money:

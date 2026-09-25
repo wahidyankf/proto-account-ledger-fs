@@ -3,6 +3,7 @@
 from dataclasses import dataclass
 from typing import assert_never
 
+from account_ledger.domain.model.config import Account
 from account_ledger.domain.model.event_log import (
     Accepted,
     AuthorizationDecided,
@@ -14,7 +15,8 @@ from account_ledger.domain.model.event_log import (
     SettlementAccepted,
 )
 from account_ledger.domain.model.events import AnyAmount, Authorization, Capture, Settlement
-from account_ledger.domain.model.money import Money, NotPositive, amount_of, below, rest_of, sum_of
+from account_ledger.domain.model.ids import Day
+from account_ledger.domain.model.money import Aed, Bhd, Money, NotPositive, amount_of, below, rest_of, same, sum_of
 
 
 @dataclass(frozen=True, slots=True)
@@ -135,7 +137,7 @@ def records(log: Log) -> tuple[AuthorizationRecord, ...]:
                 found.append(AuthorizationRecord(event, state))
             case SettlementAccepted(event=event, effect=Captured(after=after)):
                 found = [
-                    AuthorizationRecord(record.authorization, after) if _holds(record, event) else record
+                    AuthorizationRecord(record.authorization, after) if _named_by(record, event) else record
                     for record in found
                 ]
             case Accepted() | SettlementAccepted() | Rejected() | Duplicate():
@@ -147,9 +149,27 @@ def records(log: Log) -> tuple[AuthorizationRecord, ...]:
 
 def record_for(log: Log, settlement: Settlement) -> AuthorizationRecord | None:
     """The authorization a settlement names, on its account, if the log knows it."""
-    return next((record for record in records(log) if _holds(record, settlement)), None)
+    return next((record for record in records(log) if _named_by(record, settlement)), None)
 
 
-def _holds(record: AuthorizationRecord, settlement: Settlement) -> bool:
+def _named_by(record: AuthorizationRecord, settlement: Settlement) -> bool:
     opened = record.authorization
     return opened.authorization == settlement.authorization and opened.account == settlement.account
+
+
+def holds[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> M:
+    """The hold of every approved or partially settled authorization on the account whose value day is <= day
+    (AMB-010, AMB-013)."""
+    total = type(account.opening).zero()
+    for record in records(log):
+        opened, state = record.authorization, record.state
+        if opened.account != account.id or opened.value_day > day:
+            continue
+        match state:
+            case Approved(hold=hold) | PartiallySettled(hold=hold):
+                total = total + same(total, hold.money)
+            case Declined() | Settled():
+                pass  # a declined authorization holds nothing, and a final settlement released the hold
+            case _:
+                assert_never(state)
+    return total

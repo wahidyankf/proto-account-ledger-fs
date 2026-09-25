@@ -4,8 +4,8 @@ from dataclasses import replace
 
 import pytest
 
-from account_ledger.domain.authorizations import Settled
-from account_ledger.domain.balances import closing, closing_of, holds
+from account_ledger.domain.authorizations import Settled, holds
+from account_ledger.domain.balances import closing, closing_of
 from account_ledger.domain.model.config import CHALLENGE, AnyAccount
 from account_ledger.domain.model.event_log import (
     AlreadyReversed,

@@ -1,44 +1,13 @@
-"""Closing a day: interest (AMB-005), capitalization (AMB-023), and a settlement above its hold (AMB-030)."""
+"""Interest: accrued on a positive closing, adjusted when it changes, and capitalized (AMB-005, AMB-023, AMB-035)."""
 
 from dataclasses import replace
 
-from account_ledger.domain.authorizations import Settled
-from account_ledger.domain.balances import closing, holds
 from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.ids import Day
-from account_ledger.domain.model.money import Amount
 from account_ledger.domain.replay import replay
 from account_ledger.domain.report import Capitalized
-from support.states import state_of
-from support.streams import (
-    ACC_001,
-    authorization,
-    capitalization_amounts,
-    credit,
-    debit,
-    fee_markers,
-    interest_amounts,
-    reversal,
-    settlement,
-)
+from support.streams import capitalization_amounts, credit, debit, interest_amounts, reversal
 from support.values import aed
-
-
-def test_amb_030_a_settlement_above_its_hold_debits_in_full() -> None:
-    """AMB-030: a settlement above its hold posts its whole amount and releases the hold; the balance may go negative,
-    and the fee rule then applies as for any negative day."""
-    stream = (
-        credit("E1", 1, "100.00"),
-        authorization("E2", 1, "Auth-A", "80.00"),
-        settlement("E3", 2, "Auth-A", "120.00"),
-    )
-
-    log = replay(stream, CHALLENGE).log_at(Day(2))
-
-    assert state_of(log, "Auth-A") == [Settled(Amount(aed("120.00")))]
-    assert holds(log, ACC_001, Day(2)) == aed("0.00")
-    assert fee_markers(log) == ["FEE-001-D2@D2"]
-    assert closing(log, ACC_001, Day(2)) == aed("-45.00")
 
 
 def test_amb_005_interest_accrues_on_a_positive_closing() -> None:

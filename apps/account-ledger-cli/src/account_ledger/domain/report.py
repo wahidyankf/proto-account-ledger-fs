@@ -7,7 +7,8 @@ from types import MappingProxyType
 from typing import assert_never
 
 from account_ledger.domain.authorizations import AuthorizationRecord, records
-from account_ledger.domain.balances import accrued_days_of, available_of, closing_of
+from account_ledger.domain.balances import available_of, closing_of
+from account_ledger.domain.interest import accrued_days_of
 from account_ledger.domain.model.config import AnyAccount, LedgerConfig
 from account_ledger.domain.model.event_log import (
     Accepted,

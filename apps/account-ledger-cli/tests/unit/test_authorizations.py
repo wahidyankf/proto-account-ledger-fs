@@ -12,6 +12,7 @@ from account_ledger.domain.authorizations import (
     SettleFinal,
     SettlePartial,
     Trigger,
+    holds,
     transition,
 )
 from account_ledger.domain.balances import closing
@@ -22,7 +23,7 @@ from account_ledger.domain.model.ids import Day
 from account_ledger.domain.model.money import Aed, Amount
 from account_ledger.domain.replay import replay
 from support.states import settlements_of, state_of
-from support.streams import ACC_001, authorization, credit, settlement
+from support.streams import ACC_001, authorization, credit, fee_markers, settlement
 from support.values import aed
 
 
@@ -172,3 +173,20 @@ def test_every_state_and_trigger_pair_follows_the_table(
     """AMB-012, AMB-013, AMB-029, tech-docs 001: every state meets both triggers, each guard on both sides, and each
     pair goes where the declared table says."""
     assert transition(state, trigger) == after
+
+
+def test_amb_030_a_settlement_above_its_hold_debits_in_full() -> None:
+    """AMB-030: a settlement above its hold posts its whole amount and releases the hold; the balance may go negative,
+    and the fee rule then applies as for any negative day."""
+    stream = (
+        credit("E1", 1, "100.00"),
+        authorization("E2", 1, "Auth-A", "80.00"),
+        settlement("E3", 2, "Auth-A", "120.00"),
+    )
+
+    log = replay(stream, CHALLENGE).log_at(Day(2))
+
+    assert state_of(log, "Auth-A") == [Settled(Amount(aed("120.00")))]
+    assert holds(log, ACC_001, Day(2)) == aed("0.00")
+    assert fee_markers(log) == ["FEE-001-D2@D2"]
+    assert closing(log, ACC_001, Day(2)) == aed("-45.00")

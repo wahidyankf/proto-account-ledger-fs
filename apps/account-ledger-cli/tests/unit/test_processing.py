@@ -2,7 +2,8 @@
 
 import pytest
 
-from account_ledger.domain.balances import closing, holds
+from account_ledger.domain.authorizations import holds
+from account_ledger.domain.balances import closing
 from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.event_log import Accepted, Duplicate, IdReused, Rejected
 from account_ledger.domain.model.ids import Day

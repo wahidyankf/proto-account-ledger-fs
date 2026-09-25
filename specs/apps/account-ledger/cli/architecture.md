@@ -94,9 +94,10 @@ nothing.
                               v                v                  v
             +-------------------------------------------------------------------------+
             | the rules; each uses only those listed below it                         |
+            |   interest        accruals, adjustments, capitalization, accrued days   |
             |   fees            a fee for each day closing negative, refunded after   |
-            |   balances        closing, holds, available, accrued, interest base     |
-            |   authorizations  the states, decide, transition, and the records       |
+            |   balances        closing and available                                 |
+            |   authorizations  the states, decide, transition, holds, and records    |
             |   reversals       which reversal is refused, and which events one undid |
             +-------------------------------------------------------------------------+
                                            |      every component above reads the log;
@@ -124,11 +125,12 @@ nothing.
 | `render`         | the report as text: banners, box tables, amounts with `−` and separators, and every Detail text |
 | `replay`         | the stream in listed order, closing each day on time, with the log and report of every day      |
 | `processing`     | one entry per incoming event: idempotency first, then by kind; `reversals` checks a reversal    |
-| `end_of_day`     | a day's close: `fees` first, then interest accruals and adjustments, then capitalization        |
+| `end_of_day`     | a day's close: `fees`, then `interest`'s accruals and adjustments, then its capitalization      |
 | `report`         | a day's processed events, end-of-day rows, closings, restated closings, holds, and errors       |
 | `fees`           | a fee for each day closing negative with none in force, refunded once the day recovers          |
-| `balances`       | closing, holds, available, accrued interest and its days, and interest base, each over the log  |
-| `authorizations` | the authorization states, `decide`, `transition`, and the records replayed from the log         |
+| `interest`       | a day's interest on a positive closing, adjusted when a closing changes, and its capitalization |
+| `balances`       | closing and available, each recomputed over the log                                             |
+| `authorizations` | the authorization states, `decide`, `transition`, holds, and the records replayed from the log  |
 | `reversals`      | why a reversal is refused, in tech-docs 002's order, and which events the accepted ones undid   |
 | `event_log`      | the append-only tuple of entries, each kind holding only its outcome, and every `Rejection`     |
 | `events`         | the incoming event kinds, joined in `IncomingEvent`, and the fired kinds, in `FiredEvent`       |
@@ -193,7 +195,7 @@ replay, day D
   1. for each event listed next whose booked day <= D:
        processing.process(log, event, D) ---> log + one entry (+ the instalments a credit fires)
          idempotency first; then by kind; a reversal checked against its target in order
-  2. end_of_day.close_day(log, D)
+  2. end_of_day.close_day(log, D): step 1 in fees, steps 2 and 3 in interest
        step 1  fees:     each day first..D: negative with no fee in force -> Fee; non-negative with one -> FeeRefund
        step 2  interest: each day first..D: daily interest of its base, less what was fired for it
                          -> InterestAccrual for D, InterestAdjustment for an earlier day
@@ -214,13 +216,14 @@ To read the code for the first time, follow one day through it, in this order:
 1. `cli.py`, `run`: where the program starts, and how every failure becomes an exit status.
 2. `domain/replay.py`: the loop over days, which the dynamic view above draws.
 3. `domain/processing.py`, `process`: what one incoming event adds to the log, duplicates caught first.
-4. `domain/end_of_day.py`, `close_day`: fees, then interest, then capitalization.
+4. `domain/end_of_day.py`, `close_day`: the three steps of a day's close, each in its own module.
 5. `domain/fees.py`: when a day is charged an overdraft fee, and when that fee is refunded.
-6. `domain/model/event_log.py`: every kind of entry those two add, and every reason an event is rejected.
-7. `domain/authorizations.py`, then `domain/balances.py`: how an authorization moves from state to state, and how each
-   balance is worked out from the log.
-8. `domain/reversals.py`: when a reversal is refused, and which events the accepted ones undid.
-9. `domain/report.py`, then `adapters/render.py`: a day as data, then as the text OUTPUT_TARGET shows.
+6. `domain/interest.py`: each day's interest, its adjustment when a closing changes, and its capitalization.
+7. `domain/balances.py`: the closing and available balances, worked out from the log.
+8. `domain/authorizations.py`: how an authorization is decided, holds money, and moves from state to state.
+9. `domain/reversals.py`: when a reversal is refused, and which events the accepted ones undid.
+10. `domain/model/event_log.py`: every kind of entry the rules add, and every reason an event is rejected.
+11. `domain/report.py`, then `adapters/render.py`: a day as data, then as the text OUTPUT_TARGET shows.
 
 `adapters/stream_csv.py` turns the file into events and holds no ledger rule. The rest of `domain/model/`, `events.py`,
 `config.py`, `money.py`, and `ids.py`, defines the values the rules pass around; look them up when a name is unfamiliar

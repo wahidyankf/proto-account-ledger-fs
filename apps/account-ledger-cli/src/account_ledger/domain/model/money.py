@@ -171,6 +171,14 @@ def same_as[M: (Aed, Bhd)](like: M, money: Money) -> M | CurrencyMismatch:
 DAILY_RATE = Decimal("0.0004")
 
 
+def same[M: (Aed, Bhd)](like: M, money: Money) -> M:
+    """``like``'s currency's own value of ``money``; a mismatch is a bug the reader prevents."""
+    same = same_as(like, money)
+    if isinstance(same, CurrencyMismatch):
+        raise ValueError(f"an {same.found} effect on an {same.expected} account")  # the reader makes this unreachable
+    return same
+
+
 def _minor_unit(money: Money) -> Decimal:
     match money:
         case Aed():
