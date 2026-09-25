@@ -16,9 +16,13 @@ class LedgerRun:
     def run(self, source: EventSource, sink: ReportSink) -> Result[None, RunFault]:
         """Read the events, process them, and publish the reports; the first fault ends the run, so nothing is
         published unless every day is reported."""
+
         if isinstance(stream := source.read_events(self.config), Err):
             return stream
+
         if isinstance(processed := stream.value.process(self.config), Err):
             return processed
+
         sink.publish(processed.value.reports)
+
         return Ok(None)

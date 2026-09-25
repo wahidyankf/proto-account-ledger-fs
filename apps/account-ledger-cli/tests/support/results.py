@@ -5,5 +5,7 @@ from account_ledger.common.result import Err, Result
 
 def unwrap_ok[T, E](result: Result[T, E]) -> T:
     """The value of an ``Ok``; an ``Err`` fails the test with its fault."""
+
     assert not isinstance(result, Err), result.error
+
     return result.value

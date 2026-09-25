@@ -47,6 +47,7 @@ class Instalments:
     @staticmethod
     def make(amount: Amount, count: InstalmentCount) -> Result[Instalments, TooManyInstalments]:
         """The amount split into the count's parts, or a fault when a part would fall below one minor unit."""
+
         return amount.split(count).map(lambda parts: Instalments(count, parts))
 
 
@@ -67,12 +68,14 @@ class Credit:
     def make_instalments(self) -> tuple[Instalment, ...]:
         """The instalments the posting's parts make, numbered from 1, each with the credit's account and value date;
         none for a whole credit (AMB-017, AMB-020)."""
+
         match self.posting:
             case Instalments(parts=parts):
                 return tuple(
                     Instalment(InstalmentId(self.id, number), self.account, self.value_date, part)
                     for number, part in enumerate(parts, start=1)
                 )
+
             case Whole():
                 return ()
 
@@ -173,6 +176,7 @@ class InterestAccrual:
 
     def compute_signed_money(self) -> Money:
         """The accrual's amount: an accrual always moves interest up."""
+
         return self.amount.money
 
 
@@ -192,6 +196,7 @@ class InterestAdjustment:
 
     def compute_signed_money(self) -> Money:
         """The adjustment's amount, negative for an adjustment down."""
+
         return -self.amount.money if self.direction is Direction.DOWN else self.amount.money
 
 

@@ -23,17 +23,21 @@ from support.streams import ACC_001_OPENING
 
 def list_fee_ids(log: EventLog) -> list[str]:
     """The generated ID of every fee in the log, in the order generated."""
+
     return [entry.event.id.format() for entry in log.entries if isinstance(entry, FeeCharged)]
 
 
 def list_refund_ids(log: EventLog) -> list[str]:
     """The generated ID of every fee refund in the log, in the order generated."""
+
     return [entry.event.id.format() for entry in log.entries if isinstance(entry, FeeRefunded)]
 
 
 def list_interest_amounts(log: EventLog) -> list[tuple[str, Money]]:
     """The generated ID and signed amount of every interest event in the log, in the order generated."""
+
     amounts: list[tuple[str, Money]] = []
+
     for entry in log.entries:
         match entry:
             case InterestAccrued(event=InterestAccrual(id=interest_id, amount=amount)):
@@ -42,11 +46,13 @@ def list_interest_amounts(log: EventLog) -> list[tuple[str, Money]]:
                 amounts.append((interest_id.format(), amount.money if direction is Direction.UP else -amount.money))
             case _:
                 pass
+
     return amounts
 
 
 def list_capitalization_amounts(log: EventLog) -> list[tuple[str, Money]]:
     """The generated ID and amount of every capitalization in the log, in the order generated."""
+
     return [
         (entry.event.id.format(), entry.event.amount.money)
         for entry in log.entries
@@ -57,7 +63,9 @@ def list_capitalization_amounts(log: EventLog) -> list[tuple[str, Money]]:
 def list_states(log: EventLog, hold: str, opening: AccountOpening = ACC_001_OPENING) -> list[AuthorizationState]:
     """The state of every authorization with this authorization ID on the account, ACC-001 unless named, in the order
     first seen."""
+
     account = Ledger(CHALLENGE, log).find_account(opening)
+
     return [
         record.state for record in account.list_records() if record.authorization.authorization == AuthorizationId(hold)
     ]
@@ -65,6 +73,7 @@ def list_states(log: EventLog, hold: str, opening: AccountOpening = ACC_001_OPEN
 
 def list_settlements(log: EventLog, event: str) -> list[SettlementApplied | SettlementForcePosted]:
     """Every settlement entry for this event ID, in log order."""
+
     return [
         entry
         for entry in log.entries
@@ -74,4 +83,5 @@ def list_settlements(log: EventLog, event: str) -> list[SettlementApplied | Sett
 
 def list_entries(log: EventLog, event: str) -> list[LogEntry]:
     """Every entry for this incoming event ID, in log order."""
+
     return [entry for entry in log.entries if entry.event.id == IncomingId(event)]

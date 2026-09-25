@@ -49,6 +49,7 @@ from support.values import make_aed, make_bhd
 
 def test_amb_008_a_future_dated_credit_does_not_count_for_an_authorization() -> None:
     """AMB-008: an event value-dated in the future counts from its value date only."""
+
     stream = (make_credit("E1", 2, "100.00", value=3), make_authorization("E2", 2, "Auth-A", "50.00"))
 
     log = unwrap_ok(IncomingStream(stream).process(CHALLENGE)).find_log(Day(2))
@@ -58,6 +59,7 @@ def test_amb_008_a_future_dated_credit_does_not_count_for_an_authorization() -> 
 
 def test_amb_009_a_later_credit_the_same_day_does_not_change_a_decline() -> None:
     """AMB-009: an authorization is decided when it arrives, and the decision is final."""
+
     stream = (make_authorization("E1", 2, "Auth-A", "50.00"), make_credit("E2", 2, "100.00"))
 
     log = unwrap_ok(IncomingStream(stream).process(CHALLENGE)).find_log(Day(2))
@@ -67,6 +69,7 @@ def test_amb_009_a_later_credit_the_same_day_does_not_change_a_decline() -> None
 
 def test_amb_010_a_hold_counts_from_its_value_date() -> None:
     """AMB-010: a hold reduces the available balance from its authorization's value date."""
+
     stream = (make_credit("E1", 1, "100.00"), make_authorization("E2", 2, "Auth-A", "40.00", value=3))
 
     result = unwrap_ok(IncomingStream(stream).process(CHALLENGE))
@@ -77,6 +80,7 @@ def test_amb_010_a_hold_counts_from_its_value_date() -> None:
 
 def test_amb_029_a_settlement_against_a_declined_authorization_is_force_posted() -> None:
     """AMB-029: a settlement against a declined authorization posts its debit and releases no hold, as E6 does."""
+
     later_settlement = make_settlement("E3", 3, "Auth-A", "10.00")
     stream = (make_credit("E1", 1, "20.00"), make_authorization("E2", 2, "Auth-A", "50.00"), later_settlement)
 
@@ -90,7 +94,9 @@ def test_amb_029_a_settlement_against_a_declined_authorization_is_force_posted()
 def test_amb_029_a_settlement_after_a_final_one_is_force_posted() -> None:
     """AMB-029: a new settlement against an authorization whose hold a final settlement already released posts its
     debit and releases no hold."""
+
     second_settlement = make_settlement("E4", 4, "Auth-A", "20.00")
+
     stream = (
         make_credit("E1", 1, "100.00"),
         make_authorization("E2", 2, "Auth-A", "40.00"),
@@ -108,6 +114,7 @@ def test_amb_029_a_settlement_after_a_final_one_is_force_posted() -> None:
 def test_amb_013_a_non_final_settlement_keeps_the_rest_of_the_hold() -> None:
     """AMB-013: a settlement marked as followed by more settlements debits its amount and keeps the rest on hold; a
     final one of the rest then settles the authorization for the settlements' sum and releases what is left."""
+
     stream = (
         make_credit("E1", 1, "500.00"),
         make_authorization("E2", 1, "Auth-A", "200.00"),
@@ -139,10 +146,12 @@ def test_amb_013_partial_settlements_reaching_the_hold_settle(
 ) -> None:
     """AMB-013, tech-docs 001: a partial settlement that reaches the remaining hold leaves nothing to keep, so it
     settles the authorization for the settlements' sum, since a partially settled hold is always above zero."""
+
     parts = tuple(
         make_settlement(f"E{3 + index}", 2, "Auth-A", amount, kind=SettlementKind.PARTIAL)
         for index, amount in enumerate(partial_amounts)
     )
+
     stream = (make_credit("E1", 1, "500.00"), make_authorization("E2", 1, "Auth-A", "200.00"), *parts)
 
     result = unwrap_ok(IncomingStream(stream).process(CHALLENGE))
@@ -157,6 +166,7 @@ def test_amb_013_partial_settlements_reaching_the_hold_settle(
 def test_amb_030_a_settlement_above_its_hold_debits_in_full() -> None:
     """AMB-030: a settlement above its hold posts its whole amount and releases the hold; the balance may go negative,
     and the fee rule then applies as for any negative day."""
+
     stream = (
         make_credit("E1", 1, "100.00"),
         make_authorization("E2", 1, "Auth-A", "80.00"),
@@ -174,6 +184,7 @@ def test_amb_030_a_settlement_above_its_hold_debits_in_full() -> None:
 def test_amb_035_a_reversal_undoes_what_its_target_moved() -> None:
     """AMB-035: E9 reverses E7's 620.00 debit from E9's own value date, Day 2, so Days 2 to 4 restate to 250.00,
     650.00, and 285.00."""
+
     log = unwrap_ok(IncomingStream(take_through(build_brief_stream(), "E9")).process(CHALLENGE)).find_log(Day(6))
 
     assert [
@@ -187,7 +198,9 @@ def test_amb_035_a_reversal_undoes_what_its_target_moved() -> None:
 
 def test_amb_028_a_second_reversal_of_the_same_event_is_refused() -> None:
     """AMB-028: an event is reversed at most once, so a second reversal of E7 is refused and moves no balance."""
+
     second_reversal = make_reversal("E12", 3, "E7")
+
     stream = (
         make_credit("E1", 1, "1000.00"),
         make_debit("E7", 1, "620.00"),
@@ -207,7 +220,9 @@ def test_amb_028_a_second_reversal_of_the_same_event_is_refused() -> None:
 
 def test_amb_028_a_reversal_of_a_reversal_is_refused() -> None:
     """AMB-028: a reversal cannot itself be reversed, since a mistaken one is corrected by a new debit or credit."""
+
     undoing_reversal = make_reversal("E12", 3, "E9")
+
     stream = (
         make_credit("E1", 1, "1000.00"),
         make_debit("E7", 1, "620.00"),
@@ -225,6 +240,7 @@ def test_amb_028_a_reversal_of_a_reversal_is_refused() -> None:
 
 def test_amb_035_a_reversal_of_an_unknown_event_is_refused() -> None:
     """AMB-035: a reversal whose target is not in the log is refused and moves no balance."""
+
     stray_reversal = make_reversal("E12", 2, "E99")
     stream = (make_credit("E1", 1, "100.00"), stray_reversal)
 
@@ -238,7 +254,9 @@ def test_amb_035_a_reversal_of_an_unknown_event_is_refused() -> None:
 def test_amb_035_a_reversal_of_an_event_that_moved_no_money_is_refused(target: str) -> None:
     """AMB-035: an authorization is approved or declined, never accepted, so neither the declined E8 nor the approved
     E3 moved money to undo."""
+
     undoing_reversal = make_reversal("E12", 2, target)
+
     stream = (
         make_credit("E1", 1, "100.00"),
         make_authorization("E3", 1, "Auth-A", "50.00"),
@@ -254,6 +272,7 @@ def test_amb_035_a_reversal_of_an_event_that_moved_no_money_is_refused(target: s
 
 def test_amb_035_reversing_a_credit_in_instalments_undoes_every_instalment() -> None:
     """AMB-035: E10 posts nothing itself, so its reversal undoes the three instalments it generated."""
+
     stream = (
         make_credit("E10", 5, "10.000", account="ACC-002", instalments=3),
         make_reversal("E11", 5, "E10", account="ACC-002"),
@@ -309,6 +328,7 @@ def test_amb_035_money_already_undone_cannot_be_undone_again(
 ) -> None:
     """AMB-035: each event's money is undone at most once, whichever event undoes it: an instalment of a reversed
     credit, a credit one of whose instalments is reversed, or a fee already refunded."""
+
     log = unwrap_ok(IncomingStream(stream).process(WEEK)).find_log(day)
     baseline_log = unwrap_ok(IncomingStream(stream[:-1]).process(WEEK)).find_log(day)
 
@@ -321,6 +341,7 @@ def test_amb_035_money_already_undone_cannot_be_undone_again(
 def test_amb_035_a_reversed_settlement_leaves_its_authorization_settled() -> None:
     """AMB-035: a reversal undoes only what its target moved, so reversing a settlement credits its debit back and
     leaves its authorization settled, with no hold restored."""
+
     stream = (
         make_credit("E1", 1, "100.00"),
         make_authorization("E2", 1, "Auth-A", "50.00"),
@@ -338,6 +359,7 @@ def test_amb_035_a_reversed_settlement_leaves_its_authorization_settled() -> Non
 def test_amb_035_a_reversed_instalment_stays_reversed() -> None:
     """AMB-035: an instalment is generated when its credit is processed, not at a close, so once reversed it stays
     reversed at every later close."""
+
     stream = (
         make_credit("E1", 1, "10.000", account="ACC-002", instalments=3),
         make_reversal("E2", 2, "E1-2", account="ACC-002", value=1),
@@ -361,6 +383,7 @@ def test_amb_035_a_reversed_instalment_stays_reversed() -> None:
 def test_amb_011_a_day_still_negative_is_not_charged_again() -> None:
     """AMB-002, AMB-011: a fee is charged "once per day per account", so a day that has its fee is not charged again,
     however many closes find it negative."""
+
     log = unwrap_ok(IncomingStream((make_debit("E1", 1, "10.00"),)).process(CHALLENGE)).find_log(Day(2))
 
     assert list_fee_ids(log) == ["FEE-001-D1@D1", "FEE-001-D2@D2"]
@@ -369,6 +392,7 @@ def test_amb_011_a_day_still_negative_is_not_charged_again() -> None:
 def test_amb_011_a_fee_counts_in_the_closings_after_it() -> None:
     """AMB-011: a fee is an event like any other, so the Day 1 fee, value-dated Day 2, takes Day 2 from 10.00 to
     −15.00, and Day 2 is charged too."""
+
     stream = (make_debit("E1", 2, "20.00", value=1), make_credit("E2", 2, "30.00"))
 
     log = unwrap_ok(IncomingStream(stream).process(CHALLENGE)).find_log(Day(2))
@@ -379,6 +403,7 @@ def test_amb_011_a_fee_counts_in_the_closings_after_it() -> None:
 def test_amb_027_a_bhd_account_is_charged_bhd_2_560() -> None:
     """AMB-027: the fee is AED 25.00 converted at the configured rate and rounded half-even to BHD's three places, so
     ACC-002 is charged FEE-002-D1@D1 and closes Day 1 at −3.560."""
+
     stream = (make_debit("E1", 1, "1.000", account="ACC-002"),)
     log = unwrap_ok(IncomingStream(stream).process(CHALLENGE)).find_log(Day(1))
 
@@ -390,6 +415,7 @@ def test_amb_027_a_bhd_account_is_charged_bhd_2_560() -> None:
 
 def test_amb_035_a_fee_reversed_on_a_negative_day_is_charged_again() -> None:
     """AMB-035: a fee reversed while its day is still negative is charged again, under a generated ID for today."""
+
     stream = (make_debit("E1", 1, "10.00"), make_reversal("E2", 2, "FEE-001-D1@D1"))
 
     log = unwrap_ok(IncomingStream(stream).process(CHALLENGE)).find_log(Day(2))
@@ -400,6 +426,7 @@ def test_amb_035_a_fee_reversed_on_a_negative_day_is_charged_again() -> None:
 def test_amb_035_a_reversed_refund_puts_its_fee_back_in_force() -> None:
     """AMB-035: a refund may itself be reversed, which puts its fee back in force for the next close to judge again;
     Day 2 still closes at 250.00, so Day 7's close refunds FEE-001-D2@D5 once more."""
+
     week = replace(CHALLENGE, last_day=Day(7))
     stream = (*build_brief_stream(), make_reversal("E12", 7, "REFUND-001-D2@D6"))
 
@@ -411,6 +438,7 @@ def test_amb_035_a_reversed_refund_puts_its_fee_back_in_force() -> None:
 def test_amb_005_interest_accrues_on_a_positive_closing() -> None:
     """AMB-005: each day's accrual is an event generated at that day's close, on the closing ledger balance as known
     then."""
+
     log = unwrap_ok(IncomingStream((make_credit("E1", 1, "1000.00"),)).process(CHALLENGE)).find_log(Day(1))
 
     assert list_interest_amounts(log) == [("INT-001-D1@D1", make_aed("0.40"))]
@@ -419,6 +447,7 @@ def test_amb_005_interest_accrues_on_a_positive_closing() -> None:
 def test_amb_005_a_changed_closing_adjusts_its_interest() -> None:
     """AMB-005: a late event that changes a past day's closing generates an adjustment for that day, value-dated the
     day it is recognised and naming the day it is for."""
+
     stream = (make_credit("E1", 1, "1000.00"), make_debit("E2", 2, "500.00", value=1))
 
     log = unwrap_ok(IncomingStream(stream).process(CHALLENGE)).find_log(Day(2))
@@ -433,6 +462,7 @@ def test_amb_005_a_changed_closing_adjusts_its_interest() -> None:
 def test_amb_023_a_days_interest_never_counts_its_own_capitalization() -> None:
     """AMB-023: a day closes in three steps, interest before capitalization, so re-evaluating a capitalization day
     reads its interest on the balance before the capitalization, and AED 50,000.00's Day 1 interest stays 20.00."""
+
     config = replace(CHALLENGE, last_day=Day(2), capitalization_days=frozenset({Day(1)}))
 
     log = unwrap_ok(IncomingStream((make_credit("E1", 1, "50000.00"),)).process(config)).find_log(Day(2))
@@ -443,6 +473,7 @@ def test_amb_023_a_days_interest_never_counts_its_own_capitalization() -> None:
 def test_amb_035_a_reversed_interest_event_is_generated_again() -> None:
     """AMB-035: a reversed interest event drops out of what was generated for its day, so the next close generates the
     day's interest again, as an adjustment under a generated ID for that close (tech-docs 002)."""
+
     stream = (make_credit("E1", 1, "1000.00"), make_reversal("E2", 2, "INT-001-D1@D1"))
 
     log = unwrap_ok(IncomingStream(stream).process(CHALLENGE)).find_log(Day(2))
@@ -457,6 +488,7 @@ def test_amb_035_a_reversed_interest_event_is_generated_again() -> None:
 def test_amb_035_a_reversed_capitalization_returns_its_interest_to_accrued() -> None:
     """AMB-035: a reversed capitalization returns its interest to accrued interest, to be paid on the next
     capitalization day with the interest accrued since (tech-docs 002)."""
+
     config = replace(CHALLENGE, last_day=Day(2), capitalization_days=frozenset({Day(1), Day(2)}))
     stream = (make_credit("E1", 1, "1000.00"), make_reversal("E2", 2, "CAP-001@D1"))
 
@@ -474,6 +506,7 @@ def test_amb_035_a_reversed_capitalization_returns_its_interest_to_accrued() -> 
 def test_amb_035_a_capitalization_reversed_on_its_own_day_leaves_that_days_interest() -> None:
     """AMB-035, AMB-023: a capitalization reversed with its own value date no longer counts in that day's closing, so
     that day's interest base takes nothing more out, and AED 50,000.00's Day 1 interest stays 20.00."""
+
     config = replace(CHALLENGE, last_day=Day(2), capitalization_days=frozenset({Day(1), Day(2)}))
     stream = (make_credit("E1", 1, "50000.00"), make_reversal("E2", 2, "CAP-001@D1", value=1))
 

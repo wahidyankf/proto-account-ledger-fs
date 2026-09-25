@@ -30,6 +30,7 @@ from support.values import make_aed, make_bhd
 def test_amb_022_a_day_restates_each_earlier_closing_it_changed() -> None:
     """AMB-022: when a backdated event changes an earlier closing, that day's report adds a restated closing for each
     earlier day it changed; an account whose closing for that day did not change shows none."""
+
     result = unwrap_ok(IncomingStream(build_brief_stream()).process(CHALLENGE))
 
     assert result.find_report(Day(5)).restatements == (
@@ -48,10 +49,12 @@ def test_amb_022_a_day_restates_each_earlier_closing_it_changed() -> None:
 def test_amb_019_every_known_authorization_is_listed_with_its_state() -> None:
     """AMB-019, AMB-025: every authorization known by the end of the day is listed with its state then, in the order
     first seen; a declined authorization is a state, printed with the others."""
+
     result = unwrap_ok(IncomingStream(build_brief_stream()).process(CHALLENGE))
 
     def list_authorizations(day: int) -> list[tuple[AuthorizationId, AuthorizationState]]:
         """Each authorization the day's report lists, with its state then."""
+
         return [
             (record.authorization.authorization, record.state) for record in result.find_report(Day(day)).authorizations
         ]
@@ -70,6 +73,7 @@ def test_amb_014_a_rejected_event_is_that_days_error(
 ) -> None:
     """AMB-014: every event is recorded with its outcome, and a refused one is that day's error, by account, with the
     reason it was refused; the report sink prints it in the text tech-docs 001 fixes (D22)."""
+
     errors = unwrap_ok(IncomingStream(stream).process(CHALLENGE)).find_report(Day(1)).errors
 
     assert {account_id: tuple(entry.reason for entry in entries) for account_id, entries in errors.items()} == {
@@ -80,7 +84,9 @@ def test_amb_014_a_rejected_event_is_that_days_error(
 
 def list_rows(day_report: DayReport) -> list[tuple[int, str | Note, tuple[str, ...]]]:
     """Each end-of-day row as its step, its generated ID or note, and its accounts."""
+
     found_rows: list[tuple[int, str | Note, tuple[str, ...]]] = []
+
     for row in day_report.end_of_day:
         match row:
             case Generated(step=step, event=event):
@@ -91,6 +97,7 @@ def list_rows(day_report: DayReport) -> list[tuple[int, str | Note, tuple[str, .
                 found_rows.append((step.value, note, tuple(account.value for account in accounts)))
             case _:
                 assert_never(row)
+
     return found_rows
 
 
@@ -100,6 +107,7 @@ BOTH = ("ACC-001", "ACC-002")
 def test_amb_033_a_step_that_generates_nothing_reports_its_row() -> None:
     """AMB-033: every end-of-day step is printed with the events it generates, and a step that generates nothing prints
     a row saying so (tech-docs 002)."""
+
     result = unwrap_ok(IncomingStream(build_brief_stream()).process(CHALLENGE))
 
     assert list_rows(result.find_report(Day(1))) == [
@@ -124,6 +132,7 @@ def test_amb_033_a_step_that_generates_nothing_reports_its_row() -> None:
         (3, "CAP-001@D6", ("ACC-001",)),
         (3, "CAP-002@D6", ("ACC-002",)),
     ]
+
     aed_only_stream = (make_credit("E1", 1, "100.00"),)
     aed_only_report = unwrap_ok(IncomingStream(aed_only_stream).process(CHALLENGE)).find_report(Day(6))
     assert list_rows(aed_only_report)[-2:] == [

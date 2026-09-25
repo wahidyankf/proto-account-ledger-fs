@@ -27,6 +27,7 @@ from support.values import make_aed, make_bhd
 def test_amb_034_a_repeated_event_is_logged_as_a_duplicate_with_no_effect() -> None:
     """AMB-034: the event ID is the idempotency key, so E1 delivered twice with identical content is logged again as a
     duplicate and credits once; a duplicate is not an error, so Day 1's errors read none."""
+
     e1 = make_credit("E1", 1, "100.00")
 
     result = unwrap_ok(IncomingStream((e1, e1)).process(CHALLENGE))
@@ -44,11 +45,13 @@ def test_amb_034_a_repeated_event_is_logged_as_a_duplicate_with_no_effect() -> N
 def test_amb_034_a_repeated_reversal_or_settlement_is_a_duplicate(kind: str) -> None:
     """AMB-028, AMB-029, AMB-034: a reversal or a settlement delivered again with identical content is a retry, logged
     as a duplicate with no effect and no error."""
+
     opening = (
         make_credit("E1", 1, "100.00"),
         make_debit("E2", 1, "30.00"),
         make_authorization("E3", 1, "Auth-A", "20.00"),
     )
+
     repeated_event = make_reversal("E4", 1, "E2") if kind == "reversal" else make_settlement("E4", 1, "Auth-A", "20.00")
 
     result = unwrap_ok(IncomingStream((*opening, repeated_event, repeated_event)).process(CHALLENGE))
@@ -69,6 +72,7 @@ def test_amb_034_a_repeated_reversal_or_settlement_is_a_duplicate(kind: str) -> 
 def test_amb_034_the_same_event_booked_another_day_is_refused() -> None:
     """AMB-034: a duplicate equals the first in every field, the booked day included, so E1 booked again on Day 2 with
     the same value date and amount reuses its ID and is refused."""
+
     first_credit, retried_credit = make_credit("E1", 1, "100.00"), make_credit("E1", 2, "100.00", value=1)
 
     log = unwrap_ok(IncomingStream((first_credit, retried_credit)).process(CHALLENGE)).find_log(Day(2))
@@ -82,6 +86,7 @@ def test_amb_034_the_same_event_booked_another_day_is_refused() -> None:
 
 def test_amb_034_a_reused_id_with_different_content_is_refused() -> None:
     """AMB-034: a second E1 that differs from the first in any field is refused and moves no balance."""
+
     first_credit, reused_credit = make_credit("E1", 1, "100.00"), make_credit("E1", 1, "90.00")
 
     log = unwrap_ok(IncomingStream((first_credit, reused_credit)).process(CHALLENGE)).find_log(Day(1))
@@ -96,7 +101,9 @@ def test_amb_034_a_reused_id_with_different_content_is_refused() -> None:
 def test_amb_036_a_reversal_of_another_accounts_event_is_refused() -> None:
     """AMB-036: a reversal undoes an event on its own account only, so ACC-002's reversal of ACC-001's E7 is refused,
     moves neither balance, and leaves E7 for ACC-001 to reverse."""
+
     misplaced_reversal = make_reversal("E12", 2, "E7", account="ACC-002")
+
     stream = (
         make_credit("E1", 1, "1000.00"),
         make_debit("E7", 1, "620.00"),
@@ -121,6 +128,7 @@ def test_amb_036_a_reversal_of_another_accounts_event_is_refused() -> None:
 def test_an_event_on_an_unconfigured_account_is_an_internal_fault() -> None:
     """An event on an account the ledger does not hold, which only a bug brings since the event source refuses one,
     is returned as an internal fault naming the account."""
+
     credit = make_credit("E1", 1, "100.00", account="ACC-003")
 
     assert Ledger.open(CHALLENGE).process_event(credit, Day(1)) == Err(UnknownAccount(AccountId("ACC-003")))

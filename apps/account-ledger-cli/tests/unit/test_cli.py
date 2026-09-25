@@ -22,6 +22,7 @@ from support.results import unwrap_ok
 def test_a_stream_file_prints_its_report_and_exits_0() -> None:
     """AC-01: `run_cli` reads the named stream, processes it, and writes the report to standard output, exiting 0; the
     end-to-end golden run compares that report with OUTPUT_TARGET."""
+
     out, err = io.StringIO(), io.StringIO()
 
     read_text = {"streams/challenge.csv": Ok(BRIEF_CSV)}.__getitem__
@@ -40,6 +41,7 @@ USAGE = "usage: account-ledger-cli <stream.csv>\n"
 
 def read_brief(path: str) -> Result[str, OSError | UnicodeDecodeError]:
     """A reader that holds only the brief's stream, at any path."""
+
     return Ok(BRIEF_CSV)
 
 
@@ -51,6 +53,7 @@ class FailingRun:
 
     def run(self, source: EventSource, sink: ReportSink) -> Result[None, RunFault]:
         """The fault, whatever the source and the sink."""
+
         return self.fault
 
 
@@ -62,12 +65,14 @@ class RaisingRun:
 
     def run(self, source: EventSource, sink: ReportSink) -> Result[None, RunFault]:
         """Never a result: the exception, whatever the source and the sink."""
+
         raise self.exception
 
 
 @pytest.mark.parametrize("argv", [[], ["a.csv", "b.csv"]])
 def test_no_argument_is_a_usage_error_exiting_2(argv: list[str]) -> None:
     """AC-04: no argument, or more than one, prints the usage line to standard error and exits 2 (D13)."""
+
     out, err = io.StringIO(), io.StringIO()
 
     exit_code = run_cli(argv, read_brief, out, err, LedgerRun(CHALLENGE))
@@ -87,10 +92,12 @@ def test_an_unreadable_file_exits_2(fault: OSError | UnicodeDecodeError, reason:
     """AC-02: a file that cannot be read prints `error: cannot read PATH: REASON` and exits 2; REASON is `no such file`
     for a missing file, `not UTF-8 text` for one that does not decode, and the operating system's message otherwise
     (tech-docs 003)."""
+
     out, err = io.StringIO(), io.StringIO()
 
     def fail_read(path: str) -> Result[str, OSError | UnicodeDecodeError]:
         """A reader that fails as the operating system would."""
+
         return Err(fault)
 
     exit_code = run_cli(["streams/missing.csv"], fail_read, out, err, LedgerRun(CHALLENGE))
@@ -100,6 +107,7 @@ def test_an_unreadable_file_exits_2(fault: OSError | UnicodeDecodeError, reason:
 
 def test_a_malformed_stream_exits_2_naming_the_line() -> None:
     """AC-03: a malformed stream prints `error: ` and the first fault with its line, prints no report, and exits 2."""
+
     out, err = io.StringIO(), io.StringIO()
     malformed_csv = BRIEF_CSV.replace("E2,1,DEBIT,ACC-001,950.00,", "E2,1,DEBIT,ACC-001,950.00x,")
 
@@ -115,6 +123,7 @@ def test_a_malformed_stream_exits_2_naming_the_line() -> None:
 def test_a_currency_mismatch_exits_2_naming_both_currencies() -> None:
     """AC-36: processing that returns a currency mismatch, which only a bug brings, prints `error: internal: ` with the
     currency met and the one required, prints no report, and exits 2."""
+
     out, err = io.StringIO(), io.StringIO()
     run_with_mismatch = FailingRun(Err(CurrencyMismatch(expected_currency="AED", found_currency="BHD")))
 
@@ -126,6 +135,7 @@ def test_a_currency_mismatch_exits_2_naming_both_currencies() -> None:
 def test_an_unknown_account_exits_2_naming_it() -> None:
     """AC-36: processing that returns an account the ledger does not hold, which only a bug brings since the event
     source refuses one first, prints `error: internal: ` with the account, prints no report, and exits 2."""
+
     out, err = io.StringIO(), io.StringIO()
     run_with_unknown_account = FailingRun(Err(UnknownAccount(AccountId("ACC-003"))))
 
@@ -140,6 +150,7 @@ def test_an_unknown_account_exits_2_naming_it() -> None:
 
 def test_an_internal_failure_exits_2_without_a_traceback() -> None:
     """AC-36: any other exception prints `error: internal failure: ` and its type, prints no report, and exits 2."""
+
     out, err = io.StringIO(), io.StringIO()
     failing_run = RaisingRun(ZeroDivisionError("a bug in the domain"))
 
@@ -153,6 +164,7 @@ class ClosedPipe:
 
     def write(self, text: str, /) -> int:
         """A write that fails as one to a closed pipe does."""
+
         raise BrokenPipeError(32, "Broken pipe")
 
     def flush(self) -> None:
@@ -161,6 +173,7 @@ class ClosedPipe:
 
 def test_a_closed_pipe_exits_141_quietly() -> None:
     """AC-36: standard output closed early ends the run quietly with 141, as a shell reports SIGPIPE (D13)."""
+
     err = io.StringIO()
 
     exit_code = run_cli(["streams/challenge.csv"], read_brief, ClosedPipe(), err, LedgerRun(CHALLENGE))
@@ -170,10 +183,12 @@ def test_a_closed_pipe_exits_141_quietly() -> None:
 
 def test_an_interrupt_exits_130() -> None:
     """AC-36: an interrupt ends the run quietly with 130, as a shell reports SIGINT (D13)."""
+
     out, err = io.StringIO(), io.StringIO()
 
     def interrupt_read(path: str) -> Result[str, OSError | UnicodeDecodeError]:
         """A reader interrupted by Ctrl-C."""
+
         raise KeyboardInterrupt
 
     exit_code = run_cli(["streams/challenge.csv"], interrupt_read, out, err, LedgerRun(CHALLENGE))

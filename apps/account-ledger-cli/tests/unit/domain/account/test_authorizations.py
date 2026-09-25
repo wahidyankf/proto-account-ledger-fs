@@ -21,11 +21,13 @@ from support.values import make_aed
 @pytest.mark.parametrize("state", [Settled(AmountIn(make_aed("185.00"))), Declined(AmountIn(make_aed("90.00")))])
 def test_an_unconfigured_transition_leaves_the_state_unchanged(state: AuthorizationState) -> None:
     """A settled or declined authorization has no configured transition for any settlement (tech-docs 001)."""
+
     assert apply_settlement(state, SettlementKind.FINAL, AmountIn(make_aed("10.00"))) == Err(CannotSettle())
 
 
 def make_aed_amount(text: str) -> AmountIn[Aed]:
     """An AED amount for the transition table."""
+
     return AmountIn(make_aed(text))
 
 
@@ -82,4 +84,5 @@ def test_every_state_and_settlement_input_pair_follows_the_table(
 ) -> None:
     """AMB-012, AMB-013, AMB-029, tech-docs 001: every state meets both settlement inputs, each guard on both sides,
     and each pair goes where the declared table says."""
+
     assert apply_settlement(state, kind, amount) == expected_state

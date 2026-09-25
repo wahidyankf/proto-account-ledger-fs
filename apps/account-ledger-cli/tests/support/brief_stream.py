@@ -20,6 +20,7 @@ ACC_001, ACC_002 = AccountId("ACC-001"), AccountId("ACC-002")
 
 def build_brief_stream() -> tuple[IncomingEvent, ...]:
     """E1 to E10 in the order the brief lists them."""
+
     return (
         Credit(IncomingId("E1"), Day(1), ACC_001, Day(1), AmountIn(make_aed("1200.00")), Whole()),
         Debit(IncomingId("E2"), Day(1), ACC_001, Day(1), AmountIn(make_aed("950.00"))),

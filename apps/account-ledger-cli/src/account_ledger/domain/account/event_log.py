@@ -15,17 +15,21 @@ class EventLog:
 
     def append(self, *entries: LogEntry) -> EventLog:
         """This log with the entries at the end."""
+
         return EventLog((*self.entries, *entries))
 
     def find_first_entry(self, event_id: EventId) -> LogEntry | None:
         """The first entry for an event ID: on one account's log, the one a reversal targets (AMB-028, AMB-035); on
         the whole ledger's, the one a repeated ID meets (AMB-034)."""
+
         return next((entry for entry in self.entries if entry.event.id == event_id), None)
 
     def select(self, account_id: AccountId) -> EventLog:
         """The account's own entries, in log order."""
+
         return EventLog(tuple(entry for entry in self.entries if entry.event.account == account_id))
 
     def list_processed_on(self, day: Day) -> tuple[LogEntry, ...]:
         """Every entry processed on the day, in log order."""
+
         return tuple(entry for entry in self.entries if entry.processed_day == day)

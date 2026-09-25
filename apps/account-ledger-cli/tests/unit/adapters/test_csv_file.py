@@ -16,6 +16,7 @@ ACC_001, ACC_002 = AccountId("ACC-001"), AccountId("ACC-002")
 
 def test_a_valid_stream_parses_to_its_events() -> None:
     """A valid stream parses to its events, in the order listed."""
+
     text = format_csv(
         [
             {
@@ -103,6 +104,7 @@ E1 = {"event": "E1", "booked": "1", "type": "CREDIT", "account": "ACC-001", "amo
 
 def find_fault(**cells: str) -> StreamError | None:
     """The fault the event source reports for one row, E1 changed by ``cells``."""
+
     match CsvFileSource.parse(format_csv([{**E1, **cells}]), CHALLENGE):
         case Err(fault):
             return fault
@@ -112,6 +114,7 @@ def find_fault(**cells: str) -> StreamError | None:
 
 def test_a_wrong_header_or_cell_count_is_refused() -> None:
     """A wrong or missing header is refused on line 1, and a row with the wrong cell count on its own line."""
+
     header = ",".join(HEADER)
     wrong_header = Err(StreamError(1, f"line 1: expected the header {header}"))
     assert CsvFileSource.parse("event,booked\nE1,1\n", CHALLENGE) == wrong_header
@@ -123,6 +126,7 @@ def test_a_wrong_header_or_cell_count_is_refused() -> None:
 
 def test_an_id_of_the_wrong_form_is_refused() -> None:
     """An event, account, or authorization ID of the wrong form is refused, naming the kind of ID."""
+
     assert find_fault(event="7") == StreamError(2, "line 2: event ID '7' is not valid")
     assert find_fault(account="ACC-1") == StreamError(2, "line 2: account ID 'ACC-1' is not valid")
     assert find_fault(type="AUTHORIZATION", reference="Auth A") == StreamError(
@@ -132,6 +136,7 @@ def test_an_id_of_the_wrong_form_is_refused() -> None:
 
 def test_an_unknown_type_or_account_is_refused() -> None:
     """A type outside the five kinds, or an account the ledger does not hold, is refused."""
+
     assert find_fault(type="REFUND") == StreamError(
         2, "line 2: type 'REFUND' is not one of CREDIT, DEBIT, AUTHORIZATION, SETTLEMENT, REVERSAL"
     )
@@ -140,6 +145,7 @@ def test_an_unknown_type_or_account_is_refused() -> None:
 
 def test_an_amount_that_is_not_a_valid_amount_is_refused() -> None:
     """An amount that is not a decimal, has too many places for its currency, or is not above zero is refused."""
+
     assert find_fault(amount="12.00x") == StreamError(2, "line 2: amount '12.00x' is not a decimal number")
     assert find_fault(amount="12.345") == StreamError(2, "line 2: amount '12.345' has more than 2 places for AED")
     assert find_fault(account="ACC-002", amount="1.0001") == StreamError(
@@ -152,11 +158,13 @@ def test_an_amount_that_is_not_a_valid_amount_is_refused() -> None:
 
 def test_a_cell_past_the_csv_field_limit_is_refused() -> None:
     """A cell longer than the CSV reader's field limit is refused on its line, as the reader words it."""
+
     assert find_fault(reference="x" * 200_000) == StreamError(2, "line 2: field larger than field limit (131072)")
 
 
 def test_a_missing_or_inapplicable_cell_is_refused() -> None:
     """A column the kind requires but the row leaves empty, or fills but the kind does not take, is refused."""
+
     assert find_fault(event="") == StreamError(2, "line 2: column 'event' is required for CREDIT")
     assert find_fault(amount="") == StreamError(2, "line 2: column 'amount' is required for CREDIT")
     assert find_fault(type="SETTLEMENT") == StreamError(2, "line 2: column 'reference' is required for SETTLEMENT")
@@ -171,6 +179,7 @@ def test_a_missing_or_inapplicable_cell_is_refused() -> None:
 
 def test_a_day_outside_the_window_is_refused() -> None:
     """A booked or value date outside the window, or not a whole number, is refused."""
+
     assert find_fault(booked="7") == StreamError(2, "line 2: day '7' is outside the window 1 to 6")
     assert find_fault(value_date="0") == StreamError(2, "line 2: day '0' is outside the window 1 to 6")
     assert find_fault(booked="1.5") == StreamError(2, "line 2: day '1.5' is outside the window 1 to 6")
@@ -178,6 +187,7 @@ def test_a_day_outside_the_window_is_refused() -> None:
 
 def test_a_reversal_reference_must_be_an_event_id() -> None:
     """A reversal's reference must be an event ID, a generated ID included."""
+
     assert find_fault(type="REVERSAL", amount="", reference="Auth-A") == StreamError(
         2, "line 2: reference 'Auth-A' is not an event ID"
     )
@@ -188,6 +198,7 @@ def test_a_reversal_reference_must_be_an_event_id() -> None:
 
 def test_an_instalment_count_outside_2_to_360_is_refused() -> None:
     """An instalment count below 2 or above 360 (NUMBERS.md), or not a whole number, is refused."""
+
     must_be_from_2_to_360 = StreamError(2, "line 2: instalments must be a whole number from 2 to 360")
     assert find_fault(instalments="1") == must_be_from_2_to_360
     assert find_fault(instalments="two") == must_be_from_2_to_360
@@ -197,6 +208,7 @@ def test_an_instalment_count_outside_2_to_360_is_refused() -> None:
 
 def test_more_instalments_than_minor_units_are_refused() -> None:
     """A credit with more instalments than its amount has minor units is refused."""
+
     assert find_fault(account="ACC-002", amount="0.002", instalments="3") == StreamError(
         2, "line 2: 0.002 cannot be split into 3 instalments"
     )
@@ -205,13 +217,16 @@ def test_more_instalments_than_minor_units_are_refused() -> None:
 def test_a_final_cell_other_than_yes_or_no_is_refused() -> None:
     """AMB-013, tech-docs 003: a settlement's `final` cell is `yes`, `no`, or blank for `yes`; any other is a fault, and
     the cell applies to a settlement only."""
+
     header = ",".join(HEADER)
     settlement = "E5,4,SETTLEMENT,ACC-001,185.00,4,Auth-A,,"
 
     def parse_settlement_kind(cell: str) -> SettlementKind:
         """The kind a settlement row parses to when its `final` cell is ``cell``."""
+
         (event,) = unwrap_ok(CsvFileSource.parse(f"{header}\n{settlement}{cell}\n", CHALLENGE)).events
         assert isinstance(event, Settlement)
+
         return event.kind
 
     assert CsvFileSource.parse(f"{header}\n{settlement}maybe\n", CHALLENGE) == Err(

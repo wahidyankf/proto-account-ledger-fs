@@ -22,15 +22,18 @@ TITLES = ("Events processed", "EOD applied", "Closing summary")
 def test_a_day_opens_with_its_banner_and_its_blocks() -> None:
     """tech-docs 003: a day opens with a banner between two lines of 120 `=`, then the three titled blocks, each after
     one blank line, as is each day from the next; the output ends with a newline."""
+
     result = unwrap_ok(IncomingStream(()).process(CHALLENGE))
 
     text = TextReportSink.render((result.find_report(Day(0)), result.find_report(Day(1))))
 
     lines = text.split("\n")
     assert lines[:5] == [SEPARATOR, "Day 0", SEPARATOR, "", "Events processed"]
+
     title_indexes = [index for index, line in enumerate(lines) if line in TITLES]
     assert [lines[index] for index in title_indexes] == [*TITLES, *TITLES]
     assert all(lines[index - 1] == "" for index in title_indexes)
+
     day_1 = lines.index("Day 1")
     assert lines[day_1 - 2 : day_1 + 2] == ["", SEPARATOR, "Day 1", SEPARATOR]
     assert text.endswith("\n")
@@ -38,6 +41,7 @@ def test_a_day_opens_with_its_banner_and_its_blocks() -> None:
 
 def test_an_empty_block_prints_none() -> None:
     """AMB-033: a block with nothing in it prints two spaces and `none` instead of a table; Day 0 is such a day."""
+
     lines = TextReportSink.render((unwrap_ok(IncomingStream(()).process(CHALLENGE)).find_report(Day(0)),)).split("\n")
 
     assert lines[4:10] == ["Events processed", "  none", "", "EOD applied", "  none", ""]
@@ -58,6 +62,7 @@ DAY_0_SUMMARY = [
 def test_a_table_is_a_box_as_wide_as_its_cells() -> None:
     """tech-docs 003: borders of `+`, `-`, and `|`, one space either side of each cell, every cell left-aligned, and
     every column as wide as its widest cell, header included; Day 0's summary prints as OUTPUT_TARGET's does."""
+
     lines = TextReportSink.render((unwrap_ok(IncomingStream(()).process(CHALLENGE)).find_report(Day(0)),)).split("\n")
 
     assert lines[lines.index("Closing summary") + 1 :] == [*DAY_0_SUMMARY, ""]
@@ -66,6 +71,7 @@ def test_a_table_is_a_box_as_wide_as_its_cells() -> None:
 def test_amounts_print_in_their_currencys_format() -> None:
     """tech-docs 003: an amount prints its currency's places, a comma every three digits, and `−` (U+2212) for a
     negative, counted as one character when a column is sized."""
+
     opening = (make_credit("E1", 1, "1200.00"), make_credit("E2", 1, "1000.000", account="ACC-002"))
     day_1_report = unwrap_ok(IncomingStream(opening).process(CHALLENGE)).find_report(Day(1))
     day_5_report = unwrap_ok(IncomingStream(build_brief_stream()).process(CHALLENGE)).find_report(Day(5))
@@ -74,24 +80,29 @@ def test_amounts_print_in_their_currencys_format() -> None:
 
     assert "| Closing ledger balance | 1,200.00      | 1,000.000     |" in day_1
     assert any(line.startswith("| Day 2 closing, restated | \u2212370.00 ") for line in day_5)
+
     summary = day_5[day_5.index("Closing summary") + 1 :]
     assert len({len(line) for line in summary if line}) == 1
 
 
 def _list_types_and_details(text: str) -> list[tuple[str, str]]:
     """The Type and Detail cells of every Events processed and EOD applied row, header rows left out."""
+
     cells = [line.split(" | ") for line in text.split("\n") if line.startswith("| ")]
+
     return [(row[2].strip(), row[4].strip()) for row in cells if len(row) == 6 and row[2].strip() != "Type"]
 
 
 def _select_blocks(text: str) -> str:
     """The Events processed and EOD applied blocks of one rendered day."""
+
     return text[text.index("Events processed") : text.index("Closing summary")]
 
 
 def test_each_row_prints_its_type_and_detail() -> None:
     """tech-docs 003: every Events processed and EOD applied row prints OUTPUT_TARGET's Type and Detail texts: a debit
     value-dated back charges two fees and adjusts interest down, and its reversal refunds both and adjusts it up."""
+
     stream = (
         make_credit("E1", 1, "100.00"),
         make_debit("E2", 2, "150.00", value=1),
@@ -99,6 +110,7 @@ def test_each_row_prints_its_type_and_detail() -> None:
         make_authorization("E4", 4, "Auth-A", "20.00"),
         make_settlement("E5", 4, "Auth-A", "20.00"),
     )
+
     days = [
         _list_types_and_details(_select_blocks(TextReportSink.render((day,))))
         for day in unwrap_ok(IncomingStream(stream).process(CHALLENGE)).reports[1:5]
@@ -146,8 +158,10 @@ def test_instalment_counts_print_as_words() -> None:
 
     def list_details(count: int) -> list[str]:
         """The detail column of each event row for a BHD 10.000 credit in ``count`` instalments."""
+
         stream = (make_credit("E1", 1, "10.000", account="ACC-002", instalments=count),)
         report = unwrap_ok(IncomingStream(stream).process(CHALLENGE)).find_report(Day(1))
+
         return [detail for _, detail in _list_types_and_details(_select_blocks(TextReportSink.render((report,))))]
 
     assert list_details(3)[:4] == [
@@ -166,6 +180,7 @@ def test_instalment_counts_print_as_words() -> None:
 def test_authorization_states_print_as_output_target_shows() -> None:
     """AMB-019, tech-docs 003: each authorization prints its state as OUTPUT_TARGET does, with no currency code, and an
     account's several authorizations are joined by `; `."""
+
     stream = (
         make_credit("E1", 1, "100.00"),
         make_authorization("E2", 1, "Auth-A", "50.00"),
@@ -175,9 +190,11 @@ def test_authorization_states_print_as_output_target_shows() -> None:
 
     def list_cells(day: int) -> list[str]:
         """The Authorizations cells of the day's summary, one per account."""
+
         report = unwrap_ok(IncomingStream(stream).process(CHALLENGE)).find_report(Day(day))
         lines = TextReportSink.render((report,)).split("\n")
         row = next(line for line in lines if line.startswith("| Authorizations"))
+
         return [cell.strip() for cell in row.strip("|").split("|")[1:]]
 
     assert list_cells(0) == ["none", "none"]
@@ -188,8 +205,10 @@ def test_authorization_states_print_as_output_target_shows() -> None:
 def test_capitalization_names_the_days_it_accrued() -> None:
     """tech-docs 003: a capitalization names the days whose interest events do not net to zero: `Days 1 to 6` for three
     or more in a row, `Days 5 and 6` for two, `Day 6` for one, and `Days 1, 2, and 4` otherwise."""
+
     brief_report = unwrap_ok(IncomingStream(build_brief_stream()).process(CHALLENGE)).find_report(Day(6))
     brief = TextReportSink.render((brief_report,)).split("\n")
+
     gaps = (
         make_credit("E1", 1, "1000.00"),
         make_debit("E2", 3, "1000.00"),
@@ -197,11 +216,13 @@ def test_capitalization_names_the_days_it_accrued() -> None:
         make_debit("E4", 5, "1000.00"),
         make_credit("E5", 6, "10.000", account="ACC-002"),
     )
+
     gapped_report = unwrap_ok(IncomingStream(gaps).process(CHALLENGE)).find_report(Day(6))
     gapped_lines = TextReportSink.render((gapped_report,)).split("\n")
 
     def list_details(lines: list[str]) -> list[str]:
         """The detail column of each capitalization row."""
+
         return [line.split(" | ")[4].strip() for line in lines if line.startswith("| 3    | CAP-")]
 
     assert list_details(brief) == ["AED 0.76, accrued Days 1 to 6", "BHD 0.008, accrued Days 5 and 6"]
@@ -212,6 +233,7 @@ def test_the_texts_beyond_output_target_follow_its_patterns() -> None:
     """D22, tech-docs 003: a duplicate prints `duplicate of E1, no effect`; a force-post against a known hold prints as
     E6 does; a rejected event prints its usual detail, with its reason under Errors, several joined by `; `; and a
     reversal of a generated event names its ID."""
+
     stream = (
         make_credit("E1", 1, "400.00"),
         make_credit("E1", 1, "400.00"),
@@ -222,10 +244,12 @@ def test_the_texts_beyond_output_target_follow_its_patterns() -> None:
         make_reversal("E6", 2, "E99"),
         make_reversal("E7", 2, "INT-001-D1@D1"),
     )
+
     lines = TextReportSink.render(unwrap_ok(IncomingStream(stream).process(CHALLENGE)).reports[1:3]).split("\n")
 
     def list_details(block: list[str]) -> list[str]:
         """The detail column of each incoming event's row."""
+
         return [line.split(" | ")[4].strip() for line in block if line[:3] == "| E" and line[3].isdigit()]
 
     day_2 = lines.index("Day 2")
@@ -237,6 +261,7 @@ def test_the_texts_beyond_output_target_follow_its_patterns() -> None:
         "Auth-A force-posts AED 40.00",
     ]
     assert list_details(lines[day_2:]) == ["reverses E98", "reverses E99", "reverses INT-001-D1@D1"]
+
     errors = next(line for line in lines[day_2:] if line.startswith("| Errors"))
     assert errors.split(" | ")[1].strip() == "E5 refused: E98 is not in the log; E6 refused: E99 is not in the log"
 
@@ -244,17 +269,20 @@ def test_the_texts_beyond_output_target_follow_its_patterns() -> None:
 def test_a_partially_settled_authorization_prints_its_remaining_hold() -> None:
     """D22, tech-docs 003: a partial settlement prints `settles for ..., hold kept`, and its authorization `partially
     settled for C, hold H`; once a final settlement follows, it prints `settled for` the settlements' sum."""
+
     stream = (
         make_credit("E1", 1, "500.00"),
         make_authorization("E2", 1, "Auth-A", "200.00"),
         make_settlement("E3", 2, "Auth-A", "120.00", kind=SettlementKind.PARTIAL),
         make_settlement("E4", 3, "Auth-A", "40.00"),
     )
+
     lines = TextReportSink.render(unwrap_ok(IncomingStream(stream).process(CHALLENGE)).reports[2:4]).split("\n")
     day_3 = lines.index("Day 3")
 
     def find_cell(block: list[str], start: str, column: int) -> str:
         """The cell in the given column of the first row that starts with ``start``."""
+
         return next(line for line in block if line.startswith(start)).split(" | ")[column].strip()
 
     assert find_cell(lines[:day_3], "| E3 ", 4) == "Auth-A settles for AED 120.00, hold kept"
@@ -265,6 +293,7 @@ def test_a_partially_settled_authorization_prints_its_remaining_hold() -> None:
 
 def test_a_step_that_generates_nothing_prints_its_note() -> None:
     """AMB-033, tech-docs 002: a step that generates nothing of its kind prints the note for it in its Detail cell."""
+
     brief = TextReportSink.render(unwrap_ok(IncomingStream(build_brief_stream()).process(CHALLENGE)).reports)
     aed_only_stream = (make_credit("E1", 1, "100.00"),)
     aed_only_report = unwrap_ok(IncomingStream(aed_only_stream).process(CHALLENGE)).find_report(Day(6))
@@ -291,10 +320,12 @@ def test_amb_014_a_rejected_event_prints_its_refusal(
 ) -> None:
     """AMB-014, D22: a refused event prints as that day's error in its account's column, in the text tech-docs 001
     fixes; the other account's column reads none."""
+
     report = unwrap_ok(IncomingStream(stream).process(CHALLENGE)).find_report(Day(1))
     lines = TextReportSink.render((report,)).split("\n")
 
     errors = next(line for line in lines if line.startswith("| Errors")).split(" | ")
+
     columns = {
         configured_account.id: errors[index].strip(" |")
         for index, configured_account in enumerate(CHALLENGE.accounts, start=1)

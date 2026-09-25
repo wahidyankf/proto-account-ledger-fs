@@ -28,16 +28,19 @@ class IdFault:
 
 def _is_instalment_count(number: int) -> bool:
     """Whether the number is from 2 to ``MAX_INSTALMENTS``: the one rule the guard and ``make`` both apply."""
+
     return 2 <= number <= MAX_INSTALMENTS
 
 
 def _is_day_number(number: int) -> bool:
     """Whether the number is a day, 0 or later: the one rule the guard and ``make`` both apply."""
+
     return number >= 0
 
 
 def _check_text(value: str, pattern: re.Pattern[str], shape: str) -> None:
     """A guard that raises unless the text is of its kind's form, stated as ``shape``; only a bug reaches it."""
+
     if not pattern.fullmatch(value):
         raise ValueError(f"{shape}, not {value!r}")
 
@@ -45,12 +48,14 @@ def _check_text(value: str, pattern: re.Pattern[str], shape: str) -> None:
 def _parse_text(text: str, pattern: re.Pattern[str], kind: str) -> Result[str, IdFault]:
     """The text when it is of its kind's form, or a fault naming the kind: the one rule every text ID's ``parse``
     applies."""
+
     return Ok(text) if pattern.fullmatch(text) else Err(IdFault(kind, text))
 
 
 def _format_day_event_id(prefix: str, account: AccountId, for_day: Day, generated_day: Day) -> str:
     """An ID the ledger generates for an account's event about one day, at the close of another, printed as its
     prefix, the account's digits, and the two days, such as FEE-001-D2@D5."""
+
     return f"{prefix}-{account.number}-D{for_day.number}@D{generated_day.number}"
 
 
@@ -67,15 +72,19 @@ class InstalmentCount:
     @classmethod
     def make(cls, number: int) -> Result[Self, IdFault]:
         """The count, or a fault for one below 2 or above ``MAX_INSTALMENTS``."""
+
         if _is_instalment_count(number):
             return Ok(cls(number))
+
         return Err(IdFault("instalment count", str(number)))
 
     @classmethod
     def parse(cls, text: str) -> Result[Self, IdFault]:
         """The count the text holds, or a fault for one outside 2 to ``MAX_INSTALMENTS`` or not a whole number."""
+
         if re.fullmatch(r"[0-9]+", text):
             return cls.make(int(text))
+
         return Err(IdFault("instalment count", text))
 
 
@@ -92,20 +101,25 @@ class Day:
     @classmethod
     def make(cls, number: int) -> Result[Self, IdFault]:
         """The day, or a fault for one before Day 0."""
+
         return Ok(cls(number)) if _is_day_number(number) else Err(IdFault("day", str(number)))
 
     @classmethod
     def parse(cls, text: str) -> Result[Self, IdFault]:
         """The day the text holds, or a fault for one that is not a whole number."""
+
         return cls.make(int(text)) if re.fullmatch(r"[0-9]+", text) else Err(IdFault("day", text))
 
     def advance(self) -> Day:
         """The day after this one."""
+
         return Day(self.number + 1)
 
     def span_to(self, last_day: Day) -> Iterator[Day]:
         """Each day from this one to ``last_day``, both included, in order."""
+
         day = self
+
         while day <= last_day:
             yield day
             day = day.advance()
@@ -126,11 +140,13 @@ class AccountId:
     @classmethod
     def parse(cls, text: str) -> Result[Self, IdFault]:
         """The ID the text holds, or a fault for text not of its kind's form."""
+
         return _parse_text(text, cls.PATTERN, cls.KIND).map(cls)
 
     @property
     def number(self) -> str:
         """The three digits a generated ID carries."""
+
         return self.value.removeprefix("ACC-")
 
 
@@ -149,6 +165,7 @@ class AuthorizationId:
     @classmethod
     def parse(cls, text: str) -> Result[Self, IdFault]:
         """The ID the text holds, or a fault for text not of its kind's form."""
+
         return _parse_text(text, cls.PATTERN, cls.KIND).map(cls)
 
 
@@ -167,10 +184,12 @@ class IncomingId:
     @classmethod
     def parse(cls, text: str) -> Result[Self, IdFault]:
         """The ID the text holds, or a fault for text not of its kind's form."""
+
         return _parse_text(text, cls.PATTERN, cls.KIND).map(cls)
 
     def format(self) -> str:
         """The ID as the report prints it, such as E1."""
+
         return self.value
 
 
@@ -187,6 +206,7 @@ class InstalmentId:
 
     def format(self) -> str:
         """The ID as the report prints it, such as E10-1."""
+
         return f"{self.parent.value}-{self.number}"
 
 
@@ -201,6 +221,7 @@ class FeeId:
 
     def format(self) -> str:
         """The ID as the report prints it; built from its parts, never stored as a string."""
+
         return _format_day_event_id(self.PREFIX, self.account, self.for_day, self.generated_day)
 
 
@@ -215,6 +236,7 @@ class RefundId:
 
     def format(self) -> str:
         """The ID as the report prints it; built from its parts, never stored as a string."""
+
         return _format_day_event_id(self.PREFIX, self.account, self.for_day, self.generated_day)
 
 
@@ -229,6 +251,7 @@ class InterestId:
 
     def format(self) -> str:
         """The ID as the report prints it; built from its parts, never stored as a string."""
+
         return _format_day_event_id(self.PREFIX, self.account, self.for_day, self.generated_day)
 
 
@@ -241,6 +264,7 @@ class CapitalizationId:
 
     def format(self) -> str:
         """The ID as the report prints it; built from its parts, never stored as a string."""
+
         return f"CAP-{self.account.number}@D{self.generated_day.number}"
 
 
@@ -249,22 +273,29 @@ type EventId = IncomingId | InstalmentId | FeeId | RefundId | InterestId | Capit
 
 def parse_event_id(text: str) -> Result[EventId, IdFault]:
     """An incoming ID, an instalment, or a generated ID, as a reversal names its target (AMB-035)."""
+
     event_match = _EVENT.fullmatch(text)
+
     return Err(IdFault("event ID", text)) if event_match is None else Ok(_build_event_id(event_match))
 
 
 def _build_event_id(event_match: re.Match[str]) -> EventId:
     """The ID a matched text names; the pattern admits only valid parts, so every constructor here accepts them."""
+
     group = event_match.group
+
     if group("incoming"):
         incoming_id = IncomingId(group("incoming"))
+
         return InstalmentId(incoming_id, int(group("part"))) if group("part") else incoming_id
+
     if group("kind"):
         account, for_day, generated_day = (
             AccountId(f"ACC-{group('account')}"),
             Day(int(group("for_day"))),
             Day(int(group("generated"))),
         )
+
         match group("kind"):
             case "FEE":
                 return FeeId(account, for_day, generated_day)
@@ -272,4 +303,5 @@ def _build_event_id(event_match: re.Match[str]) -> EventId:
                 return RefundId(account, for_day, generated_day)
             case _:
                 return InterestId(account, for_day, generated_day)
+
     return CapitalizationId(AccountId(f"ACC-{group('cap_account')}"), Day(int(group("cap_generated"))))

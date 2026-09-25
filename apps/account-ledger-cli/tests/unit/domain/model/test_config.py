@@ -15,6 +15,7 @@ ACC_001_OPENING = AccountOpeningIn(AccountId("ACC-001"), make_aed("0.00"))
 
 def test_ledger_config_refuses_an_inverted_window() -> None:
     """An inverted window, a repeated account, or a capitalization day outside the window is refused."""
+
     assert LedgerConfig.make((ACC_001_OPENING,), Day(6), Day(1), frozenset()) == Err(
         ConfigFault("the first day 6 is after the last 1")
     )
@@ -27,7 +28,9 @@ def test_ledger_config_refuses_an_inverted_window() -> None:
     assert LedgerConfig.make((ACC_001_OPENING,), Day(1), Day(6), frozenset()) == Ok(
         LedgerConfig((ACC_001_OPENING,), Day(1), Day(6), frozenset())
     )
+
     with pytest.raises(ValueError, match="the first day 1 is after the last 0"):
         replace(CHALLENGE, last_day=Day(0))
+
     assert CHALLENGE.accounts == (ACC_001_OPENING, AccountOpeningIn(AccountId("ACC-002"), make_bhd("0.000")))
     assert (CHALLENGE.first_day, CHALLENGE.last_day, CHALLENGE.capitalization_days) == (Day(1), Day(6), {Day(6)})

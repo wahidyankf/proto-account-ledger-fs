@@ -51,9 +51,12 @@ def apply_settlement(
 ) -> Result[AuthorizationState, CannotSettle | CurrencyMismatch]:
     """The declared table (D8): one case per state, settlement kind, and what the settlement leaves of the hold. What
     it leaves is taken first, so a mismatch a bug would bring is returned rather than hidden in it."""
+
     if isinstance(taken := _take_from_hold(state, amount), Err):
         return taken
+
     triple = (state, kind, taken.value)
+
     match triple:
         case Approved(), SettlementKind.FINAL, _:
             return Ok(Settled(amount))
@@ -76,6 +79,7 @@ def apply_settlement(
 def _take_from_hold(state: AuthorizationState, amount: Amount) -> Result[Amount | None, CurrencyMismatch]:
     """What the settlement leaves of the hold the state keeps, or ``None`` when it reaches the hold; no hold is kept
     once settled or declined."""
+
     match state:
         case Approved(hold=hold) | PartiallySettled(hold=hold):
             return hold.take(amount)
@@ -94,5 +98,7 @@ class AuthorizationRecord:
 
     def is_referenced_by(self, settlement: Settlement) -> bool:
         """Whether the settlement names this record's hold on the same account."""
+
         authorization = self.authorization
+
         return authorization.authorization == settlement.authorization and authorization.account == settlement.account
