@@ -1,61 +1,27 @@
-"""Closing a day: fee re-evaluation (AMB-002, AMB-011), interest (AMB-005), and capitalization (AMB-023)."""
+"""Closing a day: interest (AMB-005), capitalization (AMB-023), and a settlement above its hold (AMB-030)."""
 
 from dataclasses import replace
 
 from account_ledger.domain.authorizations import Settled
 from account_ledger.domain.balances import closing, holds
 from account_ledger.domain.model.config import CHALLENGE
-from account_ledger.domain.model.event_log import Accepted
-from account_ledger.domain.model.events import Fee
 from account_ledger.domain.model.ids import Day
 from account_ledger.domain.model.money import Amount
 from account_ledger.domain.replay import replay
 from account_ledger.domain.report import Capitalized
-from support.brief_stream import brief_stream
 from support.states import state_of
 from support.streams import (
     ACC_001,
-    ACC_002,
     authorization,
     capitalization_amounts,
     credit,
     debit,
     fee_markers,
     interest_amounts,
-    refund_markers,
     reversal,
     settlement,
 )
-from support.values import aed, bhd
-
-
-def test_amb_011_a_day_still_negative_is_not_charged_again() -> None:
-    """AMB-002, AMB-011: a fee is charged "once per day per account", so a day that has its fee is not charged again,
-    however many closes find it negative."""
-    log = replay((debit("E1", 1, "10.00"),), CHALLENGE).log_at(Day(2))
-
-    assert fee_markers(log) == ["FEE-001-D1@D1", "FEE-001-D2@D2"]
-
-
-def test_amb_011_a_fee_counts_in_the_closings_after_it() -> None:
-    """AMB-011: a fee is an event like any other, so the Day 1 fee, value-dated Day 2, takes Day 2 from 10.00 to
-    −15.00, and Day 2 is charged too."""
-    stream = (debit("E1", 2, "20.00", value=1), credit("E2", 2, "30.00"))
-
-    log = replay(stream, CHALLENGE).log_at(Day(2))
-
-    assert fee_markers(log) == ["FEE-001-D1@D2", "FEE-001-D2@D2"]
-
-
-def test_amb_027_a_bhd_account_is_charged_bhd_2_560() -> None:
-    """AMB-027: the fee is AED 25.00 converted at the configured rate and rounded half-even to BHD's three places, so
-    ACC-002 is charged FEE-002-D1@D1 and closes Day 1 at −3.560."""
-    log = replay((debit("E1", 1, "1.000", account="ACC-002"),), CHALLENGE).log_at(Day(1))
-
-    fees = [entry.event for entry in log if isinstance(entry, Accepted) and isinstance(entry.event, Fee)]
-    assert [fee.amount for fee in fees] == [Amount(bhd("2.560"))]
-    assert fee_markers(log) == ["FEE-002-D1@D1"]
-    assert closing(log, ACC_002, Day(1)) == bhd("-3.560")
+from support.values import aed
 
 
 def test_amb_030_a_settlement_above_its_hold_debits_in_full() -> None:
@@ -73,15 +39,6 @@ def test_amb_030_a_settlement_above_its_hold_debits_in_full() -> None:
     assert holds(log, ACC_001, Day(2)) == aed("0.00")
     assert fee_markers(log) == ["FEE-001-D2@D2"]
     assert closing(log, ACC_001, Day(2)) == aed("-45.00")
-
-
-def test_amb_035_a_fee_reversed_on_a_negative_day_is_charged_again() -> None:
-    """AMB-035: a fee reversed while its day is still negative is charged again, under a marker for today."""
-    stream = (debit("E1", 1, "10.00"), reversal("E2", 2, "FEE-001-D1@D1"))
-
-    log = replay(stream, CHALLENGE).log_at(Day(2))
-
-    assert fee_markers(log) == ["FEE-001-D1@D1", "FEE-001-D1@D2", "FEE-001-D2@D2"]
 
 
 def test_amb_005_interest_accrues_on_a_positive_closing() -> None:
@@ -114,17 +71,6 @@ def test_amb_023_a_days_interest_never_counts_its_own_capitalization() -> None:
     log = replay((credit("E1", 1, "50000.00"),), config).log_at(Day(2))
 
     assert interest_amounts(log) == [("INT-001-D1@D1", aed("20.00")), ("INT-001-D2@D2", aed("20.01"))]
-
-
-def test_amb_035_a_reversed_refund_puts_its_fee_back_in_force() -> None:
-    """AMB-035: a refund may itself be reversed, which puts its fee back in force for the next close to judge again;
-    Day 2 still closes at 250.00, so Day 7's close refunds FEE-001-D2@D5 once more."""
-    week = replace(CHALLENGE, last_day=Day(7))
-    stream = (*brief_stream(), reversal("E12", 7, "REFUND-001-D2@D6"))
-
-    log = replay(stream, week).log_at(Day(7))
-
-    assert refund_markers(log) == ["REFUND-001-D2@D6", "REFUND-001-D4@D6", "REFUND-001-D5@D6", "REFUND-001-D2@D7"]
 
 
 def test_amb_035_a_reversed_interest_event_is_fired_again() -> None:

@@ -1,6 +1,7 @@
 """Identifiers, days, and counts: value objects whose constructors refuse a malformed value."""
 
 import re
+from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import assert_never
 
@@ -50,6 +51,13 @@ class Day:
 
     def next(self) -> Day:
         return Day(self.number + 1)
+
+    def through(self, last: Day) -> Iterator[Day]:
+        """Each day from this one to ``last``, both included, in order."""
+        day = self
+        while day <= last:
+            yield day
+            day = day.next()
 
 
 @dataclass(frozen=True, slots=True)
