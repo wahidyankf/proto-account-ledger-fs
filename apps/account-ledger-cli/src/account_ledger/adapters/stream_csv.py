@@ -8,7 +8,7 @@ import csv
 import io
 from dataclasses import dataclass
 
-from account_ledger.domain.model.config import LedgerConfig
+from account_ledger.domain.model.config import AnyAccount, LedgerConfig
 from account_ledger.domain.model.events import (
     AnyAmount,
     Authorization,
@@ -126,14 +126,43 @@ def _capture(text: str) -> Capture | RowFault:
             return RowFault("final must be yes or no")
 
 
+type _Head = tuple[IncomingId, Day, AccountId, Day]  # the event, booked, account, and value_date every row carries
+
+
 def _row(cells: dict[str, str], config: LedgerConfig) -> IncomingEvent | RowFault:
+    """The row's event, checked in column order: its type, which columns it fills, its head, then its own cells."""
     if (kind := cells["type"]) not in KINDS:
         return RowFault(f"type '{kind}' is not one of {', '.join(KINDS)}")
+    if (misplaced := _misplaced(cells, kind)) is not None:
+        return misplaced
+    if isinstance(parsed := _head(cells, config), RowFault):
+        return parsed
+    head, account = parsed
+    if kind == "REVERSAL":
+        return _reversal(cells["reference"], head)
+    if isinstance(amount := _amount(cells["amount"], account.opening), RowFault):
+        return amount
+    match kind:
+        case "CREDIT":
+            return _credit(cells["instalments"], head, amount)
+        case "DEBIT":
+            return Debit(*head, amount)
+        case _:
+            return _held(cells, kind, head, amount)
+
+
+def _misplaced(cells: dict[str, str], kind: str) -> RowFault | None:
+    """The first column the kind requires but the row leaves empty, or fills but the kind does not take."""
     for column in COLUMNS:
         if column in REQUIRED[kind] and not cells[column]:
             return RowFault(f"column '{column}' is required for {kind}")
         if column not in REQUIRED[kind] | OPTIONAL[kind] and cells[column]:
             return RowFault(f"column '{column}' does not apply to {kind}")
+    return None
+
+
+def _head(cells: dict[str, str], config: LedgerConfig) -> tuple[_Head, AnyAccount] | RowFault:
+    """The row's head, and the account it names, which must be one this ledger holds."""
     if isinstance(event_id := _id(IncomingId.parse(cells["event"])), RowFault):
         return event_id
     if isinstance(booked := _day(cells["booked"], config), RowFault):
@@ -144,32 +173,34 @@ def _row(cells: dict[str, str], config: LedgerConfig) -> IncomingEvent | RowFaul
         return RowFault(f"account '{account_id.value}' is not held by this ledger")
     if isinstance(value_day := _day(cells["value_date"], config), RowFault):
         return value_day
-    head = (event_id, booked, account_id, value_day)
-    if kind == "REVERSAL":
-        target = parse_event_id(cells["reference"])
-        if isinstance(target, IdFault):
-            return RowFault(f"reference '{target.text}' is not an event ID")
-        return Reversal(*head, target)
-    if isinstance(amount := _amount(cells["amount"], account.opening), RowFault):
-        return amount
-    match kind:
-        case "CREDIT":
-            posting = _posting(cells["instalments"])
-            if isinstance(posting, RowFault):
-                return posting
-            if isinstance(posting, Instalments) and isinstance(split_of(amount, posting.count), TooManyInstalments):
-                return RowFault(f"{digits(amount.money)} cannot be split into {posting.count.n} instalments")
-            return Credit(*head, amount, posting)
-        case "DEBIT":
-            return Debit(*head, amount)
-        case _:
-            if isinstance(hold := _id(AuthorizationId.parse(cells["reference"])), RowFault):
-                return hold
-            if kind == "AUTHORIZATION":
-                return Authorization(*head, hold, amount)
-            if isinstance(capture := _capture(cells["final"]), RowFault):
-                return capture
-            return Settlement(*head, hold, amount, capture)
+    return (event_id, booked, account_id, value_day), account
+
+
+def _reversal(reference: str, head: _Head) -> Reversal | RowFault:
+    target = parse_event_id(reference)
+    if isinstance(target, IdFault):
+        return RowFault(f"reference '{target.text}' is not an event ID")
+    return Reversal(*head, target)
+
+
+def _credit(instalments: str, head: _Head, amount: AnyAmount) -> Credit | RowFault:
+    """A credit, whole or in instalments; one whose amount cannot be split that many ways is refused."""
+    if isinstance(posting := _posting(instalments), RowFault):
+        return posting
+    if isinstance(posting, Instalments) and isinstance(split_of(amount, posting.count), TooManyInstalments):
+        return RowFault(f"{digits(amount.money)} cannot be split into {posting.count.n} instalments")
+    return Credit(*head, amount, posting)
+
+
+def _held(cells: dict[str, str], kind: str, head: _Head, amount: AnyAmount) -> Authorization | Settlement | RowFault:
+    """An authorization, or a settlement against one, each naming its hold in the reference."""
+    if isinstance(hold := _id(AuthorizationId.parse(cells["reference"])), RowFault):
+        return hold
+    if kind == "AUTHORIZATION":
+        return Authorization(*head, hold, amount)
+    if isinstance(capture := _capture(cells["final"]), RowFault):
+        return capture
+    return Settlement(*head, hold, amount, capture)
 
 
 def parse_stream(text: str, config: LedgerConfig) -> tuple[IncomingEvent, ...] | StreamError:
