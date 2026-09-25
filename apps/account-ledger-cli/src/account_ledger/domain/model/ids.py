@@ -3,7 +3,6 @@
 import re
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import assert_never
 
 from account_ledger.common.result import Err, Ok, Result
 
@@ -140,6 +139,10 @@ class IncomingId:
         """The event ID the text holds, or a fault for one not of the form `E1`."""
         return Ok(IncomingId(text)) if _INCOMING.fullmatch(text) else Err(IdFault("event ID", text))
 
+    def format(self) -> str:
+        """The ID as the report prints it, such as E1."""
+        return self.value
+
 
 @dataclass(frozen=True, slots=True)
 class InstalmentId:
@@ -152,6 +155,10 @@ class InstalmentId:
         if self.number < 1:
             raise ValueError(f"an instalment is numbered from 1, not {self.number}")
 
+    def format(self) -> str:
+        """The ID as the report prints it, such as E10-1."""
+        return f"{self.parent.value}-{self.number}"
+
 
 @dataclass(frozen=True, slots=True)
 class FeeId:
@@ -160,6 +167,10 @@ class FeeId:
     account: AccountId
     for_day: Day
     generated_day: Day
+
+    def format(self) -> str:
+        """The ID as the report prints it; built from its parts, never stored as a string."""
+        return f"FEE-{self.account.number}-D{self.for_day.number}@D{self.generated_day.number}"
 
 
 @dataclass(frozen=True, slots=True)
@@ -170,6 +181,10 @@ class RefundId:
     for_day: Day
     generated_day: Day
 
+    def format(self) -> str:
+        """The ID as the report prints it; built from its parts, never stored as a string."""
+        return f"REFUND-{self.account.number}-D{self.for_day.number}@D{self.generated_day.number}"
+
 
 @dataclass(frozen=True, slots=True)
 class InterestId:
@@ -179,6 +194,10 @@ class InterestId:
     for_day: Day
     generated_day: Day
 
+    def format(self) -> str:
+        """The ID as the report prints it; built from its parts, never stored as a string."""
+        return f"INT-{self.account.number}-D{self.for_day.number}@D{self.generated_day.number}"
+
 
 @dataclass(frozen=True, slots=True)
 class CapitalizationId:
@@ -186,6 +205,10 @@ class CapitalizationId:
 
     account: AccountId
     generated_day: Day
+
+    def format(self) -> str:
+        """The ID as the report prints it; built from its parts, never stored as a string."""
+        return f"CAP-{self.account.number}@D{self.generated_day.number}"
 
 
 type EventId = IncomingId | InstalmentId | FeeId | RefundId | InterestId | CapitalizationId
@@ -224,22 +247,3 @@ def _build_event_id(event_match: re.Match[str]) -> EventId:
             case _:
                 return InterestId(account, for_day, generated_day)
     return CapitalizationId(AccountId(f"ACC-{group('cap_account')}"), Day(int(group("cap_generated"))))
-
-
-def format_id(event_id: EventId) -> str:
-    """The ID as the report prints it; a generated ID is built from its parts, never stored as a string."""
-    match event_id:
-        case IncomingId(value):
-            return value
-        case InstalmentId(parent, number):
-            return f"{parent.value}-{number}"
-        case FeeId(account, for_day, generated_day):
-            return f"FEE-{account.number}-D{for_day.number}@D{generated_day.number}"
-        case RefundId(account, for_day, generated_day):
-            return f"REFUND-{account.number}-D{for_day.number}@D{generated_day.number}"
-        case InterestId(account, for_day, generated_day):
-            return f"INT-{account.number}-D{for_day.number}@D{generated_day.number}"
-        case CapitalizationId(account, generated_day):
-            return f"CAP-{account.number}@D{generated_day.number}"
-        case _:
-            assert_never(event_id)

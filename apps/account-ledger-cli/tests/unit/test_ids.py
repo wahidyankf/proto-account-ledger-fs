@@ -15,7 +15,6 @@ from account_ledger.domain.model.ids import (
     InstalmentId,
     InterestId,
     RefundId,
-    format_id,
     parse_event_id,
 )
 from support.results import unwrap_ok
@@ -89,5 +88,5 @@ def test_a_generated_id_prints_its_kind_account_and_days() -> None:
     """Every event ID prints back as the text it was parsed from."""
     acc_002 = AccountId("ACC-002")
     for event_id in ("E7", "E10-3", "FEE-002-D2@D5", "REFUND-002-D2@D6", "INT-002-D5@D6", "CAP-002@D6"):
-        assert format_id(unwrap_ok(parse_event_id(event_id))) == event_id
-    assert format_id(FeeId(acc_002, Day(4), Day(5))) == "FEE-002-D4@D5"
+        assert unwrap_ok(parse_event_id(event_id)).format() == event_id
+    assert FeeId(acc_002, Day(4), Day(5)).format() == "FEE-002-D4@D5"

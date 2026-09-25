@@ -30,7 +30,6 @@ from account_ledger.domain.model.ids import (
     Day,
     IncomingId,
     InstalmentCount,
-    format_id,
     parse_event_id,
 )
 from account_ledger.domain.model.money import Aed, Amount, AmountIn, Bhd, Direction, Money
@@ -118,12 +117,12 @@ def make_reversal(event: str, day: int, reverses: str, value: int | None = None,
 
 def list_fee_ids(log: Log) -> list[str]:
     """The generated ID of every fee in the log, in the order generated."""
-    return [format_id(entry.event.id) for entry in log if isinstance(entry, FeeCharged)]
+    return [entry.event.id.format() for entry in log if isinstance(entry, FeeCharged)]
 
 
 def list_refund_ids(log: Log) -> list[str]:
     """The generated ID of every fee refund in the log, in the order generated."""
-    return [format_id(entry.event.id) for entry in log if isinstance(entry, FeeRefunded)]
+    return [entry.event.id.format() for entry in log if isinstance(entry, FeeRefunded)]
 
 
 def list_interest_amounts(log: Log) -> list[tuple[str, Money]]:
@@ -132,9 +131,9 @@ def list_interest_amounts(log: Log) -> list[tuple[str, Money]]:
     for entry in log:
         match entry:
             case InterestAccrued(event=InterestAccrual(id=interest_id, amount=amount)):
-                amounts.append((format_id(interest_id), amount.money))
+                amounts.append((interest_id.format(), amount.money))
             case InterestAdjusted(event=InterestAdjustment(id=interest_id, direction=direction, amount=amount)):
-                amounts.append((format_id(interest_id), amount.money if direction is Direction.UP else -amount.money))
+                amounts.append((interest_id.format(), amount.money if direction is Direction.UP else -amount.money))
             case _:
                 pass
     return amounts
@@ -143,7 +142,7 @@ def list_interest_amounts(log: Log) -> list[tuple[str, Money]]:
 def list_capitalization_amounts(log: Log) -> list[tuple[str, Money]]:
     """The generated ID and amount of every capitalization in the log, in the order generated."""
     return [
-        (format_id(entry.event.id), entry.event.amount.money) for entry in log if isinstance(entry, InterestCapitalized)
+        (entry.event.id.format(), entry.event.amount.money) for entry in log if isinstance(entry, InterestCapitalized)
     ]
 
 

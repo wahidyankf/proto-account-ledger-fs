@@ -43,7 +43,7 @@ from account_ledger.domain.model.events import (
     Settlement,
     Whole,
 )
-from account_ledger.domain.model.ids import AccountId, Day, format_id
+from account_ledger.domain.model.ids import AccountId, Day
 from account_ledger.domain.model.money import Amount, Direction, Money
 from account_ledger.domain.report import (
     Capitalized,
@@ -111,7 +111,7 @@ def _build_processed_rows(processed_event: Processed) -> list[Row]:
     """The event's row, then a row per instalment it generated, each printing as a credit."""
     event, booked = processed_event.event, _format_day_cell(processed_event.event.booked)
     row = (
-        format_id(event.id),
+        event.id.format(),
         booked,
         _format_type(event),
         event.account.value,
@@ -125,7 +125,7 @@ def _build_processed_rows(processed_event: Processed) -> list[Row]:
 def _build_instalment_row(part: Instalment, booked: str, count: int) -> Row:
     """An instalment's row, printed as a credit booked with the credit that generated it."""
     detail = f"{_format_money(part.amount)}, instalment {part.id.number} of {count}"
-    return (format_id(part.id), booked, "Credit", part.account.value, detail, _format_day_cell(part.value_date))
+    return (part.id.format(), booked, "Credit", part.account.value, detail, _format_day_cell(part.value_date))
 
 
 def _format_type(event: IncomingEvent) -> str:
@@ -149,7 +149,7 @@ def _format_detail(processed_event: Processed) -> str:
     """OUTPUT_TARGET's Detail text for an incoming event (tech-docs 003); a duplicate names what it repeats (D22)."""
     event = processed_event.event
     if isinstance(processed_event.entry, DuplicateIgnored):
-        return f"duplicate of {format_id(event.id)}, no effect"
+        return f"duplicate of {event.id.format()}, no effect"
     match event:
         case Credit(amount=amount, posting=posting):
             return _format_money(amount) + _format_posting(posting)
@@ -164,7 +164,7 @@ def _format_detail(processed_event: Processed) -> str:
             )
             return f"{hold.value} {settlement_text} {_format_money(amount)}{hold_text}"
         case Reversal(target=target):
-            return f"reverses {format_id(target)}"
+            return f"reverses {target.format()}"
         case _:
             assert_never(event)
 
@@ -212,7 +212,7 @@ def _build_applied_row(row: Generated | Capitalized | NothingGenerated) -> Row:
             kind, detail = _format_generated_event(event)
             return (
                 str(step.value),
-                format_id(event.id),
+                event.id.format(),
                 kind,
                 event.account.value,
                 detail,
@@ -223,7 +223,7 @@ def _build_applied_row(row: Generated | Capitalized | NothingGenerated) -> Row:
             detail = f"{_format_money(event.amount)}, accrued {_format_days(days)}"
             return (
                 str(step.value),
-                format_id(event.id),
+                event.id.format(),
                 kind,
                 event.account.value,
                 detail,
@@ -341,7 +341,7 @@ def _format_authorizations(records: Sequence[AuthorizationRecord], account: Acco
 
 def _format_refusal(entry: EventRejected) -> str:
     """A refusal's error text (tech-docs 001, D22)."""
-    return f"{format_id(entry.event.id)} refused: {_format_reason(entry.reason, entry.event.account)}"
+    return f"{entry.event.id.format()} refused: {_format_reason(entry.reason, entry.event.account)}"
 
 
 def _format_reason(reason: Rejection, account: AccountId) -> str:
@@ -350,17 +350,17 @@ def _format_reason(reason: Rejection, account: AccountId) -> str:
         case IdReused():
             return "ID already used with different content"
         case AlreadyReversed(target=target, undoing_id=undoing_id):
-            return f"{format_id(target)} is already reversed by {format_id(undoing_id)}"
+            return f"{target.format()} is already reversed by {undoing_id.format()}"
         case ReversesAReversal(target=target):
-            return f"{format_id(target)} is a reversal"
+            return f"{target.format()} is a reversal"
         case UnknownTarget(target=target):
-            return f"{format_id(target)} is not in the log"
+            return f"{target.format()} is not in the log"
         case TargetOnAnotherAccount(target=target, target_account=target_account):
-            return f"{format_id(target)} is on {target_account.value}, not {account.value}"
+            return f"{target.format()} is on {target_account.value}, not {account.value}"
         case MovedNoMoney(target=target):
-            return f"{format_id(target)} moved no money"
+            return f"{target.format()} moved no money"
         case AlreadyUndone(part=part, undoing_id=undoing_id):
-            return f"{format_id(part)} is already undone by {format_id(undoing_id)}"
+            return f"{part.format()} is already undone by {undoing_id.format()}"
         case _:
             assert_never(reason)
 

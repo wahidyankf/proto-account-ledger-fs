@@ -15,7 +15,7 @@ from account_ledger.domain.account.states import (
 )
 from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.events import IncomingEvent
-from account_ledger.domain.model.ids import AccountId, AuthorizationId, Day, format_id
+from account_ledger.domain.model.ids import AccountId, AuthorizationId, Day
 from account_ledger.domain.model.money import AmountIn
 from account_ledger.domain.report import Capitalized, DayReport, Generated, Note, NothingGenerated, Restatement, Step
 from account_ledger.domain.stream_processing import (
@@ -85,9 +85,9 @@ def list_rows(day_report: DayReport) -> list[tuple[int, str | Note, tuple[str, .
     for row in day_report.end_of_day:
         match row:
             case Generated(step=step, event=event):
-                found_rows.append((step.value, format_id(event.id), (event.account.value,)))
+                found_rows.append((step.value, event.id.format(), (event.account.value,)))
             case Capitalized(event=event):
-                found_rows.append((Step.CAPITALIZATION.value, format_id(event.id), (event.account.value,)))
+                found_rows.append((Step.CAPITALIZATION.value, event.id.format(), (event.account.value,)))
             case NothingGenerated(step=step, accounts=accounts, note=note):
                 found_rows.append((step.value, note, tuple(account.value for account in accounts)))
             case _:
