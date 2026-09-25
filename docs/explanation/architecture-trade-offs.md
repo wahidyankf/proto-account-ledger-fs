@@ -8,39 +8,43 @@ test, in [AMBIGUITIES](../../AMBIGUITIES.md).
 ## Append-only at scale
 
 The ledger keeps one append-only log and stores no balance. Every figure, a closing, an available balance, accrued
-interest, is a pure function that scans the whole log when it is asked. That is what makes a backdated event cheap to
-get right: nothing stored has to be found and corrected, because nothing is stored.
+interest, is a pure function that scans its account's history, the account's own entries taken from the one log, when it
+is asked. That is what makes a backdated event cheap to get right: nothing stored has to be found and corrected, because
+nothing is stored.
 
 It is also what breaks first. A day's close re-evaluates fees and interest for every day from the first day of the
-window through today, and each of those days asks for its closing, which scans every entry. One close therefore costs
-days × entries, and processing D days costs about D³ once the log grows with the days. The log is also a tuple, so each
-append copies it. Measured on 2026-09-25, on a laptop, with a scratch stream of ten alternating credits and debits a day
-on one account, each value-dated on its booking day, and interest capitalized every thirtieth day:
+window through today, and each of those days asks for its closing, which scans every entry of the account's history. One
+close therefore costs days × entries, and processing D days costs about D³ once the log grows with the days. The log is
+also a tuple, so each append copies it. Measured on 2026-09-25, on a laptop, after the rules moved onto one account's
+history, with a scratch stream of ten alternating credits and debits a day on one account, each value-dated on its
+booking day, and interest capitalized every thirtieth day:
 
 | Window   | Events | Processing time |
 | -------- | ------ | --------------- |
 | 6 days   | 60     | 0.01 s          |
-| 30 days  | 300    | 0.61 s          |
-| 60 days  | 600    | 4.93 s          |
-| 120 days | 1,200  | 38.49 s         |
+| 30 days  | 300    | 0.46 s          |
+| 60 days  | 600    | 3.50 s          |
+| 120 days | 1,200  | 26.89 s         |
 
-Doubling the window multiplies the time by about eight. Volume alone is not the problem: a hundred times the brief's
-events inside the same six days is processed in 0.16 s. A hundred times the days is.
+Doubling the window multiplies the time by seven to eight. Volume alone is not the problem: a hundred times the brief's
+events inside the same six days, each repeated under new IDs, is processed in 0.71 s. A hundred times the days is.
 
 The state grows without bound in three places:
 
-- **The log.** It holds every entry since the first day, and every query reads all of it.
+- **The log.** It holds every entry since the first day, and every query reads the whole of its account's history.
 - **The window.** Fees and interest are re-judged for every day since the first, so each close does more work than the
   last, forever.
 - **The snapshots.** Processing keeps the log as it stood at every day's close, so memory grows with days × entries.
 
 The cheapest structural change that defers this is a projection: a running total of each account's movements by value
-day, updated on every append, with each closing read as a prefix sum over it. It changes no rule and no output; a close
-still re-judges every day, but each judgement becomes a lookup rather than a scan, which takes processing from about D³
-to about D². The log stays the source of truth, and the projection can be rebuilt from it at any time. What it does not
-fix is the ever-growing window. That needs a business decision, not a data structure: a period close after which a day
-is sealed, and a backdated event older than the seal posts its effect into the open period instead of reopening old
-days. That changes what the ledger reports, so it belongs with the controls below, not in the code alone.
+day, updated on every append, with each closing read as a prefix sum over it. It belongs to the Account aggregate, kept
+beside the account's history, and the rules that scan that history for a balance read it from the projection instead. It
+changes no rule's logic and no output; a close still re-judges every day, but each judgement becomes a lookup rather
+than a scan, which takes processing from about D³ to about D². The log stays the source of truth, and the projection can
+be rebuilt from it at any time. What it does not fix is the ever-growing window. That needs a business decision, not a
+data structure: a period close after which a day is sealed, and a backdated event older than the seal posts its effect
+into the open period instead of reopening old days. That changes what the ledger reports, so it belongs with the
+controls below, not in the code alone.
 
 ## Value-dated entries in production
 

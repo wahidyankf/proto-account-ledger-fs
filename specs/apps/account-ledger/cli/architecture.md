@@ -1,7 +1,8 @@
 # Account Ledger CLI — Architecture
 
-The current, as-built system, as a C4 model in four levels and one dynamic view. A change that alters an actor, a
-container, a component responsibility, a relationship, or a boundary updates this document in the same commit.
+The current, as-built system, as a C4 model in four levels and one dynamic view, then its domain model in DDD terms. A
+change that alters an actor, a container, a component responsibility, a relationship, or a boundary updates this
+document in the same commit.
 
 ## Scope
 
@@ -241,6 +242,46 @@ Every balance is recomputed from the log whenever it is asked for (D7), so a lat
 every later closing without any stored balance being updated. Each sum of money returns a `CurrencyMismatch` rather than
 a wrong total when it meets two currencies. The reader keeps every effect in its account's currency, so only a bug
 brings one; it ends the processing, and `run_cli` prints `error: internal: ` and exits 2.
+
+## Domain Model
+
+The domain is one bounded context, the Ledger: the brief's accounts, their events, and the days that close them. Every
+type in `domain/` belongs to it, and none outside `domain/` holds a ledger rule.
+
+| The brief says                     | The code has                                                                  |
+| ---------------------------------- | ----------------------------------------------------------------------------- |
+| an account, in its currency        | `Account[M]`, with `M` either `Aed` or `Bhd`, and its `AccountId`             |
+| an event in the stream             | `IncomingEvent`: `Credit`, `Debit`, `Authorization`, `Settlement`, `Reversal` |
+| the ledger, append-only            | `Log`, the one tuple of every account's domain events                         |
+| a hold                             | the `hold` of an `Approved` or a `PartiallySettled` authorization             |
+| the closing and available balances | `compute_closing` and `compute_available`, over one account's history         |
+| an overdraft fee, and its refund   | `Fee` and `FeeRefund`, recorded as `FeeCharged` and `FeeRefunded`             |
+| interest, and its capitalization   | `InterestAccrual`, `InterestAdjustment`, and `Capitalization`                 |
+| a credit paid in instalments       | `Instalment`, one per `InstalmentCount`, recorded as `InstalmentPosted`       |
+
+**The Account aggregate** is one account and its own entries in the log, `AccountHistory[M]`. Every rule in
+`domain/account/` takes one history and never the log, so pyright refuses a rule that reads another account. The
+aggregate guards the invariants that concern one account:
+
+- an authorization is decided once, on arrival, and approved only while the available balance after its hold stays at or
+  above zero (AMB-008, AMB-009);
+- a settlement moves its authorization only as the state machine in L4 allows (D8), and is force-posted otherwise
+  (AMB-012);
+- a target is reversed at most once, a reversal is never reversed, and one that undoes nothing is refused (AMB-028,
+  AMB-035);
+- a day closing negative carries one fee at most, refunded once that day recovers (AMB-002, AMB-004);
+- a day's interest is accrued once and adjusted when its closing changes, then capitalized on a capitalization day.
+
+It records each fact as a **domain event**, one kind per fact: `CreditPosted`, `AuthorizationApproved`,
+`SettlementForcePosted`, `EventRejected`, and the rest listed in L4. The aggregate's balances are not stored; each is
+recomputed from its domain events whenever it is asked for (D7).
+
+**The Ledger service**, `domain/ledger/`, is the only code that sees every account at once. It keeps the one log
+(AMB-014, AMB-024), refuses what spans accounts before any account decides, an event ID seen before (AMB-034) and a
+reversal whose target is on another account (AMB-036), and runs a day's close as each step on every account in turn.
+
+**The report** is a read model: `domain/report.py` reads the log and each account's history and writes nothing back.
+`stream_processing` drives the service and the report over the stream, day by day.
 
 ## Reading the Code
 

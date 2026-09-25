@@ -5,4 +5,5 @@ the command's input, the text it writes, and its exit code, is specified by the 
 
 ## Directory Map
 
-- [Architecture](architecture.md) — the as-built system: its context, the one executable, and its interior.
+- [Architecture](architecture.md) — the as-built system: its context, the one executable, its interior, and its domain
+  model.
