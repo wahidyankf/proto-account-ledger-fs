@@ -169,6 +169,8 @@ ids       Day   AccountId   AuthorizationId   IncomingId   InstalmentCount
           InterestId each a _DayEventIdBase (PREFIX); every event ID kind has format()
 events    IncomingEvent = Credit | Debit | Authorization | Settlement | Reversal     each holds an Amount
           GeneratedEvent = Instalment | Fee | FeeRefund | InterestAccrual | InterestAdjustment | Capitalization
+          each incoming kind a _IncomingEventBase (id, booked, account, value_date); each generated kind a
+          _GeneratedEventBase[I] (id: I, account, value_date), I its own ID kind
 config    AccountIn[M] = id + opening M   LedgerConfig = accounts, first_day, last_day, capitalization_days
 account/domain_events
           LogEntry = the domain events, one kind per fact, each holding its event and processed_day:
