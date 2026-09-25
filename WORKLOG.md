@@ -8,6 +8,7 @@ earlier work is claimed.
 
 | When                   | What                                                                                        |
 | ---------------------- | ------------------------------------------------------------------------------------------- |
+| 2026-09-25 17:12–18:12 | Restructure plan: research, pre-write gate R1 to R14, the six documents, R17 to R20 settled |
 | 2026-09-25 16:05–17:10 | Operations on their types: aggregate methods, money and ID methods, shared bases, the rule  |
 | 2026-09-25 15:41–16:00 | Currency naming: generics end in In, unions take the plain noun; README lists the tools     |
 | 2026-09-25 15:03–15:40 | DDD layout: log entries named for facts, rules on one account's history, specs in DDD terms |

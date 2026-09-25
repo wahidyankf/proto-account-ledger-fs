@@ -8,4 +8,5 @@ Execution reads and ticks `delivery.md` in place, following
 
 ## Directory Map
 
-No plans in progress.
+- [restructure-around-the-domain/](restructure-around-the-domain/README.md) — every operation on its type, in DDD and
+  hexagonal layers, without inheritance, with nothing observable changed.
