@@ -3,7 +3,22 @@
 # bytes to format, and the index mutation boundary remains owned by Rhino.
 set -euo pipefail
 
+# The nearest ancestor holding a pyproject.toml, so ruff runs with that
+# project's own settings and pinned version rather than its defaults.
+python_project() {
+  local dir
+  dir=$(dirname "$1")
+  while [[ "$dir" != "." ]]; do
+    if [[ -f "$dir/pyproject.toml" ]]; then
+      printf '%s\n' "$dir"
+      return
+    fi
+    dir=$(dirname "$dir")
+  done
+}
+
 paths=()
+python_paths=()
 for path in "$@"; do
   [[ -f "$path" ]] || continue
   case "$path" in
@@ -14,7 +29,37 @@ for path in "$@"; do
     *.js | *.cjs | *.mjs | *.ts | *.tsx | *.json | *.md | *.yml | *.yaml | *.css | *.html)
       paths+=("$path")
       ;;
+    *.py | *.pyi)
+      python_paths+=("$path")
+      ;;
   esac
 done
 
 (( ${#paths[@]} == 0 )) || prettier --write "${paths[@]}"
+
+(( ${#python_paths[@]} == 0 )) && exit 0
+
+# A Python file outside any project has no settings to honour, so it is left
+# as staged rather than formatted with ruff's defaults.
+projects=$(for path in "${python_paths[@]}"; do python_project "$path"; done | sort -u)
+
+# The snapshot has no virtual environment, and Rhino refuses any write outside
+# the selected paths, so uv builds a disposable one from the lock out here.
+venvs=$(mktemp -d)
+trap 'rm -rf "$venvs"' EXIT
+
+while IFS= read -r project; do
+  [[ -n "$project" ]] || continue
+  files=()
+  for path in "${python_paths[@]}"; do
+    [[ "$(python_project "$path")" == "$project" ]] && files+=("${path#"$project"/}")
+  done
+  # Safe fixes only, such as import order; a lint finding that has no safe fix
+  # is left for the lint target to report.
+  (
+    cd "$project"
+    export UV_PROJECT_ENVIRONMENT="$venvs/${project//\//_}"
+    uv run --quiet --frozen --only-group dev ruff check --no-cache --force-exclude --fix-only "${files[@]}"
+    uv run --quiet --frozen --only-group dev ruff format --no-cache --force-exclude "${files[@]}"
+  )
+done <<<"$projects"
