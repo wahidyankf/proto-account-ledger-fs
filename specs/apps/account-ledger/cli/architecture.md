@@ -60,19 +60,21 @@ ports; the application runs the one use case over the domain; the domain holds e
 application are pure: the program reads and writes only in the adapters, through the reader and the streams the shell
 passes in. Every dependency points inward: from the shell to what it composes, from the adapters to the application's
 ports and the domain's types, from the application to the domain, and, inside the domain, from the Ledger to the Account
-aggregate and from the aggregate to the values. Each layer is a place in the package: the shell is `cli.py` and
-`challenge.py` at its root, the adapters are `adapters/`, the application is `application/`, and the domain is
-`domain/`, with the Ledger in `domain/ledger/`, the aggregate in `domain/account/`, and the values in `domain/model/`.
-Each package has its own `ruff.toml` that refuses any import of the layers around it (TID251): every domain package
-refuses `account_ledger.application`, `account_ledger.adapters`, and the shell's two modules, the application refuses
-the adapters and the shell, and the adapters refuse the shell. The values decide nothing. Below them sits `common/`, the
-tools with no ledger meaning: every layer may import it, and its own `ruff.toml` refuses any import of the others.
+aggregate and from the aggregate to the values. Each layer is a place in the package: the shell is `cli.py`,
+`challenge.py`, and `__main__.py` at its root, the adapters are `adapters/`, the application is `application/`, and the
+domain is `domain/`, with the Ledger in `domain/ledger/`, the aggregate in `domain/account/`, and the values in
+`domain/model/`. Each package has its own `ruff.toml` that refuses any import of the layers around it (TID251): every
+domain package refuses `account_ledger.application`, `account_ledger.adapters`, `account_ledger.cli`, and
+`account_ledger.challenge`, the application refuses the adapters and the shell, and the adapters refuse the shell. The
+values decide nothing. Below them sits `common/`, the tools with no ledger meaning: every layer may import it, and its
+own `ruff.toml` refuses any import of the others.
 
 ```text
   shell        +------------------------------------------------------------------------------------+
   cli.py       | cli: run_cli(argv, read_text, out, err, run_ledger) -> exit code; builds the two   |
   challenge.py |   adapters, calls the use case, and codes each fault; main binds the real effects  |
                | challenge: CHALLENGE, the brief's configuration main gives LedgerRun               |
+  __main__.py  | __main__: python -m account_ledger runs main and exits with its status             |
                +------------------------------------------------------------------------------------+
                     | builds                      | builds                      | RunLedger.run(source, sink)
                     v                             v                             |
@@ -129,6 +131,7 @@ tools with no ledger meaning: every layer may import it, and its own `ruff.toml`
 | ------------------------ | ----------------------------------------------------------------------------------------- |
 | `cli`                    | `run_cli` checks arguments, builds the adapters, runs the use case, and codes each fault  |
 | `challenge`              | `CHALLENGE`: ACC-001 in AED and ACC-002 in BHD, Days 1 to 6, capitalized on Day 6         |
+| `__main__`               | what `python -m account_ledger` runs: `main`, whose status is the process's exit status   |
 | `csv_file`               | `CsvFileSource`: the stream file read and parsed into events, or the first fault          |
 | `text_report`            | `TextReportSink`: the report as text: banners, box tables, amounts with `−`, and errors   |
 | `ports`                  | `EventSource`, `ReportSink`, and `RunLedger`, each a `Protocol` a signature consumes      |
@@ -266,9 +269,9 @@ LedgerRun, after the last day
 
 Every balance is recomputed from the log whenever it is asked for (D7), so a late event value-dated in the past changes
 every later closing without any stored balance being updated. Each sum of money returns a `CurrencyMismatch` rather than
-a wrong total when it meets two currencies. The reader keeps every effect in its account's currency, so only a bug
-brings one; it ends the processing, and `run_cli` prints `error: internal: ` and exits 2. An event on an account the
-ledger does not hold is the other internal fault, `UnknownAccount`, and ends it the same way; the reader refuses such an
+a wrong total when it meets two currencies. Each account keeps every effect in its own currency, so only a bug brings
+one; it ends the processing, and `run_cli` prints `error: internal: ` and exits 2. An event on an account the ledger
+does not hold is the other internal fault, `UnknownAccount`, and ends it the same way; the event source refuses such an
 event first, so no input reaches it.
 
 ## Domain Model
@@ -353,7 +356,8 @@ reading them first.
 ## Constraints
 
 - No web layer, persistence, UI, or database.
-- Every effect sits in the shell; the domain stays pure and deterministic.
+- Every effect is bound in the shell and performed in the adapters; the domain and the application stay pure and
+  deterministic.
 - Balances are recomputed from the append-only log, one account's entries at a time, never stored (D7); nothing in the
   log is changed or removed.
 - Holds never expire (AMB-018), the ledger's known weakness.
