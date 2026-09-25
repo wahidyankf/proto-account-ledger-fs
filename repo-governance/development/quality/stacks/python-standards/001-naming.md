@@ -12,12 +12,12 @@ when_to_use: >-
 A name says what its code does or holds, so a reader follows a call without opening it.
 
 - **Functions:** every function and method name must start with a verb followed by that verb's object, such as
-  `parse_stream`, `_format_amount`, or `compute_closing`, never a bare noun like `_amount` or a bare verb like
+  `parse_event_id`, `_format_amount`, or `compute_closing`, never a bare noun like `_amount` or a bare verb like
   `process`. A method may leave its object to its class, as `Day.parse` and `AmountIn.make` do. A name adds where its
   value comes from or goes to, such as `from_csv` or `to_text`, only where its signature and module leave that
-  ambiguous; a constructor with more than one source takes `from_` and the source. Magic methods, a method overriding a
-  library's (`write` on an `io` subclass), a `@property`, which reads as an attribute, the entry point `main`, and the
-  Result combinators `flat_map` and `flat_map_err`, which keep the names the idiom gives them, are exempt.
+  ambiguous; a constructor with more than one source takes `from_` and the source. Magic methods, a `@property`, which
+  reads as an attribute, the entry point `main`, and the Result combinators `flat_map` and `flat_map_err`, which keep
+  the names the idiom gives them, are exempt.
 - **Variables:** every variable, parameter, and field must be named with a noun or a noun phrase, such as
   `closing_balances`, `state_after`, or `undoing_id`, never a bare verb, participle, adjective, or single letter. A
   boolean may instead be named as a yes-or-no question, such as `is_force_post`. A magic method's parameters keep

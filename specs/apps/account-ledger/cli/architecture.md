@@ -293,8 +293,8 @@ A type generic over the currency ends in `In`, and the union over its currencies
 is an account in AED, and `Account` is either; `AccountOpeningIn[Aed]` is one as the configuration opens it. A caller
 outside the aggregate asks it by method, such as `account.compute_closing(day)`; a method call works on the `Account`
 union, so no caller needs to know the currency. Every rule about one account is a method of `AccountIn`, in
-`account.py`, grouped by topic; one only the class itself calls is private. Where an operation lives, and when kinds of
-one concept share a base, follows the Python
+`account.py`, grouped by topic; one only the class itself calls is private. Where an operation lives, and that no class
+derives from another, follows the Python
 [operations](../../../../repo-governance/development/quality/stacks/python-standards/003-operations.md) rule.
 
 **The Account aggregate** is one account and its own entries in the log, `AccountIn[M]`: its ID, its opening balance,
@@ -357,4 +357,6 @@ reading them first.
 - Balances are recomputed from the append-only log, one account's entries at a time, never stored (D7); nothing in the
   log is changed or removed.
 - Holds never expire (AMB-018), the ledger's known weakness.
+- No class derives from another, save `Protocol`, `Generic`, `Enum`, or an exception; pylint's `too-many-ancestors`
+  gates it.
 - Every diagram is plain-text ASCII.

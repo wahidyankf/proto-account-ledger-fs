@@ -38,8 +38,8 @@ Functions are named by a verb and its object, variables by nouns, and a type gen
 
 ## Operations
 
-Each operation is a method of its subject type, save six named cases, and kinds of one concept share a base when the
-code reads their common fields through their union, as [Operations](python-standards/003-operations.md) holds.
+Each operation is a method of its subject type, save four named cases, and no class derives from another but a
+`Protocol`, `Generic`, `Enum`, or exception, as [Operations](python-standards/003-operations.md) holds.
 
 ## Functional Core
 
@@ -77,9 +77,9 @@ CPython reuses bytecode whose source kept its size and modification second.
 
 ## Enforcement
 
-The `lint`, `typecheck`, and `test:*` Nx targets enforce the gates in hooks. Review applies the domain shapes, the
-failure rules, the variable names, where each operation lives, and the mutation-proof step. Test levels and coverage
-follow [Test Boundaries and Gates](../testing/test-boundaries-and-gates.md).
+The `lint`, `typecheck`, and `test:*` Nx targets enforce the gates, inheritance included, in hooks. Review applies the
+domain shapes, the failure rules, the variable names, where each operation lives, and the mutation-proof step. Test
+levels and coverage follow [Test Boundaries and Gates](../testing/test-boundaries-and-gates.md).
 
 ## Modules
 

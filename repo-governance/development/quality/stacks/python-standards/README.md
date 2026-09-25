@@ -15,7 +15,7 @@ The modules below carry the detail behind the [Python Standards](../python-stand
 | ------------------------------- | ------------------------------------------------------------------------------------- |
 | [Naming](001-naming.md)         | functions by verb and object, variables by nouns, currency generics by `In`, gates    |
 | [Failures](002-failures.md)     | Result for an expected failure, `T \| None` for a lookup, and where exceptions remain |
-| [Operations](003-operations.md) | each operation a method of its type, the cases left as functions, shared bases        |
+| [Operations](003-operations.md) | each operation a method of its type, the cases left as functions, no inheritance      |
 
 ## Directory Map
 

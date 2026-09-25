@@ -49,6 +49,13 @@ first, above all [the target layout](tech-docs/001-target-layout.md) and
   the corpus and literals equal. Open until Phase 5: `003-operations.md`'s `sum_money` and `001-naming.md`'s
   `parse_stream`, both example names the code no longer has. Last gate passed: Phase 4. Next item: Phase 5, the first.
   No budget partly spent.
+- **2026-09-25 20:44, Phase 5.** Phase 4 is 553041a, pushed as 0cbeb9a..553041a. pylint's `too-many-ancestors` runs with
+  `max-parents = 0` and six ignored parents, `builtins.NoneType` among them because astroid counts it an `Enum`'s
+  ancestor; its RED run, over the Phase 0 baseline and a probe, found 39 derived classes, and its GREEN run over the
+  tree none. Through rules-propagation, `003-operations.md` keeps four function cases and replaces Shared Bases with No
+  Inheritance; the entrypoint, the module map, the naming module's example, and the architecture follow, and the
+  old-wording search prints nothing. The gate passed: 161 passed and 1 xfailed, the corpus and literals equal. Last gate
+  passed: Phase 5. Next item: Phase 6, the first. No budget partly spent.
 
 ## Execution Checkout
 
@@ -666,8 +673,9 @@ Builds `application/`, the two adapters, and the shell as
       AC-02, AC-03, AC-04, AC-11. - Done 20:33: `gate.sh` exit 0 (GATE PASSED): test:quick, test:integration, and
       test:e2e pass, coverage 95%; corpus equal; every baseline name kept, and the inventory lists the five new names;
       literals kept; cited 60, missing 0; Markdown and hygiene clean.
-- [ ] [AI] Commit as `refactor(cli): put the use case behind ports and adapters`, with the WORKLOG entry and the
-      Execution Record line, and push. Proof: the hash and range. Acceptance: AC-16.
+- [x] [AI] Commit as `refactor(cli): put the use case behind ports and adapters`, with the WORKLOG entry and the
+      Execution Record line, and push. Proof: the hash and range. Acceptance: AC-16. - Done 20:35: 553041a, pushed as
+      0cbeb9a..553041a; the push hooks passed.
 
 Pause safety: the layers are on `origin/main`. Re-verify with `sh local-tmp/restructure/gate.sh`.
 
@@ -675,30 +683,52 @@ Pause safety: the layers are on `origin/main`. Re-verify with `sh local-tmp/rest
 
 Enables the gate and changes the rule through rules-propagation, now that the code follows it (R3, R9, R21).
 
-- [ ] [AI] RED: run pylint with `--enable=too-many-ancestors --max-parents=0` and the six ignored parents on the
+- [x] [AI] RED: run pylint with `--enable=too-many-ancestors --max-parents=0` and the six ignored parents on the
       baseline copy's `$BASE/src` and `$BASE/tests`, and on a scratch probe holding one dataclass subclass. Record in
       `$EV/phase-5-no-inheritance.txt`. Proof: the baseline and the probe fail, naming the derived classes. Acceptance:
-      AC-07.
-- [ ] [AI] GREEN: enable `too-many-ancestors` and add `[tool.pylint.design]` in `$APP/pyproject.toml`, as
+      AC-07. - Done 20:34: recorded in `$EV/phase-5-no-inheritance.txt`, mapped in the evidence README. - Proof: exit 8,
+      39 findings: 38 derived classes on the baseline copy, `ClosedPipe(io.StringIO)` among them, and the probe's
+      `Derived(Base)`. Without `builtins.NoneType` the tree's four Enums fail too, so the six ignored parents stay.
+- [x] [AI] GREEN: enable `too-many-ancestors` and add `[tool.pylint.design]` in `$APP/pyproject.toml`, as
       [the rule changes](tech-docs/005-specification-rule-and-doc-changes.md#e-appsaccount-ledger-clipyprojecttoml)
       show. Command: `(cd $APP && uv run --no-sync pylint src tests)`. Proof: exit 0, appended to the evidence file.
-      Acceptance: AC-07.
-- [ ] [AI] Open the rules-propagation record `local-tmp/rules-propagation-no-inheritance.md`, naming each file below and
-      the placement: development level, the Python standards' Operations module. Proof: the record. Acceptance: AC-15.
-- [ ] [AI] Rewrite `repo-governance/development/quality/stacks/python-standards/003-operations.md`: its frontmatter, the
+      Acceptance: AC-07. - Done 20:35: `too-many-ancestors` enabled; `[tool.pylint.design]` sets `max-parents = 0` and
+      the six ignored parents, with a comment on why `NoneType` is among them; the comment above the enable list names
+      the check. - Proof: pylint exit 0 on `src` and `tests`, appended to the evidence file; the probe copied into `src`
+      fails with R0901, then is removed.
+- [x] [AI] Open the rules-propagation record `local-tmp/rules-propagation-no-inheritance.md`, naming each file below and
+      the placement: development level, the Python standards' Operations module. Proof: the record. Acceptance: AC-15. -
+      Done 20:37: the record freezes the three rules with reason, strength, scope, and enforcement; the conflict scan
+      finds Simplicity Over Complexity agreeing and no same-level contradiction; placement is the Operations module,
+      with the entrypoint, the module map, the naming module, and the architecture carried. - Proof: the record,
+      `local-tmp/rules-propagation-no-inheritance.md`.
+- [x] [AI] Rewrite `repo-governance/development/quality/stacks/python-standards/003-operations.md`: its frontmatter, the
       example, four cases, the aggregate sentence, and No Inheritance, as 005's diff shows. Command:
-      `./rhino governance word-budget validate`. Proof: exit 0. Acceptance: AC-15.
-- [ ] [AI] Rewrite the summary and Enforcement sentence of
+      `./rhino governance word-budget validate`. Proof: exit 0. Acceptance: AC-15. - Done: the frontmatter; the example
+      `account.list_instalments(credit)`; four cases, the type-alias clause, the service, and the type-variable case
+      gone with their code; the aggregate sentence; No Inheritance in place of Shared Bases, tracing to Simplicity Over
+      Complexity and naming its gate. The opening, the criterion, cases 1, 2, and 5 (now 4), and the followed and
+      violated sentences stay. - Proof: `./rhino governance word-budget validate` exit 0;
+      `./rhino md internal-link validate` exit 0.
+- [x] [AI] Rewrite the summary and Enforcement sentence of
       `repo-governance/development/quality/stacks/python-standards.md`, the file within 750 words, and the module row of
       `python-standards/README.md`; change `001-naming.md`'s example and drop its library-override exemption, as 005's
       diffs show. Command: `./rhino governance word-budget validate && ./rhino governance directory-map validate`.
-      Proof: both 0. Acceptance: AC-15.
-- [ ] [AI] Search the live corpus for the old wording:
+      Proof: both 0. Acceptance: AC-15. - Done: the Operations summary now names four cases and no inheritance but
+      `Protocol`, `Generic`, `Enum`, or exception; Enforcement names inheritance among the gates; the file is 746 words
+      (wc). The README row ends "no inheritance"; `001-naming.md` gives `parse_event_id` and drops the library-override
+      exemption. The architecture's Domain Model pointer and a Constraints bullet carry the rule. - Proof:
+      `./rhino governance word-budget validate` exit 0 (233 files, no findings);
+      `./rhino governance directory-map validate` exit 0 (60 directories, no findings).
+- [x] [AI] Search the live corpus for the old wording:
       `grep -rnE --include='*.md' "$OLD" .agents repo-governance AGENTS.md specs docs apps`, where `OLD` is
       `six named|Shared Bases|share a base|shared base|sum_money|AccountHistoryIn|AccountAggregateIn`. Proof: it prints
-      nothing. Acceptance: AC-15.
-- [ ] [AI] Close the record: every file carried, the check commands and their exits. Proof: the record. Acceptance:
-      AC-15.
+      nothing. Acceptance: AC-15. - Done: run under bash as written. - Proof: no output, grep exit 1. Outside the
+      searched set, only WORKLOG row 16:05, a past entry never reworded, says "shared bases".
+- [x] [AI] Close the record: every file carried, the check commands and their exits. Proof: the record. Acceptance:
+      AC-15. - Done: `local-tmp/rules-propagation-no-inheritance.md` closed at 20:40: the five rule and doc files and
+      `pyproject.toml` carried; word-budget, directory-map, and internal-link exit 0; the grep prints nothing; the
+      bindings are unchanged. - Proof: the record, every box ticked.
 
 ### Phase 5 Gate
 
