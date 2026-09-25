@@ -18,12 +18,7 @@ from account_ledger.domain.model.money import (
     TooManyInstalments,
     TooManyPlaces,
     compute_daily_interest,
-    compute_overdraft_fee,
-    compute_rest_of,
-    is_below,
     require_same_currency,
-    split_amount,
-    sum_amounts,
     sum_money,
 )
 from support.values import make_aed, make_bhd
@@ -91,10 +86,10 @@ def test_a_sum_or_comparison_across_currencies_returns_the_mismatch() -> None:
     aed_amount, bhd_amount = AmountIn(make_aed("5.00")), AmountIn(make_bhd("1.000"))
     assert sum_money(make_aed("1.00"), [make_aed("2.00"), make_aed("0.50")]) == Ok(make_aed("3.50"))
     assert sum_money(make_aed("1.00"), [make_aed("2.00"), make_bhd("1.000")]) == aed_to_bhd
-    assert sum_amounts(aed_amount, bhd_amount) == aed_to_bhd
-    assert compute_rest_of(aed_amount, bhd_amount) == aed_to_bhd
-    assert is_below(make_aed("1.00"), bhd_amount) == aed_to_bhd
-    assert (sum_amounts(aed_amount, aed_amount), is_below(make_aed("1.00"), aed_amount)) == (
+    assert aed_amount.add(bhd_amount) == aed_to_bhd
+    assert aed_amount.compute_rest(bhd_amount) == aed_to_bhd
+    assert make_aed("1.00").is_below(bhd_amount) == aed_to_bhd
+    assert (aed_amount.add(aed_amount), make_aed("1.00").is_below(aed_amount)) == (
         Ok(AmountIn(make_aed("10.00"))),
         Ok(True),
     )
@@ -112,16 +107,16 @@ def test_amb_006_daily_interest_rounds_half_even() -> None:
 
 def test_amb_020_ten_bhd_splits_3_333_3_333_3_334() -> None:
     """AMB-020: a split gives the remainder to the last part, and refuses more parts than minor units."""
-    assert split_amount(AmountIn(make_bhd("10.000")), InstalmentCount(3)) == Ok(
+    assert AmountIn(make_bhd("10.000")).split(InstalmentCount(3)) == Ok(
         (AmountIn(make_bhd("3.333")), AmountIn(make_bhd("3.333")), AmountIn(make_bhd("3.334")))
     )
-    assert split_amount(AmountIn(make_aed("100.00")), InstalmentCount(4)) == Ok(
+    assert AmountIn(make_aed("100.00")).split(InstalmentCount(4)) == Ok(
         tuple(AmountIn(make_aed("25.00")) for _ in range(4))
     )
-    assert split_amount(AmountIn(make_bhd("0.002")), InstalmentCount(3)) == Err(TooManyInstalments("0.002", count=3))
+    assert AmountIn(make_bhd("0.002")).split(InstalmentCount(3)) == Err(TooManyInstalments("0.002", count=3))
 
 
 def test_amb_027_the_bhd_fee_is_2_560() -> None:
     """AMB-027: the overdraft fee is AED 25.00, and BHD 2.560 at the configured rate."""
-    assert compute_overdraft_fee(make_aed("0.00")) == AmountIn(make_aed("25.00"))
-    assert compute_overdraft_fee(make_bhd("0.000")) == AmountIn(make_bhd("2.560"))
+    assert make_aed("0.00").compute_overdraft_fee() == AmountIn(make_aed("25.00"))
+    assert make_bhd("0.000").compute_overdraft_fee() == AmountIn(make_bhd("2.560"))

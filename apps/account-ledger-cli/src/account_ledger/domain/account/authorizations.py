@@ -33,10 +33,6 @@ from account_ledger.domain.model.money import (
     Bhd,
     CurrencyMismatch,
     Money,
-    compute_rest_of,
-    is_below,
-    make_amount_of,
-    sum_amounts,
     sum_money,
 )
 
@@ -80,13 +76,13 @@ def apply_settlement(
         case Approved(), PartialSettlement(amount=amount):  # amount >= hold: it reaches the hold, so nothing is left
             return Ok(Settled(amount))
         case PartiallySettled(settled_amount=settled_amount), FinalSettlement(amount=amount):
-            return sum_amounts(settled_amount, amount).map(Settled)
+            return settled_amount.add(amount).map(Settled)
         case PartiallySettled(settled_amount=settled_amount, hold=hold), PartialSettlement(amount=amount) if is_short:
-            return sum_amounts(settled_amount, amount).flat_map(
+            return settled_amount.add(amount).flat_map(
                 lambda settled_total: _make_partial_settlement(settled_total, hold, amount)
             )
         case PartiallySettled(settled_amount=settled_amount), PartialSettlement(amount=amount):  # amount >= hold
-            return sum_amounts(settled_amount, amount).map(Settled)
+            return settled_amount.add(amount).map(Settled)
         case Settled() | Declined(), _:
             return Err(CannotSettle())
         case _:
@@ -99,7 +95,7 @@ def _is_settlement_below_hold(
     """Whether the settlement's amount is below the hold the state keeps; no hold is kept once settled or declined."""
     match state:
         case Approved(hold=hold) | PartiallySettled(hold=hold):
-            return is_below(settlement_input.amount.money, hold)
+            return settlement_input.amount.money.is_below(hold)
         case Settled() | Declined():
             return Ok(False)
         case _:
@@ -115,9 +111,9 @@ def _make_partial_settlement(
 
 def _compute_rest(hold: Amount, taken_amount: Amount) -> Result[Amount, CurrencyMismatch]:
     """The hold left after a partial settlement below it, above zero as every hold is."""
-    if isinstance(rest := compute_rest_of(hold, taken_amount), Err):
+    if isinstance(rest := hold.compute_rest(taken_amount), Err):
         return rest
-    rest_amount = make_amount_of(rest.value)
+    rest_amount = rest.value.make_amount()
     assert isinstance(rest_amount, Ok)  # the settlement is below the hold, so the rest is above zero
     return rest_amount
 
@@ -145,7 +141,7 @@ def decide_authorization(
     available_balance: Money, authorization: Authorization, today: Day
 ) -> Result[AuthorizationApproved | AuthorizationDeclined, CurrencyMismatch]:
     """The decision on arrival, from the available balance before the hold (AMB-008, AMB-009)."""
-    return is_below(available_balance, authorization.amount).map(
+    return available_balance.is_below(authorization.amount).map(
         lambda is_short: (
             AuthorizationDeclined(authorization, today) if is_short else AuthorizationApproved(authorization, today)
         )

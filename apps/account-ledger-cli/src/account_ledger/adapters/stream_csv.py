@@ -44,8 +44,6 @@ from account_ledger.domain.model.money import (
     NotADecimal,
     NotPositive,
     TooManyPlaces,
-    format_digits,
-    split_amount_of,
 )
 
 COLUMNS = ("event", "booked", "type", "account", "amount", "value_date", "reference", "instalments", "final")
@@ -211,8 +209,8 @@ def _parse_credit(instalments: str, fields: _CommonFields, amount: Amount) -> Re
     if isinstance(parsed_posting := _parse_posting(instalments), Err):
         return parsed_posting
     posting = parsed_posting.value
-    if isinstance(posting, Instalments) and isinstance(split_amount_of(amount, posting.count), Err):
-        return Err(RowFault(f"{format_digits(amount.money)} cannot be split into {posting.count.number} instalments"))
+    if isinstance(posting, Instalments) and isinstance(amount.split(posting.count), Err):
+        return Err(RowFault(f"{amount.money.format_digits()} cannot be split into {posting.count.number} instalments"))
     return Ok(Credit(*fields, amount, posting))
 
 

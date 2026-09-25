@@ -28,7 +28,6 @@ from account_ledger.domain.model.money import (
     Direction,
     Money,
     compute_daily_interest,
-    make_amount_of,
     sum_money,
 )
 
@@ -68,7 +67,7 @@ def _record_interest_change(
 ) -> InterestAccrued | InterestAdjusted:
     """A day's interest change as it is recorded today: an accrual for today, an adjustment for an earlier day."""
     direction = Direction.UP if change.value > 0 else Direction.DOWN
-    made_amount = make_amount_of(change if direction is Direction.UP else -change)
+    made_amount = (change if direction is Direction.UP else -change).make_amount()
     assert isinstance(made_amount, Ok)  # a change is never zero
     amount = made_amount.value
     interest_id = InterestId(account, day, today)
@@ -86,7 +85,7 @@ def capitalize_interest[M: (Aed, Bhd)](
     if isinstance(accrued := _compute_accrued(history), Err):
         return accrued
     account_id = history.account.id
-    match make_amount_of(accrued.value):
+    match accrued.value.make_amount():
         case Ok(amount):
             capitalization = Capitalization(CapitalizationId(account_id, today), account_id, today, amount)
             return Ok((InterestCapitalized(capitalization, today),))

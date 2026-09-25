@@ -107,6 +107,26 @@ class Aed:
     def __neg__(self) -> Aed:
         return Aed(-self.value)
 
+    def get_currency(self) -> str:
+        """The currency code, AED."""
+        return "AED"
+
+    def format_digits(self) -> str:
+        """The value's text, for the renderer and messages: its places, no sign change, no separators."""
+        return str(self.value)
+
+    def is_below(self, amount: Amount) -> Result[bool, CurrencyMismatch]:
+        """Whether this balance is below an amount of its own currency, or the mismatch a bug would bring."""
+        return _is_below(self, amount)
+
+    def make_amount(self) -> Result[AmountIn[Aed], NotPositive]:
+        """This value as an amount, or a fault when it is zero or below."""
+        return AmountIn.make(self)
+
+    def compute_overdraft_fee(self) -> AmountIn[Aed]:
+        """The overdraft fee in AED: AED 25.00 (AMB-027)."""
+        return _compute_overdraft_fee(self)
+
 
 @dataclass(frozen=True, slots=True, order=True)
 class Bhd:
@@ -145,6 +165,26 @@ class Bhd:
     def __neg__(self) -> Bhd:
         return Bhd(-self.value)
 
+    def get_currency(self) -> str:
+        """The currency code, BHD."""
+        return "BHD"
+
+    def format_digits(self) -> str:
+        """The value's text, for the renderer and messages: its places, no sign change, no separators."""
+        return str(self.value)
+
+    def is_below(self, amount: Amount) -> Result[bool, CurrencyMismatch]:
+        """Whether this balance is below an amount of its own currency, or the mismatch a bug would bring."""
+        return _is_below(self, amount)
+
+    def make_amount(self) -> Result[AmountIn[Bhd], NotPositive]:
+        """This value as an amount, or a fault when it is zero or below."""
+        return AmountIn.make(self)
+
+    def compute_overdraft_fee(self) -> AmountIn[Bhd]:
+        """The overdraft fee in BHD: AED 25.00 converted, rounded half-even (AMB-027)."""
+        return _compute_overdraft_fee(self)
+
 
 type Money = Aed | Bhd
 
@@ -176,6 +216,27 @@ class AmountIn[M: (Aed, Bhd)]:
         """The money as an amount, or a fault when it is zero or below."""
         return Ok(AmountIn(money)) if _is_positive(money) else Err(NotPositive(str(money.value)))
 
+    def split(self, count: InstalmentCount) -> Result[tuple[AmountIn[M], ...], TooManyInstalments]:
+        """Equal parts rounded down, the remainder on the last (AMB-020); each part at least one minor unit."""
+        total = self.money
+        part = type(total)((total.value / count.number).quantize(_get_minor_unit(total), rounding=ROUND_DOWN))
+        if part.value <= 0:
+            return Err(TooManyInstalments(str(total.value), count=count.number))
+        last_part = type(total)(total.value - part.value * (count.number - 1))
+        return Ok((*(AmountIn(part) for _ in range(count.number - 1)), AmountIn(last_part)))
+
+    def add(self, other: Amount) -> Result[AmountIn[M], CurrencyMismatch]:
+        """This amount and another of its currency added, above zero as both are, or the mismatch a bug would bring."""
+        if isinstance(other_money := require_same_currency(self.money, other.money), Err):
+            return other_money
+        return Ok(AmountIn(self.money + other_money.value))
+
+    def compute_rest(self, taken_amount: Amount) -> Result[M, CurrencyMismatch]:
+        """What this hold keeps once an amount of its own currency is taken, or the mismatch a bug would bring."""
+        if isinstance(taken_money := require_same_currency(self.money, taken_amount.money), Err):
+            return taken_money
+        return Ok(self.money - taken_money.value)
+
 
 type Amount = AmountIn[Aed] | AmountIn[Bhd]
 
@@ -195,15 +256,6 @@ class CurrencyMismatch:
     found_currency: str
 
 
-def get_currency(money: Money) -> str:
-    """The currency code of a value."""
-    match money:
-        case Aed():
-            return "AED"
-        case Bhd():
-            return "BHD"
-
-
 def require_same_currency[M: (Aed, Bhd)](sample: M, money: Money) -> Result[M, CurrencyMismatch]:
     """The money as the currency of ``sample``, or a mismatch when it is in the other currency."""
     if isinstance(money, type(sample)):
@@ -216,7 +268,7 @@ DAILY_RATE = Decimal("0.0004")
 
 def _make_mismatch(expected_money: Money, found_money: Money) -> CurrencyMismatch:
     """The fault for a value of one currency met where the other's was required."""
-    return CurrencyMismatch(expected_currency=get_currency(expected_money), found_currency=get_currency(found_money))
+    return CurrencyMismatch(expected_currency=expected_money.get_currency(), found_currency=found_money.get_currency())
 
 
 def sum_money[M: (Aed, Bhd)](start: M, money_values: Iterable[Money]) -> Result[M, CurrencyMismatch]:
@@ -257,23 +309,11 @@ class TooManyInstalments:
     count: int
 
 
-def split_amount[M: (Aed, Bhd)](
-    amount: AmountIn[M], count: InstalmentCount
-) -> Result[tuple[AmountIn[M], ...], TooManyInstalments]:
-    """Equal parts rounded down, the remainder on the last (AMB-020); each part at least one minor unit."""
-    total = amount.money
-    part = type(total)((total.value / count.number).quantize(_get_minor_unit(total), rounding=ROUND_DOWN))
-    if part.value <= 0:
-        return Err(TooManyInstalments(str(total.value), count=count.number))
-    last_part = type(total)(total.value - part.value * (count.number - 1))
-    return Ok((*(AmountIn(part) for _ in range(count.number - 1)), AmountIn(last_part)))
-
-
 AED_FEE = Decimal("25.00")
 AED_TO_BHD = Decimal("0.10238257")
 
 
-def compute_overdraft_fee[M: (Aed, Bhd)](sample: M) -> AmountIn[M]:
+def _compute_overdraft_fee[M: (Aed, Bhd)](sample: M) -> AmountIn[M]:
     """The fee in ``sample``'s currency: AED 25.00, and for BHD its conversion, rounded half-even (AMB-027)."""
     match sample:
         case Aed():
@@ -282,63 +322,7 @@ def compute_overdraft_fee[M: (Aed, Bhd)](sample: M) -> AmountIn[M]:
             return AmountIn(_round_money(sample, AED_FEE * AED_TO_BHD))
 
 
-def split_amount_of(
-    amount: Amount, count: InstalmentCount
-) -> Result[tuple[AmountIn[Aed], ...] | tuple[AmountIn[Bhd], ...], TooManyInstalments]:
-    """``split_amount`` for an amount whose currency is known only at run time."""
-    match amount.money:
-        case Aed() as money:
-            return split_amount(AmountIn(money), count)
-        case Bhd() as money:
-            return split_amount(AmountIn(money), count)
-
-
-def compute_overdraft_fee_of(sample: Money) -> Amount:
-    """``compute_overdraft_fee`` for a currency known only at run time."""
-    match sample:
-        case Aed():
-            return compute_overdraft_fee(sample)
-        case Bhd():
-            return compute_overdraft_fee(sample)
-
-
-def make_amount_of(money: Money) -> Result[Amount, NotPositive]:
-    """``AmountIn.make`` for a currency known only at run time."""
-    match money:
-        case Aed():
-            return AmountIn.make(money)
-        case Bhd():
-            return AmountIn.make(money)
-
-
-def compute_rest_of(hold: Amount, taken_amount: Amount) -> Result[Money, CurrencyMismatch]:
-    """What a hold keeps once an amount of its own currency is taken, or the mismatch a bug would bring."""
-    match (hold.money, taken_amount.money):
-        case (Aed() as hold_money, Aed() as taken_money):
-            return Ok(hold_money - taken_money)
-        case (Bhd() as hold_money, Bhd() as taken_money):
-            return Ok(hold_money - taken_money)
-        case _:
-            return Err(_make_mismatch(hold.money, taken_amount.money))
-
-
-def sum_amounts(first_amount: Amount, second_amount: Amount) -> Result[Amount, CurrencyMismatch]:
-    """Two amounts of one currency added, above zero as both are, or the mismatch a bug would bring."""
-    match (first_amount.money, second_amount.money):
-        case (Aed() as first_money, Aed() as second_money):
-            return Ok(AmountIn(first_money + second_money))
-        case (Bhd() as first_money, Bhd() as second_money):
-            return Ok(AmountIn(first_money + second_money))
-        case _:
-            return Err(_make_mismatch(first_amount.money, second_amount.money))
-
-
-def format_digits(money: Money) -> str:
-    """The value's text, for the renderer and messages: its places, no sign change, no separators."""
-    return str(money.value)
-
-
-def is_below(money: Money, amount: Amount) -> Result[bool, CurrencyMismatch]:
+def _is_below(money: Money, amount: Amount) -> Result[bool, CurrencyMismatch]:
     """Whether a balance is below an amount of its own currency, or the mismatch a bug would bring."""
     match (money, amount.money):
         case (Aed(), Aed()) | (Bhd(), Bhd()):

@@ -45,7 +45,7 @@ from account_ledger.domain.model.events import (
     Settlement,
 )
 from account_ledger.domain.model.ids import Day, InstalmentCount, InstalmentId
-from account_ledger.domain.model.money import Aed, Bhd, CurrencyMismatch, split_amount_of
+from account_ledger.domain.model.money import Aed, Bhd, CurrencyMismatch
 
 
 def decide_event[M: (Aed, Bhd)](
@@ -102,7 +102,7 @@ def _decide_effect(
 
 def _generate_instalments(credit: Credit, count: InstalmentCount, today: Day) -> tuple[InstalmentPosted, ...]:
     """The instalments a credit generates, in order, each posted with the credit's value date (AMB-017, AMB-020)."""
-    parts = split_amount_of(credit.amount, count)
+    parts = credit.amount.split(count)
     assert isinstance(parts, Ok)  # the stream reader refuses a credit it cannot split
     return tuple(
         InstalmentPosted(Instalment(InstalmentId(credit.id, number), credit.account, credit.value_date, part), today)

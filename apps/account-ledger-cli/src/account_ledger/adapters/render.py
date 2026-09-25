@@ -44,7 +44,7 @@ from account_ledger.domain.model.events import (
     Whole,
 )
 from account_ledger.domain.model.ids import AccountId, Day, format_id
-from account_ledger.domain.model.money import Amount, Direction, Money, format_digits, get_currency
+from account_ledger.domain.model.money import Amount, Direction, Money
 from account_ledger.domain.report import (
     Capitalized,
     DayReport,
@@ -303,7 +303,10 @@ def _format_note(note: Note) -> str:
 
 def _build_summary_header(report: DayReport) -> Row:
     """`Item`, then a column per account, headed by its ID and currency."""
-    return ("Item", *(f"{account.value} ({get_currency(money)})" for account, money in report.closing_balances.items()))
+    return (
+        "Item",
+        *(f"{account.value} ({money.get_currency()})" for account, money in report.closing_balances.items()),
+    )
 
 
 def _build_summary_rows(report: DayReport) -> list[Row]:
@@ -384,12 +387,12 @@ MINUS = "\u2212"
 
 def _format_money(amount: Amount) -> str:
     """An amount with its currency code, as a Detail cell prints it."""
-    return f"{get_currency(amount.money)} {_format_amount(amount.money)}"
+    return f"{amount.money.get_currency()} {_format_amount(amount.money)}"
 
 
 def _format_amount(money: Money) -> str:
     """Its currency's places, a comma every three digits, and `−` for a negative (tech-docs 003)."""
-    text = format_digits(money)
+    text = money.format_digits()
     integer_part, places = text.removeprefix("-").split(".")
     sign = MINUS if text.startswith("-") else ""
     return f"{sign}{int(integer_part):,}.{places}"

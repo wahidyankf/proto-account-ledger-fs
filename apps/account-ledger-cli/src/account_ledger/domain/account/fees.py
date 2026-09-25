@@ -16,7 +16,7 @@ from account_ledger.domain.account.history import (
 )
 from account_ledger.domain.model.events import Fee, FeeRefund, Reversal
 from account_ledger.domain.model.ids import Day, FeeId, RefundId
-from account_ledger.domain.model.money import Aed, Bhd, CurrencyMismatch, compute_overdraft_fee_of
+from account_ledger.domain.model.money import Aed, Bhd, CurrencyMismatch
 
 
 def assess_fees[M: (Aed, Bhd)](
@@ -26,7 +26,7 @@ def assess_fees[M: (Aed, Bhd)](
     and a refund of the fee in force for a day that closes at or above zero (AMB-002, AMB-004). Each closing is read
     from the history as it grows, so a fee generated for an earlier day counts in the days after it (AMB-011)."""
     account = history.account
-    amount = compute_overdraft_fee_of(account.opening)
+    amount = account.opening.compute_overdraft_fee()
     entries: list[LogEntry] = []
     for day in first_day.span_to(today):
         fee = _map_fees_in_force(history).get(day)
