@@ -42,6 +42,7 @@ from account_ledger.domain.account.rejections import (
 )
 from account_ledger.domain.model.events import (
     Authorization,
+    Capitalization,
     Credit,
     Debit,
     Fee,
@@ -60,6 +61,10 @@ from account_ledger.domain.model.ids import AccountId, Day
 from account_ledger.domain.model.money import Amount, Direction, Money
 
 SEPARATOR = "=" * 120
+MINUS = "\u2212"
+NUMBER_WORDS = MappingProxyType(
+    dict(zip(range(2, 11), ("two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"), strict=True))
+)
 
 type Row = Sequence[str]
 
@@ -108,14 +113,6 @@ def _format_day(report: DayReport) -> str:
     return "\n\n".join((banner, *blocks))
 
 
-def _build_event_rows(report: DayReport) -> list[Row]:
-    """A row per event the day processed, each followed by the rows of the instalments it generated."""
-    rows: list[Row] = []
-    for processed_event in report.processed_events:
-        rows.extend(_build_processed_rows(processed_event))
-    return rows
-
-
 def _format_block(title: str, body: list[str]) -> str:
     """A titled block; one with no rows prints two spaces and `none` (AMB-033)."""
     return "\n".join((title, *(body or ["  none"])))
@@ -135,9 +132,18 @@ def _format_table(header: Row, rows: Sequence[Row]) -> list[str]:
     return [border, format_line(header), border, *(format_line(row) for row in rows), border]
 
 
+def _build_event_rows(report: DayReport) -> list[Row]:
+    """A row per event the day processed, each followed by the rows of the instalments it generated."""
+    rows: list[Row] = []
+    for processed_event in report.processed_events:
+        rows.extend(_build_processed_rows(processed_event))
+    return rows
+
+
 def _build_processed_rows(processed_event: Processed) -> list[Row]:
     """The event's row, then a row per instalment it generated, each printing as a credit."""
-    event, booked = processed_event.event, _format_day_cell(processed_event.event.booked)
+    event = processed_event.event
+    booked = _format_day_cell(event.booked)
     row = (
         event.id.format(),
         booked,
@@ -208,11 +214,6 @@ def _format_posting(posting: Posting) -> str:
             assert_never(posting)
 
 
-NUMBER_WORDS = MappingProxyType(
-    dict(zip(range(2, 11), ("two", "three", "four", "five", "six", "seven", "eight", "nine", "ten"), strict=True))
-)
-
-
 def _format_count(count: int) -> str:
     """An instalment count as an English word from two to ten, and as digits above (tech-docs 003)."""
     return NUMBER_WORDS.get(count, str(count))
@@ -237,26 +238,10 @@ def _build_applied_row(row: Generated | Capitalized | NothingGenerated) -> Row:
     """An end-of-day row: the step, the event it generated or `-`, and its detail or the note for nothing generated."""
     match row:
         case Generated(step=step, event=event):
-            kind, detail = _format_generated_event(event)
-            return (
-                str(step.value),
-                event.id.format(),
-                kind,
-                event.account.value,
-                detail,
-                _format_day_cell(event.value_date),
-            )
+            return _build_generated_row(step, event, *_format_generated_event(event))
         case Capitalized(event=event, days=days):
-            step, kind = Step.CAPITALIZATION, "Interest capitalization"
             detail = f"{_format_money(event.amount)}, accrued {_format_days(days)}"
-            return (
-                str(step.value),
-                event.id.format(),
-                kind,
-                event.account.value,
-                detail,
-                _format_day_cell(event.value_date),
-            )
+            return _build_generated_row(Step.CAPITALIZATION, event, "Interest capitalization", detail)
         case NothingGenerated(step=step, accounts=accounts, note=note):
             return (
                 str(step.value),
@@ -268,6 +253,12 @@ def _build_applied_row(row: Generated | Capitalized | NothingGenerated) -> Row:
             )
         case _:
             assert_never(row)
+
+
+def _build_generated_row(step: Step, event: EndOfDayEvent | Capitalization, kind: str, detail: str) -> Row:
+    """A row for an event a step generated: the step, the event's ID, its Type and Detail, its account, and its value
+    date, in the columns' order."""
+    return (str(step.value), event.id.format(), kind, event.account.value, detail, _format_day_cell(event.value_date))
 
 
 def _format_generated_event(event: EndOfDayEvent) -> tuple[str, str]:
@@ -408,9 +399,6 @@ def _format_state(record: AuthorizationRecord) -> str:
             return f"{hold} settled for {_format_amount(amount.money)}"
         case _:
             assert_never(state)
-
-
-MINUS = "\u2212"
 
 
 def _format_money(amount: Amount) -> str:

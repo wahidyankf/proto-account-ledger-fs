@@ -22,7 +22,7 @@ Specification: [specs/apps/account-ledger/cli/](../../specs/apps/account-ledger/
 | `tests/unit/`                     | in-process tests, one directory per source package; `run_cli` gets every effect |
 | `tests/integration/`              | the real stream file from disk, and `main` on the real descriptors with `capfd` |
 | `tests/e2e/`                      | `python -m account_ledger` as a subprocess: the golden run and the error paths  |
-| `tests/support/`                  | the brief's stream in code and as CSV, stream builders, OUTPUT_TARGET's text    |
+| `tests/support/`                  | the brief's stream as code and CSV, builders, log readers, OUTPUT_TARGET's text |
 | `pyproject.toml`, `uv.lock`       | uv project (`package = false`) pinning pytest, ruff, pylint, pyright, vulture   |
 | `project.json`                    | Nx targets                                                                      |
 

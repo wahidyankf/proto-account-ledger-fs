@@ -1,6 +1,6 @@
 """The configuration the challenge brief sets: ACC-001 in AED and ACC-002 in BHD, both opening at zero, Days 1 to 6,
-and interest capitalized on Day 6. It is the shell's composition data: the CLI passes it to the stream reader and the
-ledger, and the domain never imports it."""
+and interest capitalized on Day 6. It is the shell's composition data: ``main`` gives it to the use case, ``LedgerRun``,
+which passes it to the event source and the ledger, and no layer below the shell imports it."""
 
 from account_ledger.domain.model.config import AccountOpeningIn, LedgerConfig
 from account_ledger.domain.model.ids import AccountId, Day

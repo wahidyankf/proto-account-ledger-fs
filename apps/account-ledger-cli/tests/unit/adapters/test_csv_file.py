@@ -4,15 +4,7 @@ from account_ledger.adapters.csv_file import CsvFileSource, StreamError
 from account_ledger.application.stream import IncomingStream
 from account_ledger.challenge import CHALLENGE
 from account_ledger.common.result import Err, Ok
-from account_ledger.domain.model.events import (
-    Authorization,
-    Credit,
-    Debit,
-    Reversal,
-    Settlement,
-    SettlementKind,
-    Whole,
-)
+from account_ledger.domain.model.events import Authorization, Credit, Debit, Reversal, Settlement, SettlementKind, Whole
 from account_ledger.domain.model.ids import AccountId, AuthorizationId, Day, FeeId, IncomingId, InstalmentCount
 from account_ledger.domain.model.money import AmountIn
 from support.results import unwrap_ok
@@ -110,7 +102,7 @@ E1 = {"event": "E1", "booked": "1", "type": "CREDIT", "account": "ACC-001", "amo
 
 
 def find_fault(**cells: str) -> StreamError | None:
-    """The fault the reader reports for one row, E1 changed by ``cells``."""
+    """The fault the event source reports for one row, E1 changed by ``cells``."""
     match CsvFileSource.parse(format_csv([{**E1, **cells}]), CHALLENGE):
         case Err(fault):
             return fault

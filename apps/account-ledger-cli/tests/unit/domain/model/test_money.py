@@ -79,7 +79,7 @@ def test_aed_and_bhd_values_never_combine() -> None:
 
 def test_a_sum_or_comparison_across_currencies_returns_the_mismatch() -> None:
     """Every sum, rest, and comparison of money known only at run time returns a mismatch, never a wrong total; only
-    a bug could bring one, since the reader keeps every effect in its account's currency."""
+    a bug could bring one, since the account keeps every effect in its own currency."""
     aed_to_bhd = Err(CurrencyMismatch(expected_currency="AED", found_currency="BHD"))
     aed_amount, bhd_amount = AmountIn(make_aed("5.00")), AmountIn(make_bhd("1.000"))
     assert make_aed("1.00").add_all([make_aed("2.00"), make_aed("0.50")]) == Ok(make_aed("3.50"))

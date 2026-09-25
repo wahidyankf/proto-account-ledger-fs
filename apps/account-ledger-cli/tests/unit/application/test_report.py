@@ -23,7 +23,7 @@ from account_ledger.domain.model.money import AmountIn
 from support.brief_stream import build_brief_stream
 from support.refusals import REFUSALS
 from support.results import unwrap_ok
-from support.streams import ACC_001, ACC_002, make_credit
+from support.streams import ACC_001_OPENING, ACC_002_OPENING, make_credit
 from support.values import make_aed, make_bhd
 
 
@@ -33,15 +33,15 @@ def test_amb_022_a_day_restates_each_earlier_closing_it_changed() -> None:
     result = unwrap_ok(IncomingStream(build_brief_stream()).process(CHALLENGE))
 
     assert result.find_report(Day(5)).restatements == (
-        Restatement(Day(2), {ACC_001.id: make_aed("-370.00"), ACC_002.id: None}),
-        Restatement(Day(3), {ACC_001.id: make_aed("30.00"), ACC_002.id: None}),
-        Restatement(Day(4), {ACC_001.id: make_aed("-335.00"), ACC_002.id: None}),
+        Restatement(Day(2), {ACC_001_OPENING.id: make_aed("-370.00"), ACC_002_OPENING.id: None}),
+        Restatement(Day(3), {ACC_001_OPENING.id: make_aed("30.00"), ACC_002_OPENING.id: None}),
+        Restatement(Day(4), {ACC_001_OPENING.id: make_aed("-335.00"), ACC_002_OPENING.id: None}),
     )
     assert result.find_report(Day(6)).restatements == (
-        Restatement(Day(2), {ACC_001.id: make_aed("250.00"), ACC_002.id: None}),
-        Restatement(Day(3), {ACC_001.id: make_aed("650.00"), ACC_002.id: None}),
-        Restatement(Day(4), {ACC_001.id: make_aed("285.00"), ACC_002.id: None}),
-        Restatement(Day(5), {ACC_001.id: make_aed("210.00"), ACC_002.id: make_bhd("10.000")}),
+        Restatement(Day(2), {ACC_001_OPENING.id: make_aed("250.00"), ACC_002_OPENING.id: None}),
+        Restatement(Day(3), {ACC_001_OPENING.id: make_aed("650.00"), ACC_002_OPENING.id: None}),
+        Restatement(Day(4), {ACC_001_OPENING.id: make_aed("285.00"), ACC_002_OPENING.id: None}),
+        Restatement(Day(5), {ACC_001_OPENING.id: make_aed("210.00"), ACC_002_OPENING.id: make_bhd("10.000")}),
     )
 
 
@@ -69,7 +69,7 @@ def test_amb_014_a_rejected_event_is_that_days_error(
     stream: tuple[IncomingEvent, ...], account: AccountId, reason: Rejection, _text: str
 ) -> None:
     """AMB-014: every event is recorded with its outcome, and a refused one is that day's error, by account, with the
-    reason it was refused; the renderer prints it in the text tech-docs 001 fixes (D22)."""
+    reason it was refused; the report sink prints it in the text tech-docs 001 fixes (D22)."""
     errors = unwrap_ok(IncomingStream(stream).process(CHALLENGE)).find_report(Day(1)).errors
 
     assert {account_id: tuple(entry.reason for entry in entries) for account_id, entries in errors.items()} == {

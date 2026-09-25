@@ -12,7 +12,7 @@ from account_ledger.domain.model.config import LedgerConfig
 
 @dataclass(frozen=True, slots=True)
 class SourceFault:
-    """Why the events could not be read: the text the CLI prints after ``error: ``."""
+    """Why the events could not be read: the text the CLI prints after `error: `."""
 
     message: str
 

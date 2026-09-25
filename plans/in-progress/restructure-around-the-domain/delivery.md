@@ -56,6 +56,13 @@ first, above all [the target layout](tech-docs/001-target-layout.md) and
   Inheritance; the entrypoint, the module map, the naming module's example, and the architecture follow, and the
   old-wording search prints nothing. The gate passed: 161 passed and 1 xfailed, the corpus and literals equal. Last gate
   passed: Phase 5. Next item: Phase 6, the first. No budget partly spent.
+- **2026-09-25 20:54, Phase 6.** Phase 5 is 62ced26 and 4bb46c9, pushed as 553041a..4bb46c9. Every source and test
+  module read once: stale docstrings now name the event source, the report sink, `LedgerRun`, and the Ledger's own
+  refusals; nine imports wrapped only by a leftover comma fit one line; `_record_interest_change`'s `if` and
+  `_CommonFields` read plainly; `text_report.py`'s constants sit at the top and `_build_applied_row` builds one row
+  shape through `_build_generated_row`. The test support is builders in `streams.py` and readers in `entries.py`, and
+  the openings are `ACC_001_OPENING` and `ACC_002_OPENING`. The gate passed: 161 passed and 1 xfailed, the corpus and
+  literals equal. Last gate passed: Phase 6. Next item: Phase 7, the first. No budget partly spent.
 
 ## Execution Checkout
 
@@ -732,11 +739,15 @@ Enables the gate and changes the rule through rules-propagation, now that the co
 
 ### Phase 5 Gate
 
-- [ ] [AI] Run `sh local-tmp/restructure/gate.sh` and `./rhino md internal-link validate`. Proof: both 0. Acceptance:
-      AC-07, AC-15.
-- [ ] [AI] Commit the gate as `build(cli): refuse class inheritance in lint` and the rule as
+- [x] [AI] Run `sh local-tmp/restructure/gate.sh` and `./rhino md internal-link validate`. Proof: both 0. Acceptance:
+      AC-07, AC-15. - Done 20:43: `GATE PASSED`, exit 0 (test:quick, integration, e2e, corpus equal, every baseline name
+      kept with 5 added, 115 names' literals equal, `cited 60 defined 120 missing 0`, Markdown, hygiene); internal-link
+      exit 0, 1490 links, no findings.
+- [x] [AI] Commit the gate as `build(cli): refuse class inheritance in lint` and the rule as
       `docs(governance): keep operations on their type, without inheritance`, with the WORKLOG entry and the Execution
-      Record line, and push. Proof: the hashes and range. Acceptance: AC-16.
+      Record line, and push. Proof: the hashes and range. Acceptance: AC-16. - Done 20:46: 62ced26 (the gate and its
+      evidence) and 4bb46c9 (the rule, its docs, the WORKLOG entry, and the Phase 5 line), pushed as 553041a..4bb46c9;
+      every hook passed.
 
 Pause safety: the gate and the rule are on `origin/main`. Re-verify with `sh local-tmp/restructure/gate.sh`.
 
@@ -744,28 +755,63 @@ Pause safety: the gate and the rule are on `origin/main`. Re-verify with `sh loc
 
 Reads every source and test file once, top to bottom, and fixes what the comb finds without changing behaviour (R19).
 
-- [ ] [AI] Comb the values: `$SRC/domain/model/{money,ids,events,config}.py`, `$SRC/challenge.py`,
+- [x] [AI] Comb the values: `$SRC/domain/model/{money,ids,events,config}.py`, `$SRC/challenge.py`,
       `$SRC/common/result.py`. Look for: stale docstrings naming a removed type or module, parenthesized single imports,
       definition order, a comment that restates the code. Command: `pytest tests`. Proof: passes; each fix listed.
-      Acceptance: AC-14.
-- [ ] [AI] Comb the aggregate package, `$SRC/domain/account/`: `account.py`, `authorizations.py`, `domain_events.py`,
+      Acceptance: AC-14. - Done: `challenge.py`'s docstring named the CLI passing the configuration to the stream
+      reader; it now says `main` gives it to `LedgerRun`, which passes it to the event source and the ledger, and no
+      layer below the shell imports it. `money.py`, `ids.py`, `events.py`, `config.py`, and `result.py` needed nothing:
+      no stale name, no single import wrapped, top-down order, no comment restating code. - Proof: `pytest tests` 161
+      passed, 1 xfailed.
+- [x] [AI] Comb the aggregate package, `$SRC/domain/account/`: `account.py`, `authorizations.py`, `domain_events.py`,
       `event_log.py`, `rejections.py`; `_record_interest_change`'s wrapped `if (day == today):` becomes
       `if day == today:`, its comment moved to the line above. Command: `pytest tests`. Proof: passes; each fix listed.
-      Acceptance: AC-14.
-- [ ] [AI] Comb `$SRC/domain/ledger/ledger.py`, every module of `$SRC/application/` and `$SRC/adapters/`, `$SRC/cli.py`,
+      Acceptance: AC-14. - Done: `_record_interest_change`'s wrapped `if (day == today):` is `if day == today:`, its
+      comment on the line above; `rejections.py`'s docstring now says the Ledger refuses a reused ID or another
+      account's target and the aggregate the rest; the money imports of `account.py` and `authorizations.py`, wrapped
+      only by a leftover trailing comma, fit one line (with five more such imports across the tree). - Proof:
+      `pytest tests` 161 passed, 1 xfailed.
+- [x] [AI] Comb `$SRC/domain/ledger/ledger.py`, every module of `$SRC/application/` and `$SRC/adapters/`, `$SRC/cli.py`,
       and `$SRC/__main__.py`; in the adapters, `_CommonFields`'s layout is tidied and `_build_applied_row`'s repeated
-      tuples fold into one. Command: `pytest tests`, the corpus compare. Proof: passes; equal. Acceptance: AC-02, AC-14.
-- [ ] [AI] Split the test support into builders and readers (R22): move `list_fee_ids`, `list_refund_ids`,
+      tuples fold into one. Command: `pytest tests`, the corpus compare. Proof: passes; equal. Acceptance: AC-02,
+      AC-14. - Done: `UnknownAccount` names the event source, not the stream reader; `ports.py` marks the printed
+      `error: ` with single backticks, as every docstring marks printed text; `report.py`'s domain-events import fits
+      one line. In the adapters `_CommonFields` is one line with its comment above; `text_report.py`'s `MINUS` and
+      `NUMBER_WORDS` join the constants at the top, `_build_event_rows` follows the two block helpers,
+      `_build_processed_rows` reads the event once, and `_build_applied_row`'s two six-cell tuples fold into
+      `_build_generated_row`. `run.py`, `stream.py`, `cli.py`, and `__main__.py` needed nothing. - Proof: `pytest tests`
+      161 passed, 1 xfailed; the corpus compares equal.
+- [x] [AI] Split the test support into builders and readers (R22): move `list_fee_ids`, `list_refund_ids`,
       `list_interest_amounts`, and `list_capitalization_amounts` from `$APP/tests/support/streams.py`, and every
       function of `$APP/tests/support/states.py`, into the new `$APP/tests/support/entries.py`; delete `states.py`, and
       every importer follows. Command: `pytest tests`, `inventory.py --compare`, `test_literals.py --compare`. Proof:
-      passes; no name or literal lost; `streams.py` holds only builders. Acceptance: AC-03, AC-13.
-- [ ] [AI] Comb every module under `$APP/tests`: `support/streams.py`'s `ACC_001` and `ACC_002` openings become
+      passes; no name or literal lost; `streams.py` holds only builders. Acceptance: AC-03, AC-13. - Done:
+      `tests/support/entries.py` holds the seven readers, `list_fee_ids`, `list_refund_ids`, `list_interest_amounts`,
+      and `list_capitalization_amounts` from `streams.py` and `list_states`, `list_settlements`, and `list_entries` from
+      `states.py`; `states.py` is deleted; `test_stream.py`, `test_account.py`, and `test_ledger.py` import the readers
+      from `support.entries`. `list_states` takes an `opening` and names what `find_account` gives `account`, not
+      `history`; no caller passed it by keyword. - Proof: `pytest tests` 161 passed, 1 xfailed; `inventory.py --compare`
+      every baseline name kept with its count; `test_literals.py --compare` 115 names' literals equal; `streams.py`
+      holds only builders, `HEADER`, and the two openings.
+- [x] [AI] Comb every module under `$APP/tests`: `support/streams.py`'s `ACC_001` and `ACC_002` openings become
       `ACC_001_OPENING` and `ACC_002_OPENING`; docstrings name the new API; no helper duplicates another. Command:
-      `pytest tests`, `inventory.py --compare`. Proof: passes; no name lost. Acceptance: AC-03, AC-14.
-- [ ] [AI] Search for stale names across the application: `grep -rnwE --include='*.py'` over `$SRC` and `$APP/tests` for
+      `pytest tests`, `inventory.py --compare`. Proof: passes; no name lost. Acceptance: AC-03, AC-14. - Done: the
+      openings in `support/streams.py` are `ACC_001_OPENING` and `ACC_002_OPENING`, as is `test_config.py`'s local one,
+      while the `AccountId` constants of `brief_stream.py` and `test_csv_file.py` keep `ACC_001`; five docstrings named
+      the stream reader or the renderer and now name the event source or the report sink (`values.py`,
+      `test_csv_file.py`, `test_stream.py`, `test_ledger.py`, `test_report.py`), as do three in `src`; `test_money.py`
+      and `money.py` say the account keeps each effect in its currency, not the reader; `test_account.py` no longer
+      claims AMB-036, whose test is in `test_ledger.py`; `streams.py` names `Instalments.make` as the split. The three
+      nested `list_details` helpers of `test_text_report.py` each select other rows, and their literals belong to their
+      tests, so they stay. - Proof: `pytest tests` 161 passed, 1 xfailed; `inventory.py --compare` every baseline name
+      kept with its count.
+- [x] [AI] Search for stale names across the application: `grep -rnwE --include='*.py'` over `$SRC` and `$APP/tests` for
       `history`, `aggregate`, `stream_processing`, `process_stream`, `render_reports`, `parse_stream`, `Log`, and any
-      name ending in `_of`. Proof: each hit is either the domain word used correctly or fixed. Acceptance: AC-14.
+      name ending in `_of`. Proof: each hit is either the domain word used correctly or fixed. Acceptance: AC-14. -
+      Done: run under bash as written. Every hit is the domain word `aggregate` in a docstring, used as the architecture
+      defines it: the Account aggregate (8 hits in `src`, 1 in `tests`); no `history`, `stream_processing`,
+      `process_stream`, `render_reports`, `parse_stream`, or `Log`; no name ends in `_of` (exit 1). - Proof: the two
+      searches.
 
 ### Phase 6 Gate
 

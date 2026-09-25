@@ -21,19 +21,17 @@ from account_ledger.domain.model.events import Settlement
 from account_ledger.domain.model.ids import AccountId, AuthorizationId, Day, IncomingId, InstalmentId
 from account_ledger.domain.model.money import Aed, AmountIn, Bhd
 from support.brief_stream import build_brief_stream
-from support.results import unwrap_ok
-from support.states import list_entries, list_settlements, list_states
-from support.streams import (
-    ACC_001,
-    ACC_002,
-    build_unsettled_auth_a,
+from support.entries import (
     list_capitalization_amounts,
+    list_entries,
     list_fee_ids,
     list_interest_amounts,
     list_refund_ids,
-    make_credit,
-    take_through,
+    list_settlements,
+    list_states,
 )
+from support.results import unwrap_ok
+from support.streams import ACC_001_OPENING, ACC_002_OPENING, build_unsettled_auth_a, make_credit, take_through
 from support.values import make_aed, make_bhd
 
 
@@ -75,7 +73,7 @@ def test_amb_001_a_day_without_events_still_closes() -> None:
 
 def test_amb_001_an_event_booked_after_the_window_reaches_no_day() -> None:
     """AMB-001: no day closes after the window's last, so an event booked after it reaches no day's log or report;
-    the stream reader refuses such a day before it gets here."""
+    the event source refuses such a day before it gets here."""
     stream = (make_credit("E1", 1, "100.00"), make_credit("E2", 9, "50.00"))
     result = unwrap_ok(IncomingStream(stream).process(CHALLENGE))
 
@@ -88,7 +86,9 @@ def test_c1_day_2_closes_at_minus_370_at_end_of_day_5_before_fees() -> None:
     AED −370.00." """
     log = unwrap_ok(IncomingStream(build_brief_stream()).process(CHALLENGE)).find_log(Day(5))
 
-    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001).compute_closing(Day(2))) == make_aed("-370.00")
+    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001_OPENING).compute_closing(Day(2))) == make_aed(
+        "-370.00"
+    )
 
 
 def test_c5_a_hold_reduces_available_balance_but_not_ledger_balance() -> None:
@@ -96,8 +96,8 @@ def test_c5_a_hold_reduces_available_balance_but_not_ledger_balance() -> None:
     Auth-B is declined, so the rule is proven on Auth-A's hold instead, on Day 2."""
     day_2 = unwrap_ok(IncomingStream(build_brief_stream()).process(CHALLENGE)).find_report(Day(2))
 
-    assert day_2.closing_balances[ACC_001.id] == make_aed("250.00")
-    assert day_2.available_balances[ACC_001.id] == make_aed("50.00")
+    assert day_2.closing_balances[ACC_001_OPENING.id] == make_aed("250.00")
+    assert day_2.available_balances[ACC_001_OPENING.id] == make_aed("50.00")
 
 
 def test_c5_auth_b_is_declined() -> None:
@@ -107,7 +107,7 @@ def test_c5_auth_b_is_declined() -> None:
 
     auth_b = [
         record.state
-        for record in Ledger(CHALLENGE, log).find_account(ACC_001).list_records()
+        for record in Ledger(CHALLENGE, log).find_account(ACC_001_OPENING).list_records()
         if record.authorization.authorization == AuthorizationId("Auth-B")
     ]
     assert auth_b == [Declined(AmountIn(make_aed("90.00")))]
@@ -121,7 +121,7 @@ def test_c3_auth_a_settlement_is_accepted_and_releases_the_hold() -> None:
 
     assert list_states(log, "Auth-A") == [Settled(AmountIn(make_aed("185.00")))]
     day_4 = result.find_report(Day(4))
-    assert day_4.available_balances[ACC_001.id] == day_4.closing_balances[ACC_001.id]
+    assert day_4.available_balances[ACC_001_OPENING.id] == day_4.closing_balances[ACC_001_OPENING.id]
     settlement = next(event for event in build_brief_stream() if event.id == IncomingId("E5"))
     assert isinstance(settlement, Settlement)
     applied = SettlementApplied(
@@ -141,7 +141,7 @@ def test_c4_e6_is_force_posted_for_180() -> None:
     assert list_settlements(log, settlement.id.value) == [SettlementForcePosted(settlement, Day(4))]
     assert list_states(log, "Auth-Z") == []
     assert list_states(log, "Auth-A") == [Settled(AmountIn(make_aed("185.00")))]
-    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001).compute_closing(Day(4))) == make_aed("285.00")
+    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001_OPENING).compute_closing(Day(4))) == make_aed("285.00")
 
 
 def test_c7_e10_posts_3_333_3_333_3_334() -> None:
@@ -154,7 +154,7 @@ def test_c7_e10_posts_3_333_3_333_3_334() -> None:
         (InstalmentId(IncomingId("E10"), number), AmountIn(make_bhd(text)), Day(5))
         for number, text in ((1, "3.333"), (2, "3.333"), (3, "3.334"))
     ]
-    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_002).compute_closing(Day(5))) == make_bhd("10.000")
+    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_002_OPENING).compute_closing(Day(5))) == make_bhd("10.000")
 
 
 def test_c2_e7_causes_three_fees_all_value_dated_day_5() -> None:
@@ -173,7 +173,9 @@ def test_c6_e9_restores_days_2_to_4_and_refunds_the_fees() -> None:
     value-dated Day 6."""
     log = unwrap_ok(IncomingStream(build_brief_stream()).process(CHALLENGE)).find_log(Day(6))
 
-    assert [unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001).compute_closing(Day(day))) for day in (2, 3, 4)] == [
+    assert [
+        unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001_OPENING).compute_closing(Day(day))) for day in (2, 3, 4)
+    ] == [
         make_aed("250.00"),
         make_aed("650.00"),
         make_aed("285.00"),
@@ -207,8 +209,8 @@ def test_c6_day_6_closes_at_285_76_not_285_79() -> None:
     ACC-001 capitalizes 0.76 and closes Day 6 at 285.76, not 285.79."""
     log = unwrap_ok(IncomingStream(build_brief_stream()).process(CHALLENGE)).find_log(Day(6))
 
-    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001).compute_closing(Day(5))) == make_aed("210.00")
-    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001).compute_closing(Day(6))) == make_aed("285.76")
+    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001_OPENING).compute_closing(Day(5))) == make_aed("210.00")
+    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001_OPENING).compute_closing(Day(6))) == make_aed("285.76")
 
 
 # KNOWN WEAKNESS (AMB-018): a hold never expires.
@@ -223,4 +225,4 @@ def test_known_weakness_an_unsettled_hold_never_expires() -> None:
     processed = unwrap_ok(IncomingStream(build_unsettled_auth_a()).process(replace(CHALLENGE, last_day=Day(32))))
     day_32 = processed.find_report(Day(32))
 
-    assert day_32.available_balances[ACC_001.id] == day_32.closing_balances[ACC_001.id]
+    assert day_32.available_balances[ACC_001_OPENING.id] == day_32.closing_balances[ACC_001_OPENING.id]

@@ -1,4 +1,5 @@
-"""Every reason the Account aggregate refuses an event, recorded in ``EventRejected``."""
+"""Every reason an event is refused, recorded in ``EventRejected``: by the Ledger for a reused ID or another account's
+target, and by the Account aggregate for the rest."""
 
 from dataclasses import dataclass
 

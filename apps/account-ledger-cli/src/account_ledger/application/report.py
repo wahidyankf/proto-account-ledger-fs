@@ -8,12 +8,7 @@ from types import MappingProxyType
 from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.account.account import Account
 from account_ledger.domain.account.authorizations import AuthorizationRecord
-from account_ledger.domain.account.domain_events import (
-    CreditPosted,
-    EventRejected,
-    LogEntry,
-    LoggedEvent,
-)
+from account_ledger.domain.account.domain_events import CreditPosted, EventRejected, LogEntry, LoggedEvent
 from account_ledger.domain.ledger.ledger import Ledger
 from account_ledger.domain.model.events import (
     Authorization,
@@ -50,7 +45,7 @@ class Step(Enum):
 
 
 class Note(Enum):
-    """Why a step's row shows nothing generated of its kind (tech-docs 002); the renderer prints its text."""
+    """Why a step's row shows nothing generated of its kind (tech-docs 002); the report sink prints its text."""
 
     NO_FEE = auto()
     NO_NEW_FEE = auto()

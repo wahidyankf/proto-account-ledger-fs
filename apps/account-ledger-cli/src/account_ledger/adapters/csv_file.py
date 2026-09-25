@@ -209,9 +209,8 @@ def _parse_settlement_kind(text: str) -> Result[SettlementKind, RowFault]:
             return Err(RowFault("final must be yes or no"))
 
 
-type _CommonFields = tuple[
-    IncomingId, Day, AccountId, Day
-]  # the event, booked, account, and value_date every row carries
+# the event, booked, account, and value_date every row carries
+type _CommonFields = tuple[IncomingId, Day, AccountId, Day]
 
 
 def _parse_row(cells: dict[str, str], config: LedgerConfig) -> Result[IncomingEvent, RowFault]:

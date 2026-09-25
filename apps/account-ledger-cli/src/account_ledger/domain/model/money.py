@@ -192,7 +192,7 @@ class Aed:
         return self.CURRENCY
 
     def format_digits(self) -> str:
-        """The value's text, for the renderer and messages: its places, no sign change, no separators."""
+        """The value's text, for the report sink and messages: its places, no sign change, no separators."""
         return str(self.value)
 
     def is_below(self, amount: Amount) -> Result[bool, CurrencyMismatch]:
@@ -206,8 +206,8 @@ class Aed:
         return _require_same(self, money)
 
     def add_all(self, money_values: Iterable[Money]) -> Result[Self, CurrencyMismatch]:
-        """This value plus every value, each of its currency, or the first value of another; the reader keeps every
-        effect in its account's currency, so only a bug returns the mismatch."""
+        """This value plus every value, each of its currency, or the first value of another; the account keeps every
+        effect in its own currency, so only a bug returns the mismatch."""
         return _add_all(self, money_values)
 
     def compute_daily_interest(self) -> Self:
@@ -271,7 +271,7 @@ class Bhd:
         return self.CURRENCY
 
     def format_digits(self) -> str:
-        """The value's text, for the renderer and messages: its places, no sign change, no separators."""
+        """The value's text, for the report sink and messages: its places, no sign change, no separators."""
         return str(self.value)
 
     def is_below(self, amount: Amount) -> Result[bool, CurrencyMismatch]:
@@ -285,8 +285,8 @@ class Bhd:
         return _require_same(self, money)
 
     def add_all(self, money_values: Iterable[Money]) -> Result[Self, CurrencyMismatch]:
-        """This value plus every value, each of its currency, or the first value of another; the reader keeps every
-        effect in its account's currency, so only a bug returns the mismatch."""
+        """This value plus every value, each of its currency, or the first value of another; the account keeps every
+        effect in its own currency, so only a bug returns the mismatch."""
         return _add_all(self, money_values)
 
     def compute_daily_interest(self) -> Self:

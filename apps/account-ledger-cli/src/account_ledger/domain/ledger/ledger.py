@@ -10,17 +10,14 @@ from account_ledger.domain.account.domain_events import DuplicateIgnored, EventR
 from account_ledger.domain.account.event_log import EventLog
 from account_ledger.domain.account.rejections import IdReused, TargetOnAnotherAccount
 from account_ledger.domain.model.config import AccountOpening, LedgerConfig, is_aed
-from account_ledger.domain.model.events import (
-    IncomingEvent,
-    Reversal,
-)
+from account_ledger.domain.model.events import IncomingEvent, Reversal
 from account_ledger.domain.model.ids import AccountId, Day
 from account_ledger.domain.model.money import CurrencyMismatch
 
 
 @dataclass(frozen=True, slots=True)
 class UnknownAccount:
-    """An event on an account the ledger does not hold; only a bug brings it, since the stream reader refuses one."""
+    """An event on an account the ledger does not hold; only a bug brings it, since the event source refuses one."""
 
     account: AccountId
 

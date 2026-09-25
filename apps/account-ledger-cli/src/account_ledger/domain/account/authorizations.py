@@ -6,11 +6,7 @@ from typing import assert_never
 
 from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.model.events import Authorization, Settlement, SettlementKind
-from account_ledger.domain.model.money import (
-    Amount,
-    AmountIn,
-    CurrencyMismatch,
-)
+from account_ledger.domain.model.money import Amount, AmountIn, CurrencyMismatch
 
 
 @dataclass(frozen=True, slots=True)

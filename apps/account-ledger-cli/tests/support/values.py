@@ -1,4 +1,4 @@
-"""Domain values for tests, built through the same ``parse`` functions the stream reader uses."""
+"""Domain values for tests, built through the same ``parse`` functions the event source uses."""
 
 from account_ledger.domain.model.money import Aed, Bhd
 from support.results import unwrap_ok

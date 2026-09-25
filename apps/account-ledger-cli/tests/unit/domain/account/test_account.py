@@ -1,6 +1,6 @@
 """The Account aggregate, topic by topic as its class reads: authorizations and settlements (AMB-008 to AMB-013,
-AMB-029, AMB-030), reversals (AMB-028, AMB-035, AMB-036), fees (AMB-011, AMB-027, AMB-035), and interest (AMB-005,
-AMB-023, AMB-035)."""
+AMB-029, AMB-030), reversals (AMB-028, AMB-035), fees (AMB-011, AMB-027, AMB-035), and interest (AMB-005, AMB-023,
+AMB-035)."""
 
 from dataclasses import replace
 
@@ -9,16 +9,8 @@ import pytest
 from account_ledger.application.report import Capitalized
 from account_ledger.application.stream import IncomingStream
 from account_ledger.challenge import CHALLENGE
-from account_ledger.domain.account.authorizations import (
-    Declined,
-    PartiallySettled,
-    Settled,
-)
-from account_ledger.domain.account.domain_events import (
-    EventRejected,
-    FeeCharged,
-    SettlementForcePosted,
-)
+from account_ledger.domain.account.authorizations import Declined, PartiallySettled, Settled
+from account_ledger.domain.account.domain_events import EventRejected, FeeCharged, SettlementForcePosted
 from account_ledger.domain.account.rejections import (
     AlreadyReversed,
     AlreadyUndone,
@@ -32,15 +24,19 @@ from account_ledger.domain.model.events import IncomingEvent, SettlementKind
 from account_ledger.domain.model.ids import Day, FeeId, IncomingId, InstalmentId, RefundId
 from account_ledger.domain.model.money import AmountIn
 from support.brief_stream import build_brief_stream
-from support.results import unwrap_ok
-from support.states import list_entries, list_settlements, list_states
-from support.streams import (
-    ACC_001,
-    ACC_002,
+from support.entries import (
     list_capitalization_amounts,
+    list_entries,
     list_fee_ids,
     list_interest_amounts,
     list_refund_ids,
+    list_settlements,
+    list_states,
+)
+from support.results import unwrap_ok
+from support.streams import (
+    ACC_001_OPENING,
+    ACC_002_OPENING,
     make_authorization,
     make_credit,
     make_debit,
@@ -75,8 +71,8 @@ def test_amb_010_a_hold_counts_from_its_value_date() -> None:
 
     result = unwrap_ok(IncomingStream(stream).process(CHALLENGE))
 
-    assert result.find_report(Day(2)).available_balances[ACC_001.id] == make_aed("100.00")
-    assert result.find_report(Day(3)).available_balances[ACC_001.id] == make_aed("60.00")
+    assert result.find_report(Day(2)).available_balances[ACC_001_OPENING.id] == make_aed("100.00")
+    assert result.find_report(Day(3)).available_balances[ACC_001_OPENING.id] == make_aed("60.00")
 
 
 def test_amb_029_a_settlement_against_a_declined_authorization_is_force_posted() -> None:
@@ -88,7 +84,7 @@ def test_amb_029_a_settlement_against_a_declined_authorization_is_force_posted()
 
     assert list_settlements(log, "E3") == [SettlementForcePosted(later_settlement, Day(3))]
     assert list_states(log, "Auth-A") == [Declined(AmountIn(make_aed("50.00")))]
-    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001).compute_closing(Day(3))) == make_aed("10.00")
+    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001_OPENING).compute_closing(Day(3))) == make_aed("10.00")
 
 
 def test_amb_029_a_settlement_after_a_final_one_is_force_posted() -> None:
@@ -106,7 +102,7 @@ def test_amb_029_a_settlement_after_a_final_one_is_force_posted() -> None:
 
     assert list_settlements(log, "E4") == [SettlementForcePosted(second_settlement, Day(4))]
     assert list_states(log, "Auth-A") == [Settled(AmountIn(make_aed("40.00")))]
-    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001).compute_closing(Day(4))) == make_aed("40.00")
+    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001_OPENING).compute_closing(Day(4))) == make_aed("40.00")
 
 
 def test_amb_013_a_non_final_settlement_keeps_the_rest_of_the_hold() -> None:
@@ -124,9 +120,9 @@ def test_amb_013_a_non_final_settlement_keeps_the_rest_of_the_hold() -> None:
     assert list_states(result.find_log(Day(2)), "Auth-A") == [
         PartiallySettled(AmountIn(make_aed("120.00")), AmountIn(make_aed("80.00")))
     ]
-    assert result.find_report(Day(2)).available_balances[ACC_001.id] == make_aed("300.00")
+    assert result.find_report(Day(2)).available_balances[ACC_001_OPENING.id] == make_aed("300.00")
     assert list_states(result.find_log(Day(3)), "Auth-A") == [Settled(AmountIn(make_aed("160.00")))]
-    assert result.find_report(Day(3)).available_balances[ACC_001.id] == make_aed("340.00")
+    assert result.find_report(Day(3)).available_balances[ACC_001_OPENING.id] == make_aed("340.00")
 
 
 @pytest.mark.parametrize(
@@ -153,8 +149,8 @@ def test_amb_013_partial_settlements_reaching_the_hold_settle(
 
     assert list_states(result.find_log(Day(2)), "Auth-A") == [Settled(AmountIn(make_aed(settled_amount)))]
     assert (
-        result.find_report(Day(2)).available_balances[ACC_001.id]
-        == result.find_report(Day(2)).closing_balances[ACC_001.id]
+        result.find_report(Day(2)).available_balances[ACC_001_OPENING.id]
+        == result.find_report(Day(2)).closing_balances[ACC_001_OPENING.id]
     )
 
 
@@ -170,9 +166,9 @@ def test_amb_030_a_settlement_above_its_hold_debits_in_full() -> None:
     log = unwrap_ok(IncomingStream(stream).process(CHALLENGE)).find_log(Day(2))
 
     assert list_states(log, "Auth-A") == [Settled(AmountIn(make_aed("120.00")))]
-    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001).sum_holds(Day(2))) == make_aed("0.00")
+    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001_OPENING).sum_holds(Day(2))) == make_aed("0.00")
     assert list_fee_ids(log) == ["FEE-001-D2@D2"]
-    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001).compute_closing(Day(2))) == make_aed("-45.00")
+    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001_OPENING).compute_closing(Day(2))) == make_aed("-45.00")
 
 
 def test_amb_035_a_reversal_undoes_what_its_target_moved() -> None:
@@ -180,7 +176,9 @@ def test_amb_035_a_reversal_undoes_what_its_target_moved() -> None:
     650.00, and 285.00."""
     log = unwrap_ok(IncomingStream(take_through(build_brief_stream(), "E9")).process(CHALLENGE)).find_log(Day(6))
 
-    assert [unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001).compute_closing(Day(day))) for day in (2, 3, 4)] == [
+    assert [
+        unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001_OPENING).compute_closing(Day(day))) for day in (2, 3, 4)
+    ] == [
         make_aed("250.00"),
         make_aed("650.00"),
         make_aed("285.00"),
@@ -202,7 +200,9 @@ def test_amb_028_a_second_reversal_of_the_same_event_is_refused() -> None:
     assert list_entries(log, "E12") == [
         EventRejected(second_reversal, Day(3), AlreadyReversed(IncomingId("E7"), IncomingId("E9")))
     ]
-    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001).compute_closing(Day(3))) == make_aed("1000.00")
+    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001_OPENING).compute_closing(Day(3))) == make_aed(
+        "1000.00"
+    )
 
 
 def test_amb_028_a_reversal_of_a_reversal_is_refused() -> None:
@@ -218,7 +218,9 @@ def test_amb_028_a_reversal_of_a_reversal_is_refused() -> None:
     log = unwrap_ok(IncomingStream(stream).process(CHALLENGE)).find_log(Day(3))
 
     assert list_entries(log, "E12") == [EventRejected(undoing_reversal, Day(3), ReversesAReversal(IncomingId("E9")))]
-    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001).compute_closing(Day(3))) == make_aed("1000.00")
+    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001_OPENING).compute_closing(Day(3))) == make_aed(
+        "1000.00"
+    )
 
 
 def test_amb_035_a_reversal_of_an_unknown_event_is_refused() -> None:
@@ -229,7 +231,7 @@ def test_amb_035_a_reversal_of_an_unknown_event_is_refused() -> None:
     log = unwrap_ok(IncomingStream(stream).process(CHALLENGE)).find_log(Day(2))
 
     assert list_entries(log, "E12") == [EventRejected(stray_reversal, Day(2), UnknownTarget(IncomingId("E99")))]
-    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001).compute_closing(Day(2))) == make_aed("100.00")
+    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001_OPENING).compute_closing(Day(2))) == make_aed("100.00")
 
 
 @pytest.mark.parametrize("target", ["E8", "E3"])
@@ -247,7 +249,7 @@ def test_amb_035_a_reversal_of_an_event_that_moved_no_money_is_refused(target: s
     log = unwrap_ok(IncomingStream(stream).process(CHALLENGE)).find_log(Day(2))
 
     assert list_entries(log, "E12") == [EventRejected(undoing_reversal, Day(2), MovedNoMoney(IncomingId(target)))]
-    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001).compute_closing(Day(2))) == make_aed("100.00")
+    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001_OPENING).compute_closing(Day(2))) == make_aed("100.00")
 
 
 def test_amb_035_reversing_a_credit_in_instalments_undoes_every_instalment() -> None:
@@ -259,7 +261,7 @@ def test_amb_035_reversing_a_credit_in_instalments_undoes_every_instalment() -> 
 
     log = unwrap_ok(IncomingStream(stream).process(CHALLENGE)).find_log(Day(5))
 
-    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_002).compute_closing(Day(5))) == make_bhd("0.000")
+    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_002_OPENING).compute_closing(Day(5))) == make_bhd("0.000")
 
 
 WEEK = replace(CHALLENGE, last_day=Day(7))
@@ -275,7 +277,7 @@ UNDONE = {
             make_reversal("E11", 5, "E10", account="ACC-002"),
             make_reversal("E12", 5, "E10-1", account="ACC-002"),
         ),
-        ACC_002,
+        ACC_002_OPENING,
         Day(5),
         AlreadyUndone(InstalmentId(IncomingId("E10"), 1), IncomingId("E11")),
     ),
@@ -285,17 +287,17 @@ UNDONE = {
             make_reversal("E11", 5, "E10-1", account="ACC-002"),
             make_reversal("E12", 5, "E10", account="ACC-002"),
         ),
-        ACC_002,
+        ACC_002_OPENING,
         Day(5),
         AlreadyUndone(InstalmentId(IncomingId("E10"), 1), IncomingId("E11")),
     ),
     "refunded-fee": (
         (*build_brief_stream(), make_reversal("E12", 7, "FEE-001-D2@D5")),
-        ACC_001,
+        ACC_001_OPENING,
         Day(7),
         AlreadyUndone(
-            FeeId(ACC_001.id, Day(2), Day(5)),
-            RefundId(ACC_001.id, Day(2), Day(6)),
+            FeeId(ACC_001_OPENING.id, Day(2), Day(5)),
+            RefundId(ACC_001_OPENING.id, Day(2), Day(6)),
         ),
     ),
 }
@@ -329,8 +331,8 @@ def test_amb_035_a_reversed_settlement_leaves_its_authorization_settled() -> Non
     log = unwrap_ok(IncomingStream(stream).process(CHALLENGE)).find_log(Day(3))
 
     assert list_states(log, "Auth-A") == [Settled(AmountIn(make_aed("30.00")))]
-    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001).sum_holds(Day(3))) == make_aed("0.00")
-    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001).compute_closing(Day(3))) == make_aed("100.00")
+    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001_OPENING).sum_holds(Day(3))) == make_aed("0.00")
+    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001_OPENING).compute_closing(Day(3))) == make_aed("100.00")
 
 
 def test_amb_035_a_reversed_instalment_stays_reversed() -> None:
@@ -344,7 +346,7 @@ def test_amb_035_a_reversed_instalment_stays_reversed() -> None:
     result = unwrap_ok(IncomingStream(stream).process(CHALLENGE))
 
     assert [
-        unwrap_ok(Ledger(CHALLENGE, result.find_log(Day(day))).find_account(ACC_002).compute_closing(Day(1)))
+        unwrap_ok(Ledger(CHALLENGE, result.find_log(Day(day))).find_account(ACC_002_OPENING).compute_closing(Day(1)))
         for day in (1, 2, 6)
     ] == [
         make_bhd("10.000"),
@@ -383,7 +385,7 @@ def test_amb_027_a_bhd_account_is_charged_bhd_2_560() -> None:
     fees = [entry.event for entry in log.entries if isinstance(entry, FeeCharged)]
     assert [fee.amount for fee in fees] == [AmountIn(make_bhd("2.560"))]
     assert list_fee_ids(log) == ["FEE-002-D1@D1"]
-    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_002).compute_closing(Day(1))) == make_bhd("-3.560")
+    assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_002_OPENING).compute_closing(Day(1))) == make_bhd("-3.560")
 
 
 def test_amb_035_a_fee_reversed_on_a_negative_day_is_charged_again() -> None:

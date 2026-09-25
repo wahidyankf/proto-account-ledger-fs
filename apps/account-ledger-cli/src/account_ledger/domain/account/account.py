@@ -69,14 +69,7 @@ from account_ledger.domain.model.ids import (
     InterestId,
     RefundId,
 )
-from account_ledger.domain.model.money import (
-    Aed,
-    Amount,
-    Bhd,
-    CurrencyMismatch,
-    Direction,
-    Money,
-)
+from account_ledger.domain.model.money import Aed, Amount, Bhd, CurrencyMismatch, Direction, Money
 
 
 @dataclass(frozen=True, slots=True)
@@ -531,8 +524,7 @@ def _record_interest_change(
 ) -> InterestAccrued | InterestAdjusted:
     """A day's interest change as it is recorded today: an accrual for today, an adjustment for an earlier day."""
     interest_id = InterestId(account, day, today)
-    if (
-        day == today
-    ):  # nothing is generated for today before its close, so today's change is its first, positive accrual
+    # nothing is generated for today before its close, so today's change is its first, positive accrual
+    if day == today:
         return InterestAccrued(InterestAccrual(interest_id, account, today, amount), today)
     return InterestAdjusted(InterestAdjustment(interest_id, account, today, direction, amount), today)

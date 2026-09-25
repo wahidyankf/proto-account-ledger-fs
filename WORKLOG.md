@@ -8,6 +8,7 @@ earlier work is claimed.
 
 | When                   | What                                                                                        |
 | ---------------------- | ------------------------------------------------------------------------------------------- |
+| 2026-09-25 20:46–20:54 | Restructure Phase 6: every module combed; test support split into builders and readers      |
 | 2026-09-25 20:34–20:44 | Restructure Phase 5: no inheritance but Protocol, Generic, Enum, or exception, lint-gated   |
 | 2026-09-25 20:13–20:34 | Restructure Phase 4: application, ports, and adapters; run_cli takes a RunLedger            |
 | 2026-09-25 19:58–20:12 | Restructure Phase 3: the Ledger class; an unknown account is an internal fault, no assert   |
