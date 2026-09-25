@@ -42,7 +42,8 @@ cited-name check ([004](tech-docs/004-behaviour-preservation-and-tests.md)).
 
 - Commit `83dfd58`, the baseline every comparison reads.
 - The toolchain the repository pins: Python 3.14, uv, pytest, ruff, pyright, pylint, vulture, Nx, Rhino, and Prettier.
-- The owner, only to reopen a decision; R17, R18, and R20 were settled on the recommendation under the owner's goal.
+- The owner, only to reopen a decision; R17, R18, R20, and R22 were settled on the recommendation under the owner's
+  goal.
 
 ## Directory Map
 

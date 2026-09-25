@@ -15,8 +15,8 @@ adapters implementing those ports, and the shell composing them. Every arrow poi
                                   |
 +---------------------------- shell ------------------------------+
 | cli.py       driving adapter: run_cli maps each fault to the    |
-|              exit code and message the README tables publish     |
-| challenge.py composition data: CHALLENGE, the brief's config     |
+|              exit code and message the README tables publish    |
+| challenge.py composition data: CHALLENGE, the brief's config    |
 +----------------------------------+------------------------------+
         | RunLedger (driving port)  |  builds the adapters
         v                           v
@@ -74,7 +74,7 @@ src/account_ledger/
 │   │   ├── __init__.py
 │   │   ├── config.py        AccountOpeningIn, AccountOpening, is_aed, ConfigFault, LedgerConfig
 │   │   ├── events.py        SettlementKind, Whole, Instalments, the eleven event kinds, their unions
-│   │   ├── ids.py           IdFault, Day, InstalmentCount, the seven ID kinds, EventId, parse_event_id
+│   │   ├── ids.py           IdFault, Day, InstalmentCount, the eight ID kinds, EventId, parse_event_id
 │   │   ├── money.py         the money faults, Aed, Bhd, Money, AmountIn, Amount, Direction
 │   │   └── ruff.toml
 │   ├── account/
@@ -122,10 +122,10 @@ tests/
 ├── support/
 │   ├── brief_stream.py                  the brief's stream in code and as CSV
 │   ├── output_target.py                 OUTPUT_TARGET's fenced block
+│   ├── entries.py                       readers that turn a log into what a test asserts (R22)
 │   ├── refusals.py                      one stream per refusal reason
 │   ├── results.py                       unwrap_ok
-│   ├── states.py                        authorization states and entries read out of a log
-│   ├── streams.py                       stream builders and log readers
+│   ├── streams.py                       builders of the short streams the rule tests process
 │   └── values.py                        make_aed, make_bhd
 └── unit/
     ├── adapters/
@@ -152,6 +152,29 @@ tests/
 
 `--import-mode=importlib`, already set in `pyproject.toml`, lets two test files share a basename in different
 directories, as `test_cli.py` and `test_csv_file.py` do; a probe on 2026-09-25 collected and type-checked such a pair.
+
+## How the Names Read
+
+The layout follows five patterns, so a reader who knows one file can guess the name of the next (R22):
+
+- **A module is named for its concept, and its main type for the concept made precise.** `ledger.py` holds `Ledger`,
+  `account.py` `AccountIn`, `event_log.py` `EventLog`, `report.py` `DayReport`, `stream.py` `IncomingStream`, `run.py`
+  `LedgerRun`, `csv_file.py` `CsvFileSource`, and `text_report.py` `TextReportSink`.
+- **A module holding one concept is singular; one holding a family is plural.** `money.py`, `config.py`, `account.py`,
+  `ledger.py`, and `result.py` against `ids.py`, `events.py`, `domain_events.py`, `rejections.py`, `authorizations.py`,
+  and `ports.py`.
+- **A type generic over the currency ends in `In`, and its union drops the suffix.** `AmountIn` and `Amount`,
+  `AccountIn` and `Account`, `AccountOpeningIn` and `AccountOpening`.
+- **An adapter is named for its medium and the port it fills.** `CsvFileSource` is an `EventSource`, and
+  `TextReportSink` a `ReportSink`.
+- **A test file mirrors its source.** `src/account_ledger/X/Y.py` is tested in `tests/<suite>/X/test_Y.py`, and
+  `tests/support/` holds what several test files share, builders apart from readers: `streams.py`, `brief_stream.py`,
+  `refusals.py`, and `values.py` build inputs; `entries.py` and `output_target.py` read what a test compares;
+  `results.py` unwraps a `Result` a test expects to be `Ok`. The e2e suite has one file, `test_program.py`, since it
+  tests the program as a whole rather than a module.
+
+`EventLog` sits in `account/`, below the ledger, because the aggregate reads its own entries through it and the ledger
+holds the same type for every account; the ledger imports downward, never the reverse.
 
 ## Where Every Current File Goes
 
@@ -203,8 +226,8 @@ Tests, under `tests/`:
 | `unit/test_cli.py`                 | `unit/test_cli.py`                                                          |
 | `integration/test_stream_file.py`  | `integration/adapters/test_csv_file.py`                                     |
 | `integration/test_main.py`         | `integration/test_cli.py`                                                   |
-| `e2e/test_program.py`, `support/*` | stay; `support/` follows the new API and polish                             |
+| `e2e/test_program.py`, `support/*` | stay, save `support/states.py`, whose readers join `support/entries.py`     |
 
 The two table tests are `test_every_state_and_settlement_input_pair_follows_the_table` and
-`test_an_unconfigured_transition_leaves_the_state_unchanged`. Every test keeps its name and its parameters; only its
-file and the calls it makes move ([behaviour preservation](004-behaviour-preservation-and-tests.md)).
+`test_an_unconfigured_transition_leaves_the_state_unchanged`. Every test keeps its name and its cases; only its file and
+the calls it makes move ([behaviour preservation](004-behaviour-preservation-and-tests.md)).

@@ -42,7 +42,7 @@ The companions, read in the order listed; each builds on the ones before it.
   document the restructure makes stale, file by file.
 - [006 Migration Inventory](006-migration-inventory.md) — every moving source, its readers, its destination, the
   transition, deletion with proof, and recovery.
-- [007 Decision Records](007-decision-records.md) — R1 to R21, each with its alternatives and its revisit trigger.
+- [007 Decision Records](007-decision-records.md) — R1 to R22, each with its alternatives and its revisit trigger.
 - [008 File Impact](008-file-impact.md) — every path the plan touches, as annotated trees.
 
 ## File Impact

@@ -13,6 +13,7 @@ apps/account-ledger-cli/src/account_ledger/
 ├── common/
 │   └── ruff.toml                      [E] bans application and challenge too
 ├── domain/
+│   ├── __init__.py                    [E] docstring: the report leaves
 │   ├── ruff.toml                      [E] bans application and the shell's two modules
 │   ├── report.py                      [M] to application/report.py
 │   ├── stream_processing.py           [M] to application/stream.py
@@ -23,7 +24,9 @@ apps/account-ledger-cli/src/account_ledger/
 │   │   ├── money.py                   [E] Aed and Bhd without a base; add_all, require_same, take, directed amount
 │   │   └── ruff.toml                  [E] bans application, adapters, and the shell
 │   ├── account/
-│   │   ├── account.py                 [M] from aggregate.py; AccountIn, every rule about one account a method
+│   │   ├── __init__.py                [E] docstring: entries, not history
+│   │   ├── account.py                 [N] AccountIn, every rule about one account a method
+│   │   ├── aggregate.py               [D] into account.py
 │   │   ├── authorizations.py          [E] the states, the record, the D8 table on kind and rest
 │   │   ├── balances.py                [D] into account.py
 │   │   ├── decisions.py               [D] into account.py
@@ -37,9 +40,11 @@ apps/account-ledger-cli/src/account_ledger/
 │   │   ├── states.py                  [D] into authorizations.py
 │   │   └── ruff.toml                  [E] bans application, adapters, and the shell
 │   └── ledger/
+│       ├── __init__.py                [E] docstring: the Ledger, not the log
 │       ├── end_of_day.py              [D] into ledger.py
 │       ├── event_log.py               [D] EventLog to account/event_log.py, the dispatch to Ledger.find_account
 │       ├── ledger.py                  [M] from processing.py; Ledger, UnknownAccount, InternalFault
+│       ├── processing.py              [M] to ledger.py
 │       └── ruff.toml                  [E] bans application, adapters, and the shell
 ├── application/
 │   ├── __init__.py                    [N] package docstring
@@ -49,6 +54,7 @@ apps/account-ledger-cli/src/account_ledger/
 │   ├── stream.py                      [M] from domain/stream_processing.py; IncomingStream, ProcessedStream
 │   └── ruff.toml                      [N] bans adapters and the shell
 └── adapters/
+    ├── __init__.py                    [E] docstring: the ports' implementations
     ├── csv_file.py                    [M] from stream_csv.py; CsvFileSource, Reader, read_file
     ├── render.py                      [M] to text_report.py
     ├── stream_csv.py                  [M] to csv_file.py
@@ -60,17 +66,17 @@ apps/account-ledger-cli/src/account_ledger/
 
 ```text
 apps/account-ledger-cli/tests/
-├── e2e/test_program.py                          [E] imports TextReportSink.render
 ├── integration/
 │   ├── test_main.py                             [M] to integration/test_cli.py
-│   ├── test_cli.py                              [M] from test_main.py
+│   ├── test_cli.py                              [M] from test_main.py; imports follow the new API
 │   ├── test_stream_file.py                      [M] to integration/adapters/test_csv_file.py
 │   └── adapters/test_csv_file.py                [M] from test_stream_file.py
 ├── support/
 │   ├── brief_stream.py                          [E] Instalments.make for E10
+│   ├── entries.py                               [N] the log readers of states.py and streams.py (R22)
 │   ├── refusals.py                              [E] the rejection reasons from rejections.py
-│   ├── states.py                                [E] Ledger(…).find_account and account methods
-│   └── streams.py                               [E] AccountOpeningIn, ACC_001_OPENING, EventLog
+│   ├── states.py                                [D] into entries.py
+│   └── streams.py                               [E] builders only; ACC_001_OPENING, ACC_002_OPENING
 └── unit/
     ├── test_authorizations.py                   [D] into domain/account/test_account.py and test_authorizations.py
     ├── test_cli.py                              [E] fake RunLedger; plain ClosedPipe; the unknown-account test
@@ -109,7 +115,7 @@ apps/account-ledger-cli/tests/
 ├── WORKLOG.md                                                        [E] one entry per session
 ├── README.md                                                         [E] the layers, in one sentence
 ├── apps/account-ledger-cli/README.md                                 [E] layout, DDD paragraph, exit row, weakness
-├── apps/account-ledger-cli/pyproject.toml                            [E] too-many-ancestors; verbs open, publish
+├── apps/account-ledger-cli/pyproject.toml                            [E] too-many-ancestors; the verb lists
 ├── docs/explanation/architecture-trade-offs.md                       [E] entries wording; re-measured timings
 ├── specs/apps/account-ledger/cli/architecture.md                     [E] L3, L4, dynamic view, model, reading order
 ├── plans/in-progress/README.md                                       [E] directory map lists this plan
@@ -142,9 +148,11 @@ plans/in-progress/restructure-around-the-domain/
 ├── evidence/phase-0-baseline.txt              [N] gates, counts, and the baseline manifest
 ├── evidence/phase-0-corpus.txt                [N] the behaviour corpus on the baseline
 ├── evidence/phase-0-tests.txt                 [N] the test inventory on the baseline
+├── evidence/phase-0-literals.txt              [N] each test's literals on the baseline
 ├── evidence/phase-5-no-inheritance.txt        [N] the gate failing on the baseline, passing on the tree
 ├── evidence/phase-8-corpus.txt                [N] the corpus on the result
 ├── evidence/phase-8-tests.txt                 [N] the test inventory on the result
+├── evidence/phase-8-literals.txt              [N] each test's literals on the result
 ├── evidence/phase-8-mutations.txt             [N] the mutation spot-checks
 └── evidence/phase-8-timings.txt               [N] the re-measured timings
 ```
@@ -154,7 +162,8 @@ plans/in-progress/restructure-around-the-domain/
 - Files the plan leaves as they are, such as `__main__.py`, `common/result.py`, and `tests/support/values.py`, are not
   in the tree. Phase 6 reads every file; where its comb finds a defect in an unlisted file, its item names the file and
   the Execution Record notes that the tree grew.
-- `local-tmp/restructure/` holds the scratch scripts (`corpus.py`, `cited_names.py`, `width.py`, `inventory.py`) and the
-  baseline copy. The folder is gitignored, so it is not in the tree above.
+- `local-tmp/restructure/` holds the scratch scripts Phase 0 writes (`corpus.py`, `inventory.py`, `test_literals.py`,
+  `cited_names.py`, `scale.py`, `doc_sweep.py`, `audit.py`, `gate.sh`), the probes, and the baseline copy. The folder is
+  gitignored, so it is not in the tree above.
 - At archival the plan folder moves to `plans/done/<completion-date>__restructure-around-the-domain/` with every file
   above; no file changes in the move.

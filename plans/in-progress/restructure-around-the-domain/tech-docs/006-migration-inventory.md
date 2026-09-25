@@ -51,8 +51,8 @@ phase named is the one whose items move the source and its readers and prove the
 - **`domain/account/fees.py`.** Read by `aggregate`. Destination: `domain/account/account.py`. Phase 2.
 - **`domain/account/interest.py`.** Read by `aggregate`. Destination: `domain/account/account.py`. Phase 2.
 - **`domain/account/reversals.py`.** Read by `decisions`, `interest`. Destination: `domain/account/account.py`. Phase 2.
-- **`domain/account/authorizations.py`.** Read by `render`, four account modules, `report`, `test_authorizations`. Goes
-  to stays for the table, the states, and the record; its history rules to `account.py`. Phase 2.
+- **`domain/account/authorizations.py`.** Read by `render`, four account modules, `report`, `test_authorizations`.
+  Destination: stays for the table, the states, and the record; its history rules to `account.py`. Phase 2.
 - **`domain/account/states.py`.** Read by `render`, three account modules, `support/states`, four tests. Goes to
   `domain/account/authorizations.py`. Phase 2.
 - **`domain/account/domain_events.py`.** Read by `render`, every account and ledger module, `report`, three support
@@ -65,7 +65,7 @@ phase named is the one whose items move the source and its readers and prove the
   Phase 1.
 - **`domain/model/money.py`.** Read by twenty-nine modules across every layer and suite. Destination: stays, reshaped.
   Phase 1.
-- **`common/result.py`.** Read by twenty-five modules across every layer and suite. Destination: stays unchanged. no
+- **`common/result.py`.** Read by twenty-five modules across every layer and suite. Destination: stays unchanged. No
   phase.
 - **The five `ruff.toml` files.** Read by ruff, through the `lint` target. Destination: stay, their bans rewritten;
   `application/` and `adapters/` gain one each. Phase 4.
@@ -85,12 +85,22 @@ Each move follows the migration rule's order inside one commit, so the main line
    runs the program as a process, never through the moved code's own tests alone.
 4. **Contract.** The old module is deleted in the same commit, under the deletion-with-proof steps below.
 
+Phase 2 folds six topic modules into `account.py` one at a time, and a topic module cannot import `AccountIn` at load
+from the module that imports it. While a topic waits its turn it imports `AccountIn` under `if TYPE_CHECKING:` only, so
+its annotations, evaluated lazily in Python 3.14, name the aggregate, and no import cycle runs; `account.py` imports the
+topic modules. The probe `local-tmp/restructure/probe_cycle/` ran this shape with no import error at runtime, none from
+pyright strict on the guarded import, and none from pylint's `cyclic-import`. Between items a topic module may still
+call an entry query that is now private, which pyright reports as `reportPrivateUsage`; the items run `pytest tests`,
+and pyright counts at the Phase 2 gate. The guard leaves with the last topic, and the Phase 2 gate proves no
+`TYPE_CHECKING` remains under `src/`. Until Phase 3 builds the `Ledger`, `processing.py` asks the whole log through
+`EventLog(log).find_first_entry(…)`, both for a repeated ID and for a reversal's target.
+
 ## Deletion With Proof
 
 For each module a phase deletes:
 
-1. **Inventory.** Its row above, and every definition in it, listed by `grep -nE '^(def|class|type) '` in the phase's
-   first item.
+1. **Inventory.** Its row above, and every definition in it, listed by `grep -nE '^(def|class|type) '`, recorded first
+   under the deleting item.
 2. **Successor.** Each definition's new home, by path and name, from [the domain model](002-domain-model.md) and
    [the application, ports, and adapters](003-application-ports-and-adapters.md).
 3. **Prove it is missed.** Before the delete, the phase breaks one rule the module holds in its new home, on a scratch
@@ -99,7 +109,8 @@ For each module a phase deletes:
 4. **Prove the successor provides it.** The same test passes against the successor.
 5. **Compare on recorded inputs.** The behaviour corpus equals the Phase 0 record.
 6. **Full gate.** `npx nx run account-ledger-cli:test:quick`, `test:integration`, `test:e2e`, and
-   `npm run check:hygiene`.
+   `npm run check:hygiene`. In Phase 2, before the last topic folds, this step runs the three suites and the corpus, and
+   pyright counts at the Phase 2 gate.
 
 Then delete, and update every reference in the same commit. No alias, re-export, or forwarding function stays. The
 destination of every removed responsibility is recorded in the phase's items and in the architecture's L3 table.

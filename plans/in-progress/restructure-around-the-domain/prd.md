@@ -31,12 +31,15 @@ Each criterion names its proof; `delivery.md` cites each by its identifier.
   equals its text at `83dfd58`.
 - **AC-02.** The behaviour corpus run on the result equals its run on the baseline, input by input: exit code, standard
   error, and standard output's hash.
-- **AC-03.** Every test function collected at the baseline is collected on the result with the same number of cases; the
-  only names added are the five new tests; exactly one strict xfail remains, and nothing is skipped.
+- **AC-03.** Every test function collected at the baseline is collected on the result with the same number of cases and
+  the same literal constants in its decorators, its body, and any module-level case table a decorator names, leaving
+  aside every docstring inside it, patched attribute names, and `parametrize` argument names; the only names added are
+  the five new tests; exactly one strict xfail remains, and nothing is skipped.
 - **AC-04.** Every test name cited in `AMBIGUITIES.md`, `MOVEMENT.md`, `REJECTED.md`, `NUMBERS.md`, and
   `OUTPUT_TARGET.md` is defined under `tests/`.
-- **AC-05.** `git diff 83dfd58 -- AMBIGUITIES.md NUMBERS.md REJECTED.md MOVEMENT.md OUTPUT_TARGET.md challenge-raw.md`
-  is empty, and `WORKLOG.md` only gains entries.
+- **AC-05.**
+  `/usr/bin/git diff 83dfd58 -- AMBIGUITIES.md NUMBERS.md REJECTED.md MOVEMENT.md OUTPUT_TARGET.md challenge-raw.md` is
+  empty, and `WORKLOG.md` only gains entries.
 - **AC-06.** pyright strict reports 0 errors; `src/` holds no `assert`, `Any`, `cast`, `# type: ignore`, or `# noqa`.
 - **AC-07.** pylint `too-many-ancestors` with `max-parents = 0` passes on `src` and `tests`, and fails on the baseline.
 - **AC-08.** Every public module-level function in `src/` is one of `parse_event_id`, `is_aed`, `apply_settlement`,
@@ -47,13 +50,14 @@ Each criterion names its proof; `delivery.md` cites each by its identifier.
   `find_history_of` functions do not exist.
 - **AC-11.** `application/ports.py` declares `EventSource`, `ReportSink`, and `RunLedger`; `CsvFileSource` and
   `TextReportSink` satisfy them; each package's `ruff.toml` refuses the imports 001 lists, and ruff passes.
-- **AC-12.** Every class in `src/` is frozen and slotted, save `Ok`, `Err`, the `Enum`s, and the `Protocol`s; no module
-  holds a mutable container at module level.
+- **AC-12.** Every `class` in `src/` is `@dataclass(frozen=True, slots=True)`, save `Ok`, `Err`, the `Enum`s, and the
+  `Protocol`s; no module in `src/` binds a `dict`, `list`, or `set`, by literal or by call, at module level.
 - **AC-13.** The `.py` files under `src/account_ledger/` and `tests/` are exactly those 001's trees list.
 - **AC-14.** The architecture, the application README, the root README, and the trade-offs document name only modules,
-  types, and functions that exist; the doc sweep reports no removed name outside `plans/`.
+  types, and functions that exist; the doc sweep reports no removed name outside `plans/done/` and this plan.
 - **AC-15.** `003-operations.md` states four cases and No Inheritance, `python-standards.md` summarizes it within 750
-  words, and the word-budget, directory-map, and rules gates pass.
+  words, and `./rhino governance word-budget validate`, `./rhino governance directory-map validate`, and
+  `./rhino md internal-link validate` pass.
 - **AC-16.** Each phase ends with its gate passing, one commit or more pushed to `origin/main`, a `WORKLOG.md` entry,
   and an Execution Record line.
 

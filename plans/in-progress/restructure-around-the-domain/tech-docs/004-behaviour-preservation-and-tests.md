@@ -38,8 +38,9 @@ python3 local-tmp/restructure/corpus.py apps/account-ledger-cli \
   | diff -I '^#' plans/in-progress/restructure-around-the-domain/evidence/phase-0-corpus.txt -
 ```
 
-The baseline copy shares the working tree's `.venv` through `uv run --no-sync` from the application directory, and runs
-with `PYTHONPATH` set to its own `src`, so it runs the baseline code on the same interpreter.
+Every run uses the working tree's interpreter, `apps/account-ledger-cli/.venv/bin/python`, with `PYTHONPATH` set to the
+given application's `src`, so the baseline copy, which `git archive` gives no `.venv`, runs its own code on the same
+interpreter.
 
 The inputs, each written by the script into a temporary directory and named by a relative path, so no absolute path
 reaches standard error:
@@ -62,9 +63,9 @@ reaches standard error:
 Every phase gate runs the corpus against the working tree and compares it with the Phase 0 record; any difference fails
 the gate. Phase 8 writes `evidence/phase-8-corpus.txt` and proves it equal (AC-02).
 
-Two effects cannot run in the corpus, because they depend on the terminal: the closed pipe (exit 141) and the interrupt
-(exit 130). The unit tests that prove both today keep proving them, and the integration test that runs `main` on the
-real descriptors keeps running it.
+Two effects stay out of the corpus, because each needs the run disturbed while it prints: the closed pipe (exit 141) and
+the interrupt (exit 130). The unit tests and the e2e test that prove both today, the e2e one through `os.pipe`, keep
+proving them, and the integration test that runs `main` on the real descriptors keeps running it.
 
 ## The Test Inventory
 
@@ -77,7 +78,14 @@ a parametrized case's ID may follow a renamed argument. Phase 8 records `evidenc
 
 - every Phase 0 name is present with the same number of cases (AC-03);
 - the only names added are the new tests listed below;
-- the known weakness is still the one strict xfail, and nothing is skipped.
+- the known weakness is still the one strict xfail, and nothing is skipped;
+- every Phase 0 name keeps its literals: `local-tmp/restructure/test_literals.py` reads each test function with `ast`
+  and lists the literal constants of its decorators, its body, and any upper-case module-level case table a decorator
+  names, leaving out every docstring inside it, the attribute name a `monkeypatch.setattr` patches, and the argument
+  names a `pytest.mark.parametrize` declares, each of which names code rather than a case, so a changed input or
+  expected value fails the compare while a call that follows the new API does not. Phase 0 records
+  `evidence/phase-0-literals.txt` from the baseline copy, every gate compares, and Phase 8 records
+  `evidence/phase-8-literals.txt`.
 
 What a moved test may change, and what it may not:
 
@@ -104,13 +112,16 @@ Today it reports 60 cited, 115 defined, none missing. It runs at every phase gat
 Each is written first and seen to fail for the stated reason before the code that passes it, one behaviour per cycle,
 per [test-driven development](../../../../repo-governance/development/quality/testing/test-driven-development.md):
 
+Where the code a test calls does not exist yet, its RED adds a stub whose wrong answer the assertion catches, so every
+RED fails on its assertion, never on an import or an error:
+
 | Test, in the file it lands in                                                        | Fails first because        |
 | ------------------------------------------------------------------------------------ | -------------------------- |
-| `domain/ledger/test_ledger.py`: `test_an_event_on_an_unconfigured_account_is_an_…`   | today's `assert` raises    |
-| `unit/test_cli.py`: `test_an_unknown_account_exits_2_naming_it`                      | `run_cli` has no such line |
-| `domain/model/test_money.py`: `test_taking_all_of_a_hold_or_more_leaves_nothing`     | `AmountIn` has no `take`   |
-| `domain/model/test_money.py`: `test_a_zero_change_has_no_direction`                  | no `make_directed_amount`  |
-| `domain/model/test_events.py`: `test_instalments_refuse_parts_whose_number_is_not_…` | `Instalments` has no parts |
+| `domain/ledger/test_ledger.py`: `test_an_event_on_an_unconfigured_account_is_an_…`   | a stub keeps the ledger    |
+| `unit/test_cli.py`: `test_an_unknown_account_exits_2_naming_it`                      | a stub prints another line |
+| `domain/model/test_money.py`: `test_taking_all_of_a_hold_or_more_leaves_nothing`     | a stub `take` keeps it all |
+| `domain/model/test_money.py`: `test_a_zero_change_has_no_direction`                  | a stub gives `None` always |
+| `domain/model/test_events.py`: `test_instalments_refuse_parts_whose_number_is_not_…` | no guard: `DID NOT RAISE`  |
 
 The two shortened names are `test_an_event_on_an_unconfigured_account_is_an_internal_fault` and
 `test_instalments_refuse_parts_whose_number_is_not_the_count`.

@@ -5,7 +5,8 @@ Every material decision behind the restructure, as
 were settled with the owner at the pre-write gate, one question each, on 2026-09-25. R15, R16, R19, and R21 follow from
 a rule or a probe and needed no question. R17, R18, and R20 came out of drafting and were settled on the recommendation,
 because the owner's goal for this plan said not to stop before every phase is done; the final report names them for the
-owner to reopen. Prior art cites this repository first: its rules, its archived plan
+owner to reopen. R22 answers the owner's request during the quality gate for a "very consistent and natural/intuitive"
+result, settled the same way. Prior art cites this repository first: its rules, its archived plan
 `plans/done/2026-09-25__in-memory-account-ledger-init/`, and the commits before `83dfd58`.
 
 ## R1 — The Account Aggregate Is One Class in One Module
@@ -142,7 +143,7 @@ owner to reopen. Prior art cites this repository first: its rules, its archived 
 - **Prior art.** `deletion-with-proof.md` step 5: compare on recorded inputs.
 - **Trade-offs.** A scratch script and two evidence files against a proof that reaches every error path.
 - **Consequences.** Any difference fails a gate inside its phase.
-- **Revisit.** None; the corpus ends with the plan.
+- **Revisit.** A behaviour change surfaces that no corpus input reached, found by a test or a reader.
 
 ## R12 — Module-Level Containers Frozen
 
@@ -152,7 +153,7 @@ owner to reopen. Prior art cites this repository first: its rules, its archived 
 - **Prior art.** `immutability.md` confines mutation to one scope; `DayReport` already holds `MappingProxyType`s.
 - **Trade-offs.** None worth weighing; no reader writes them.
 - **Consequences.** No shared mutable state remains.
-- **Revisit.** None.
+- **Revisit.** A module needs a registry it writes after import.
 
 ## R13 — One Test File per Source Module
 
@@ -200,7 +201,8 @@ owner to reopen. Prior art cites this repository first: its rules, its archived 
 ## R17 — The D8 Table Matches Kind and Rest
 
 - **Evidence.** `FinalSettlement` and `PartialSettlement` only relabel `SettlementKind`, and `_compute_rest` needs an
-  `assert`.
+  `assert`. The probe `local-tmp/restructure/probe_cycle/probe_table.py` matches a (state, kind, rest) triple the same
+  way: pyright strict narrows it to `Never` with 0 errors, and reports an error when a row is removed.
 - **Selected.** `apply_settlement(state, kind, amount)` matches the state, the kind, and what `take` leaves of the hold;
   the settlement inputs go.
 - **Alternatives.** Keep the inputs and add `take` beside them; a guard boolean, as today.
@@ -225,12 +227,13 @@ owner to reopen. Prior art cites this repository first: its rules, its archived 
 - **Evidence.** Reading every module found parenthesized single imports, a wrapped `if (day == today):`, forwarding
   wrappers in the report, repeated tuples in the renderer, faults defined after their users, and two meanings of
   `ACC_001` in the test support.
-- **Selected.** Each fixed in Phase 6, with no behaviour change.
+- **Selected.** Each fixed in Phase 6, with no behaviour change, save the report's two forwarding wrappers, which go in
+  Phase 4 with the module they sit in, since moving them only to delete them later is wasted work.
 - **Alternatives.** Leave them; fix them in each phase as met.
 - **Prior art.** The earlier readability commits in the log.
 - **Trade-offs.** A phase against a mixed diff in every other.
 - **Consequences.** Phase 6 holds only polish.
-- **Revisit.** None.
+- **Revisit.** A later change brings back a pattern Phase 6 removed, such as a forwarding wrapper.
 
 ## R20 — TextOutput for the Streams
 
@@ -254,4 +257,19 @@ owner to reopen. Prior art cites this repository first: its rules, its archived 
 - **Trade-offs.** Phases 1 to 4 run against a rule that still describes bases, against no rule describing code that does
   not exist.
 - **Consequences.** Between Phase 1 and Phase 5, review reads the plan's rule, not the file's.
-- **Revisit.** None.
+- **Revisit.** A rule must bind before its code exists, such as a gate that has to stop the code being written.
+
+## R22 — Names That Follow Five Patterns, and Support Split Into Builders and Readers
+
+- **Evidence.** The owner asked on 2026-09-25 that the result be "very consistent and natural/intuitive". The target
+  already names modules for their concepts, but `tests/support/streams.py` both builds streams and reads logs, and
+  `tests/support/states.py` reads logs under the name of a source module the plan deletes.
+- **Selected.** The five patterns of [the target layout](001-target-layout.md#how-the-names-read), and
+  `tests/support/entries.py` for every log reader, so each support module is a builder or a reader, save `results.py`'s
+  one unwrapping helper.
+- **Alternatives.** Leave the support modules; mirror them on the source (`support/account.py`, `support/ledger.py`).
+- **Prior art.** The source already separates what builds a value (`make`, `parse`) from what reads one (`list_`,
+  `find_`); the verb lists enforce it per function.
+- **Trade-offs.** Thirteen test modules change an import, against one place to look for any log reader.
+- **Consequences.** Phase 6 moves the readers; the literal compare proves no test changed a case.
+- **Revisit.** A support module grows past about 300 lines or starts serving one test file only.

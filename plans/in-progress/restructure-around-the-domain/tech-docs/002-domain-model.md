@@ -175,7 +175,7 @@ module, grouped by topic in this order; `history` in today's code reads as `self
 
 | Topic          | Public methods                       | Private methods, each today's function of the same name    |
 | -------------- | ------------------------------------ | ---------------------------------------------------------- |
-| entries        | `list_instalments(credit)`           | `_find_entry`, `_list_counted_events`, `_with_entry`,      |
+| entries        | `list_instalments(credit)`           | `_find_entry`, `_list_counted_events`, `_append_entry`,    |
 |                |                                      | `_make_zero`                                               |
 | balances       | `compute_closing(day)`,              | `_list_effects`, `_list_moved_amounts`,                    |
 |                | `compute_available(day)`             | `_list_undone_amounts`                                     |
@@ -200,8 +200,8 @@ module, grouped by topic in this order; `history` in today's code reads as `self
   `_record_interest_change(account_id, day, today, direction, amount)`, which takes what `make_directed_amount` gives.
 - `sum_money(type(history.account.opening).make_zero(), …)` becomes `self._make_zero().add_all(…)`, and
   `compute_daily_interest(base)` becomes `base.compute_daily_interest()`.
-- `_with_entry(entry)` replaces `AccountHistoryIn.append` inside `assess_fees`, its one caller; it is private, and every
-  entry the aggregate builds carries `self.id`, so the entry-on-its-own-account `assert` goes.
+- `_append_entry(entry)` replaces `AccountHistoryIn.append` inside `assess_fees`, its one caller; it is private, and
+  every entry the aggregate builds carries `self.id`, so the entry-on-its-own-account `assert` goes.
 
 The module is long, about 650 lines, by the owner's choice of one class in one file (R1); it passes the complexity gates
 because each method stays the size of the function it replaces.
@@ -237,7 +237,7 @@ object that sees every account (R6), and `Ledger.open(config)` starts it with an
 | `_compute_rest`: the rest is above zero       | `AmountIn.take` gives the rest or `None`; the table matches   |
 | `_record_interest_change`: change is not zero | `make_directed_amount` gives `None` at zero                   |
 | `process_event`: the account is configured    | `Ledger._find_opening` returns `Err(UnknownAccount)`          |
-| `AccountHistoryIn.append`: the entry is its   | `_with_entry` is private, and every entry is built from       |
+| `AccountHistoryIn.append`: the entry is its   | `_append_entry` is private, and every entry is built from     |
 | own account's                                 | `self.id`                                                     |
 
 `_find_interest_changes` already skips a zero change, so `make_directed_amount` never gives `None` there; the `None` is

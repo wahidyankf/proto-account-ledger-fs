@@ -44,7 +44,7 @@ follow the new API. Each file below binds at the unit boundary unless its path s
 - = Preserve: every current test, by name, with its cases.
 - → Bindings: the unit suite.
 - ✓ Proof: `npx nx run account-ledger-cli:test:unit`.
-- Phase 1.
+- Phase 1; the `take` line, Phase 2.
 
 ### [N] `tests/unit/domain/model/test_events.py`
 
@@ -67,15 +67,16 @@ Phase 1.
 From `tests/unit/test_fees.py`, `test_interest.py`, `test_reversals.py`, and `test_authorizations.py`, merged.
 
 ```diff
-- history = find_history(log, ACC_001)
-- assert sum_holds(history, Day(3)) == Ok(make_aed("185.00"))
-+ account = Ledger(CHALLENGE, log).find_account(ACC_001_OPENING)
-+ assert account.sum_holds(Day(3)) == Ok(make_aed("185.00"))
+- assert unwrap_ok(find_history(log, ACC_001).sum_holds(Day(2))) == make_aed("0.00")
++ assert unwrap_ok(Ledger(CHALLENGE, log).find_account(ACC_001).sum_holds(Day(2))) == make_aed("0.00")
 ```
+
+The tests already call the aggregate's methods, so Phase 2 moves them without changing a call; Phase 3 changes the call
+as shown, and Phase 6 renames the opening `ACC_001_OPENING`.
 
 - = Preserve: every test, in the files' current order, grouped under a comment naming its topic.
 - Moved elsewhere: the AMB-036 test to `test_ledger.py`; the two table tests to `test_authorizations.py`.
-- ✓ Proof: `test:unit`. Phase 2.
+- ✓ Proof: `test:unit`. Phase 2 moves the tests; Phase 3 changes the call.
 
 ### [N] `tests/unit/domain/account/test_authorizations.py`
 
@@ -156,14 +157,16 @@ Its test keeps reading the shipped file from disk, through `CsvFileSource.parse`
 
 ### [M] `tests/integration/test_main.py` → `tests/integration/test_cli.py`
 
-Its two tests keep running `main` on the real descriptors, at the integration boundary. ✓ Proof: `test:integration`.
-Phase 4.
+Its two tests keep running `main` on the real descriptors, at the integration boundary; its imports of `render_reports`
+and `process_stream`, which build the expected report, become `TextReportSink.render` and `IncomingStream`. ✓ Proof:
+`test:integration`. Phase 4.
 
-### [E] `tests/e2e/test_program.py`, `tests/support/*.py`
+### [E] `tests/support/*.py`
 
-`test_program.py` changes only the import of the render function it compares with; the support modules follow the new
-API, and `streams.py`'s `ACC_001`, an opening, becomes `ACC_001_OPENING` beside `brief_stream.py`'s `ACC_001`, an ID
-(polish, R19). ✓ Proof: `npx nx run account-ledger-cli:test:e2e`. Phases 1 to 6, as each API lands.
+The support modules follow the new API; the log readers of `states.py` and `streams.py` join the new `entries.py`, and
+`states.py` goes, so `streams.py` only builds (R22, Phase 6); and `streams.py`'s `ACC_001` and `ACC_002`, openings,
+become `ACC_001_OPENING` and `ACC_002_OPENING` beside `brief_stream.py`'s `ACC_001` and `ACC_002`, IDs (polish, R19). ✓
+Proof: `npx nx run account-ledger-cli:test:unit` and `test:integration`. Phases 1 to 6, as each API lands.
 
 ## Architecture
 
@@ -211,6 +214,12 @@ it, so no rule describes code that does not exist yet.
 ### [E] `repo-governance/development/quality/stacks/python-standards/003-operations.md`
 
 ```diff
+- description: ... and gives kinds of one concept a shared base when they share behaviour or the fields ...
++ description: ... names the few cases that stay functions, and allows no class inheritance.
+- when_to_use: ... or when several frozen dataclasses of one concept repeat the same fields or the same code.
++ when_to_use: ... or when a class would derive from another.
+- value, or a rule its aggregate answers, called as `history.list_instalments(credit)` or `money.format_digits()`.
++ value, or a rule its aggregate answers, called as `account.list_instalments(credit)` or `money.format_digits()`.
 - 3. **No class to hold it:** its subject is a type alias such as a tuple or a mapping, it builds one of a union's kinds
 + 3. **No class to hold it:** it builds one of a union's kinds
 - 4. **A service:** it runs across aggregates, such as processing an event or closing a day.
@@ -241,8 +250,8 @@ it, so no rule describes code that does not exist yet.
 + The `lint`, `typecheck`, and `test:*` Nx targets enforce the gates, inheritance included, in hooks.
 ```
 
-- The file holds 749 of its 750 words today, so each replacement is no longer than the text it replaces, counted with
-  `./rhino governance word-budget validate` before the commit.
+- The file holds 749 of its 750 words today; the summary shrinks and the Enforcement sentence grows by two words, and
+  the file's total stays within 750, checked with `./rhino governance word-budget validate` before the commit.
 
 ### [E] `repo-governance/development/quality/stacks/python-standards/README.md`
 
@@ -256,9 +265,13 @@ it, so no rule describes code that does not exist yet.
 ```diff
 - `parse_stream`, `_format_amount`, or `compute_closing`, never a bare noun like `_amount` or a bare verb like
 + `parse_event_id`, `_format_amount`, or `compute_closing`, never a bare noun like `_amount` or a bare verb like
+- ambiguous; ... Magic methods, a method overriding a library's (`write` on an `io` subclass), a `@property`, ...
++ ambiguous; ... Magic methods, a `@property`, ...
 ```
 
-Reason: `parse_stream` becomes `CsvFileSource.parse`. `AccountIn[M]` and `Account`, its other examples, keep their
+Reason: `parse_stream` becomes `CsvFileSource.parse`. No class derives from a library's any more, save a `Protocol`, an
+`Enum`, or an exception, so no method overrides a library's; the exemption goes with its last case, `ClosedPipe`'s
+`write` (R20), and `flush` joins the verb lists instead. `AccountIn[M]` and `Account`, its other examples, keep their
 meaning, now the aggregate's.
 
 ### [E] `apps/account-ledger-cli/pyproject.toml`
@@ -272,11 +285,12 @@ meaning, now the aggregate's.
 + ignored-parents = ["typing.Protocol", "typing.Generic", "enum.Enum", "builtins.NoneType", "builtins.Exception",
 +                    "builtins.BaseException"]
 - function-rgx = "^_?(accrue|add|advance|...|derive|...|sign|...)(_[a-z0-9]+)+$"
-+ function-rgx = "^_?(accrue|add|advance|...|open|...|publish|...)(_[a-z0-9]+)+$"
++ function-rgx = "^_?(accrue|add|advance|...|flush|...|open|...|publish|...)(_[a-z0-9]+)+$"
 ```
 
-- The verbs `open` (`Ledger.open`) and `publish` (`ReportSink.publish`) join both lists; `derive` and `sign` leave them
-  once nothing uses them, in the phase that removes their last user.
+- The verbs `open` (`Ledger.open`, Phase 3), `publish` (`ReportSink.publish`, Phase 4), and `flush` (`TextOutput.flush`
+  and the test double's, Phase 4) join both lists; `derive` and `sign` leave them once nothing uses them, in the phase
+  that removes their last user.
 - ✓ Proof: the RED run in Phase 5 flags today's twenty-plus derived classes on the baseline copy and nothing on the
   working tree.
 
@@ -285,6 +299,9 @@ meaning, now the aggregate's.
 ### [E] `apps/account-ledger-cli/README.md`
 
 ```diff
+- | `src/account_ledger/domain/`   | the domain, in DDD terms: `model/`, `account/`, `ledger/`, and the report       |
++ | `src/account_ledger/domain/`   | the domain, in DDD terms: `model/`, `account/`, and `ledger/`                   |
++ | `src/account_ledger/challenge.py` | the brief's configuration, which `main` runs                                 |
 - | `src/account_ledger/cli.py`    | imperative shell: `run_cli` injects every effect; `main` binds the real ones    |
 - | `src/account_ledger/adapters/` | pure translators: `stream_csv` reads the stream, `render` writes the report     |
 + | `src/account_ledger/cli.py`    | the shell: `run_cli` takes every effect and the use case; `main` binds them     |
@@ -296,8 +313,18 @@ meaning, now the aggregate's.
 + `tests/unit/application/test_stream.py` holds the brief's one failing test
 ```
 
-- The DDD paragraph under the layout names the new packages; the sentence after the exit table adds the unknown
-  account's line. Phases 4 and 7.
+- The exit row and the sentence after the table, which adds the unknown account's line: Phase 3. The layout rows, the
+  DDD paragraph under the layout, which names the new packages, and the weakness's path: Phase 4. Phase 7 reads the
+  whole file against the tree.
+
+### [E] `README.md`
+
+```diff
++ The code is layered: the domain, the application with its ports, the adapters, and the shell, each allowed to import
++ only the layers below it, as the [architecture](specs/apps/account-ledger/cli/architecture.md) draws.
+```
+
+One sentence, a paragraph of its own after the opening one. Phase 7.
 
 ### [E] `docs/explanation/architecture-trade-offs.md`
 
@@ -316,7 +343,7 @@ Its directory map lists this plan while it is in progress; the archival move tak
 
 ### Unchanged, Checked
 
-`README.md`, `AGENTS.md`, `docs/` other than the trade-offs doc, `AMBIGUITIES.md`, `NUMBERS.md`, `REJECTED.md`,
-`MOVEMENT.md`, `OUTPUT_TARGET.md`, and `challenge-raw.md` name no module, function, or test file, and stay as they are;
-the Phase 7 doc sweep reads every Markdown file for a name the restructure removed and proves none remains outside
-`plans/done/` and this plan.
+`AGENTS.md`, `docs/` other than the trade-offs doc, `AMBIGUITIES.md`, `NUMBERS.md`, `REJECTED.md`, `MOVEMENT.md`,
+`OUTPUT_TARGET.md`, and `challenge-raw.md` name no module, function, or test file, and stay as they are; the Phase 7 doc
+sweep reads every Markdown file for a name the restructure removed and proves none remains outside `plans/done/` and
+this plan.

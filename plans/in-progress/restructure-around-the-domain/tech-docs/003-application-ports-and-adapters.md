@@ -79,7 +79,7 @@ The read model, moved out of `domain/` because it serves the report, not a rule 
   `DayReport`'s fields stay as they are, so the renderer reads the same values.
 - The private builders stay private functions of the module, taking the `Ledger` where they took the log and config.
   `_compute_closing` and `_compute_available`, which only forward to a method, go: `_map_balances` takes the lambdas
-  `lambda account, day: account.compute_closing(day)` and its twin (polish, R19).
+  `lambda account, day: account.compute_closing(day)` and its twin (R19: they go with the move, in Phase 4).
 - `_map_histories` becomes `ledger.list_accounts()`, keyed by `account.id`, in the configured order as today.
 
 ## `adapters/csv_file.py`
