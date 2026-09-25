@@ -11,6 +11,7 @@ from account_ledger.cli import main
 from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.replay import replay_stream
 from support.brief_stream import build_brief_stream
+from support.results import unwrap_ok
 
 APP = Path(__file__).resolve().parents[2]
 
@@ -32,7 +33,7 @@ def test_main_reads_a_real_file_and_reports_a_missing_one(
     missing_exit_code = main()
 
     assert (captured_output.out, captured_output.err, read_exit_code) == (
-        render_reports(replay_stream(build_brief_stream(), CHALLENGE).reports),
+        render_reports(unwrap_ok(replay_stream(build_brief_stream(), CHALLENGE)).reports),
         "",
         0,
     )

@@ -4,6 +4,7 @@ No ``Decimal`` leaves this module: values are built from text through ``parse``,
 happens here.
 """
 
+from collections.abc import Iterable
 from dataclasses import dataclass
 from decimal import ROUND_DOWN, ROUND_HALF_EVEN, Decimal, InvalidOperation
 from enum import Enum
@@ -186,21 +187,26 @@ def try_narrow_currency[M: (Aed, Bhd)](sample: M, money: Money) -> Result[M, Cur
     """Narrow a value known only as ``Money`` to the currency of ``sample``."""
     if isinstance(money, type(sample)):
         return Ok(money)
-    return Err(CurrencyMismatch(expected_currency=get_currency(sample), found_currency=get_currency(money)))
+    return Err(_make_mismatch(sample, money))
 
 
 DAILY_RATE = Decimal("0.0004")
 
 
-def narrow_currency[M: (Aed, Bhd)](sample: M, money: Money) -> M:
-    """``sample``'s currency's own value of ``money``; a mismatch is a bug the reader prevents."""
-    match try_narrow_currency(sample, money):
-        case Ok(narrowed_money):
+def _make_mismatch(expected_money: Money, found_money: Money) -> CurrencyMismatch:
+    """The fault for a value of one currency met where the other's was required."""
+    return CurrencyMismatch(expected_currency=get_currency(expected_money), found_currency=get_currency(found_money))
+
+
+def sum_money[M: (Aed, Bhd)](start: M, moneys: Iterable[Money]) -> Result[M, CurrencyMismatch]:
+    """``start`` plus every value, each of ``start``'s currency, or the first value of another; the reader keeps every
+    effect in its account's currency, so only a bug returns the mismatch."""
+    total = start
+    for money in moneys:
+        if isinstance(narrowed_money := try_narrow_currency(start, money), Err):
             return narrowed_money
-        case Err(mismatch):
-            raise ValueError(
-                f"an {mismatch.found_currency} effect on an {mismatch.expected_currency} account"
-            )  # the reader makes this unreachable
+        total = total + narrowed_money.value
+    return Ok(total)
 
 
 def _get_minor_unit(money: Money) -> Decimal:
@@ -284,28 +290,30 @@ def make_amount_of(money: Money) -> Result[Amount[Aed] | Amount[Bhd], NotPositiv
             return Amount.make(money)
 
 
-def compute_rest_of(hold: Amount[Aed] | Amount[Bhd], taken_amount: Amount[Aed] | Amount[Bhd]) -> Money:
-    """What a hold keeps once an amount of its own currency is taken; a mismatch is a bug the reader prevents."""
+def compute_rest_of(
+    hold: Amount[Aed] | Amount[Bhd], taken_amount: Amount[Aed] | Amount[Bhd]
+) -> Result[Money, CurrencyMismatch]:
+    """What a hold keeps once an amount of its own currency is taken, or the mismatch a bug would bring."""
     match (hold.money, taken_amount.money):
         case (Aed() as hold_money, Aed() as taken_money):
-            return hold_money - taken_money
+            return Ok(hold_money - taken_money)
         case (Bhd() as hold_money, Bhd() as taken_money):
-            return hold_money - taken_money
+            return Ok(hold_money - taken_money)
         case _:
-            raise ValueError(f"{get_currency(taken_amount.money)} taken from {get_currency(hold.money)}")
+            return Err(_make_mismatch(hold.money, taken_amount.money))
 
 
 def sum_amounts(
     first_amount: Amount[Aed] | Amount[Bhd], second_amount: Amount[Aed] | Amount[Bhd]
-) -> Amount[Aed] | Amount[Bhd]:
-    """Two amounts of one currency added, above zero as both are; a mismatch is a bug the reader prevents."""
+) -> Result[Amount[Aed] | Amount[Bhd], CurrencyMismatch]:
+    """Two amounts of one currency added, above zero as both are, or the mismatch a bug would bring."""
     match (first_amount.money, second_amount.money):
         case (Aed() as first_money, Aed() as second_money):
-            return Amount(first_money + second_money)
+            return Ok(Amount(first_money + second_money))
         case (Bhd() as first_money, Bhd() as second_money):
-            return Amount(first_money + second_money)
+            return Ok(Amount(first_money + second_money))
         case _:
-            raise ValueError(f"{get_currency(first_amount.money)} added to {get_currency(second_amount.money)}")
+            return Err(_make_mismatch(first_amount.money, second_amount.money))
 
 
 def format_digits(money: Money) -> str:
@@ -313,10 +321,10 @@ def format_digits(money: Money) -> str:
     return str(money.value)
 
 
-def is_below(money: Money, amount: Amount[Aed] | Amount[Bhd]) -> bool:
-    """Whether a balance is below an amount of its own currency; a mismatch is a bug the reader prevents."""
+def is_below(money: Money, amount: Amount[Aed] | Amount[Bhd]) -> Result[bool, CurrencyMismatch]:
+    """Whether a balance is below an amount of its own currency, or the mismatch a bug would bring."""
     match (money, amount.money):
         case (Aed(), Aed()) | (Bhd(), Bhd()):
-            return money.value < amount.money.value
+            return Ok(money.value < amount.money.value)
         case _:
-            raise ValueError(f"{get_currency(money)} compared with {get_currency(amount.money)}")
+            return Err(_make_mismatch(money, amount.money))

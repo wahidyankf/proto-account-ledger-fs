@@ -76,18 +76,20 @@ closed exit vocabulary, standard output for the report and standard error for ev
 signal statuses. The floor tier has no `--help`, so this table publishes the statuses instead; that is the adaptation
 D13 records.
 
-| Status | When                                      | Standard output | Standard error                           |
-| ------ | ----------------------------------------- | --------------- | ---------------------------------------- |
-| `0`    | the replay completed, refusals included   | the report      | nothing                                  |
-| `2`    | no argument, or more than one             | nothing         | `usage: account-ledger-cli <stream.csv>` |
-| `2`    | the file cannot be read                   | nothing         | `error: cannot read PATH: REASON`        |
-| `2`    | the stream is malformed                   | nothing         | `error: line N: ...`                     |
-| `2`    | any other failure, never with a traceback | nothing         | `error: internal failure: TYPE`          |
-| `141`  | output closed early, as by `\| head`      | what was taken  | nothing                                  |
-| `130`  | interrupted                               | what was taken  | nothing                                  |
+| Status | When                                         | Standard output | Standard error                           |
+| ------ | -------------------------------------------- | --------------- | ---------------------------------------- |
+| `0`    | the replay completed, refusals included      | the report      | nothing                                  |
+| `2`    | no argument, or more than one                | nothing         | `usage: account-ledger-cli <stream.csv>` |
+| `2`    | the file cannot be read                      | nothing         | `error: cannot read PATH: REASON`        |
+| `2`    | the stream is malformed                      | nothing         | `error: line N: ...`                     |
+| `2`    | a currency mismatch, which only a bug brings | nothing         | `error: internal: ...`                   |
+| `2`    | any other failure, never with a traceback    | nothing         | `error: internal failure: TYPE`          |
+| `141`  | output closed early, as by `\| head`         | what was taken  | nothing                                  |
+| `130`  | interrupted                                  | what was taken  | nothing                                  |
 
-`REASON` is `no such file` for a missing file and the operating system's message otherwise. Both streams are written as
-UTF-8 whatever the locale, because the report prints `−` (U+2212) for a negative amount.
+`REASON` is `no such file` for a missing file and the operating system's message otherwise. A currency mismatch prints
+`error: internal: FOUND met where EXPECTED was required`. Both streams are written as UTF-8 whatever the locale, because
+the report prints `−` (U+2212) for a negative amount.
 
 ## Known Weakness
 

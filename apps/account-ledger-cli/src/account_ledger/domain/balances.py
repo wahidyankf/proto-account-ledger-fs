@@ -27,7 +27,8 @@ from account_ledger.domain.model.events import (
     Whole,
 )
 from account_ledger.domain.model.ids import AccountId, Day
-from account_ledger.domain.model.money import Aed, Bhd, Money, narrow_currency
+from account_ledger.domain.model.money import Aed, Bhd, CurrencyMismatch, Money, sum_money
+from account_ledger.domain.model.result import Err, Result
 
 
 def _list_effects(log: Log, account_id: AccountId) -> list[tuple[Day, Money]]:
@@ -77,28 +78,27 @@ def _list_undone_amounts(log: Log, target: LoggedEvent) -> tuple[Money, ...]:
             return _list_moved_amounts(log, target)
 
 
-def compute_closing[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> M:
+def compute_closing[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> Result[M, CurrencyMismatch]:
     """The opening plus the effect of every counted entry for the account with value day <= day."""
-    total = account.opening
-    for value_day, effect in _list_effects(log, account.id):
-        if value_day <= day:
-            total = total + narrow_currency(total, effect)
-    return total
+    effects = [effect for value_day, effect in _list_effects(log, account.id) if value_day <= day]
+    return sum_money(account.opening, effects)
 
 
-def compute_available[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> M:
+def compute_available[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> Result[M, CurrencyMismatch]:
     """The closing less the holds."""
-    return compute_closing(log, account, day) - sum_holds(log, account, day)
+    if isinstance(closing := compute_closing(log, account, day), Err):
+        return closing
+    return sum_holds(log, account, day).map(lambda holds: closing.value - holds)
 
 
-def compute_available_of(log: Log, account: AnyAccount, day: Day) -> Money:
+def compute_available_of(log: Log, account: AnyAccount, day: Day) -> Result[Money, CurrencyMismatch]:
     """``compute_available`` for an account whose currency is known only at run time."""
     if is_aed(account):
         return compute_available(log, account, day)
     return compute_available(log, account, day)
 
 
-def compute_closing_of(log: Log, account: AnyAccount, day: Day) -> Money:
+def compute_closing_of(log: Log, account: AnyAccount, day: Day) -> Result[Money, CurrencyMismatch]:
     """``compute_closing`` for an account whose currency is known only at run time."""
     # The branches read alike, but pyright binds M to Aed in the first and to Bhd in the second.
     if is_aed(account):

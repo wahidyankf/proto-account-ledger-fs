@@ -4,6 +4,7 @@ from typing import assert_never
 
 from account_ledger.domain.authorizations import (
     AuthorizationState,
+    NoTransition,
     apply_trigger,
     decide_authorization,
     derive_trigger,
@@ -35,46 +36,65 @@ from account_ledger.domain.model.events import (
     Settlement,
 )
 from account_ledger.domain.model.ids import Day, InstalmentCount, InstalmentId
-from account_ledger.domain.model.money import split_amount_of
-from account_ledger.domain.model.result import Err, Ok
+from account_ledger.domain.model.money import CurrencyMismatch, split_amount_of
+from account_ledger.domain.model.result import Err, Ok, Result
 from account_ledger.domain.reversals import check_reversal
 
 
-def process_event(log: Log, event: IncomingEvent, today: Day, config: LedgerConfig) -> Log:
+def process_event(log: Log, event: IncomingEvent, today: Day, config: LedgerConfig) -> Result[Log, CurrencyMismatch]:
     """The log with the event's entry appended; ``today`` is the day it is processed on (AMB-015)."""
     known_entry = find_first_entry(log, event.id)  # the event ID is the idempotency key (AMB-034)
     if known_entry is not None:
         if known_entry.event == event:
-            return append_entry(log, Duplicate(event, today))
-        return append_entry(log, Rejected(event, today, IdReused()))
+            return Ok(append_entry(log, Duplicate(event, today)))
+        return Ok(append_entry(log, Rejected(event, today, IdReused())))
     match event:
         case Credit(posting=Instalments(count=count)):
-            return append_entry(log, Accepted(event, today)) + _fire_instalments(event, count, today)
+            return Ok(append_entry(log, Accepted(event, today)) + _fire_instalments(event, count, today))
         case Credit() | Debit():
-            return append_entry(log, Accepted(event, today))
+            return Ok(append_entry(log, Accepted(event, today)))
         case Reversal():
-            return append_entry(log, _decide_reversal(log, event, today))
+            return Ok(append_entry(log, _decide_reversal(log, event, today)))
         case Authorization():
-            account = config.find_account(event.account)
-            assert account is not None  # the stream reader refuses an account the ledger does not hold
-            decision = decide_authorization(compute_available_of(log, account, today), event.amount)
-            return append_entry(log, AuthorizationDecided(event, today, decision))
+            return _decide_authorization_entry(log, event, today, config).map(lambda entry: append_entry(log, entry))
         case Settlement():
-            record = find_record(log, event)
-            if record is None:  # an unknown authorization has no transition either (AMB-012)
-                return append_entry(log, SettlementAccepted(event, today, ForcePosted()))
-            return append_entry(log, SettlementAccepted(event, today, _decide_effect(record.state, event)))
+            return _decide_settlement_entry(log, event, today).map(lambda entry: append_entry(log, entry))
         case _:
             assert_never(event)
 
 
-def _decide_effect(state_before: AuthorizationState, settlement: Settlement) -> Captured | ForcePosted:
+def _decide_authorization_entry(
+    log: Log, authorization: Authorization, today: Day, config: LedgerConfig
+) -> Result[AuthorizationDecided, CurrencyMismatch]:
+    """The authorization's decision, from the account's available balance when it arrives (AMB-008, AMB-009)."""
+    account = config.find_account(authorization.account)
+    assert account is not None  # the stream reader refuses an account the ledger does not hold
+    return (
+        compute_available_of(log, account, today)
+        .flat_map(lambda available_balance: decide_authorization(available_balance, authorization.amount))
+        .map(lambda decision: AuthorizationDecided(authorization, today, decision))
+    )
+
+
+def _decide_settlement_entry(
+    log: Log, settlement: Settlement, today: Day
+) -> Result[SettlementAccepted, CurrencyMismatch]:
+    """The settlement, capturing against the authorization it names, or force-posted when there is none (AMB-012)."""
+    record = find_record(log, settlement)
+    if record is None:  # an unknown authorization has no transition either (AMB-012)
+        return Ok(SettlementAccepted(settlement, today, ForcePosted()))
+    return _decide_effect(record.state, settlement).map(lambda effect: SettlementAccepted(settlement, today, effect))
+
+
+def _decide_effect(
+    state_before: AuthorizationState, settlement: Settlement
+) -> Result[Captured | ForcePosted, CurrencyMismatch]:
     """The capture a settlement completes, or a force-post when the table has no transition for it (AMB-029)."""
     match apply_trigger(state_before, derive_trigger(settlement)):
         case Ok(state_after):
-            return Captured(state_before, state_after)
-        case Err():
-            return ForcePosted()
+            return Ok(Captured(state_before, state_after))
+        case Err(fault):
+            return Ok(ForcePosted()) if isinstance(fault, NoTransition) else Err(fault)
 
 
 def _fire_instalments(credit: Credit, count: InstalmentCount, today: Day) -> tuple[Accepted, ...]:

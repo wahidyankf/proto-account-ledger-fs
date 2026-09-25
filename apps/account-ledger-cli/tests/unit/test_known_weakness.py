@@ -7,6 +7,7 @@ import pytest
 from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.ids import Day
 from account_ledger.domain.replay import replay_stream
+from support.results import unwrap_ok
 from support.streams import ACC_001, build_unsettled_auth_a
 
 
@@ -19,6 +20,7 @@ from support.streams import ACC_001, build_unsettled_auth_a
 @pytest.mark.xfail(strict=True, reason="AMB-018: holds never expire, so an unsettled hold is never released")
 def test_known_weakness_an_unsettled_hold_never_lapses() -> None:
     """AMB-018: Auth-A, never settled, should lapse by Day 32, but its hold still reduces the available balance."""
-    day_32 = replay_stream(build_unsettled_auth_a(), replace(CHALLENGE, last_day=Day(32))).find_report(Day(32))
+    replay = unwrap_ok(replay_stream(build_unsettled_auth_a(), replace(CHALLENGE, last_day=Day(32))))
+    day_32 = replay.find_report(Day(32))
 
     assert day_32.available_balances[ACC_001.id] == day_32.closing_balances[ACC_001.id]

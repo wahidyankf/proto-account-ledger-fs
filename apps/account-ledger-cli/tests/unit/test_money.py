@@ -17,7 +17,11 @@ from account_ledger.domain.model.money import (
     TooManyPlaces,
     compute_daily_interest,
     compute_overdraft_fee,
+    compute_rest_of,
+    is_below,
     split_amount,
+    sum_amounts,
+    sum_money,
     try_narrow_currency,
 )
 from account_ledger.domain.model.result import Err, Ok
@@ -68,6 +72,22 @@ def test_aed_and_bhd_values_never_combine() -> None:
         make_aed("1.00") + make_bhd("1.000")  # pyright: ignore[reportOperatorIssue, reportUnusedExpression]
     with pytest.raises(TypeError):
         make_bhd("1.000") - make_aed("1.00")  # pyright: ignore[reportOperatorIssue, reportUnusedExpression]
+
+
+def test_a_sum_or_comparison_across_currencies_returns_the_mismatch() -> None:
+    """Every sum, rest, and comparison of money known only at run time returns a mismatch, never a wrong total; only
+    a bug could bring one, since the reader keeps every effect in its account's currency."""
+    aed_to_bhd = Err(CurrencyMismatch(expected_currency="AED", found_currency="BHD"))
+    aed_amount, bhd_amount = Amount(make_aed("5.00")), Amount(make_bhd("1.000"))
+    assert sum_money(make_aed("1.00"), [make_aed("2.00"), make_aed("0.50")]) == Ok(make_aed("3.50"))
+    assert sum_money(make_aed("1.00"), [make_aed("2.00"), make_bhd("1.000")]) == aed_to_bhd
+    assert sum_amounts(aed_amount, bhd_amount) == aed_to_bhd
+    assert compute_rest_of(aed_amount, bhd_amount) == aed_to_bhd
+    assert is_below(make_aed("1.00"), bhd_amount) == aed_to_bhd
+    assert (sum_amounts(aed_amount, aed_amount), is_below(make_aed("1.00"), aed_amount)) == (
+        Ok(Amount(make_aed("10.00"))),
+        Ok(True),
+    )
 
 
 def test_amb_006_daily_interest_rounds_half_even() -> None:

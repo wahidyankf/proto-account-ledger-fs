@@ -19,12 +19,13 @@ from account_ledger.domain.model.ids import Day
 from account_ledger.domain.model.money import (
     Aed,
     Bhd,
+    CurrencyMismatch,
     Money,
     compute_rest_of,
     is_below,
     make_amount_of,
-    narrow_currency,
     sum_amounts,
+    sum_money,
 )
 from account_ledger.domain.model.result import Err, Ok, Result
 
@@ -83,37 +84,60 @@ class NoTransition:
     """The table has no transition from this state for this trigger, so the state stands."""
 
 
-def apply_trigger(state: AuthorizationState, trigger: Trigger) -> Result[AuthorizationState, NoTransition]:
-    """The declared table (tech-docs 001): one case per source, trigger, and guard."""
-    pair = state, trigger
+def apply_trigger(
+    state: AuthorizationState, trigger: Trigger
+) -> Result[AuthorizationState, NoTransition | CurrencyMismatch]:
+    """The declared table (tech-docs 001): one case per source, trigger, and guard. The guard, whether the capture
+    falls short of the hold, is decided first, so a mismatch a bug would bring is returned rather than hidden in it."""
+    if isinstance(checked_capture := _is_capture_below_hold(state, trigger), Err):
+        return checked_capture
+    is_short, pair = checked_capture.value, (state, trigger)
     match pair:
         case Approved(), SettleFinal(amount=amount):
             return Ok(Settled(amount))
-        case Approved(hold=hold), SettlePartial(amount=amount) if is_below(amount.money, hold):
-            return Ok(PartiallySettled(amount, _compute_rest(hold, amount)))
+        case Approved(hold=hold), SettlePartial(amount=amount) if is_short:
+            return _make_partial_settlement(amount, hold, amount)
         case Approved(), SettlePartial(amount=amount):  # amount >= hold: it reaches the hold, so nothing is left
             return Ok(Settled(amount))
         case PartiallySettled(captured_amount=captured_amount), SettleFinal(amount=amount):
-            return Ok(Settled(sum_amounts(captured_amount, amount)))
-        case PartiallySettled(captured_amount=captured_amount, hold=hold), SettlePartial(amount=amount) if is_below(
-            amount.money, hold
-        ):
-            return Ok(PartiallySettled(sum_amounts(captured_amount, amount), _compute_rest(hold, amount)))
+            return sum_amounts(captured_amount, amount).map(Settled)
+        case PartiallySettled(captured_amount=captured_amount, hold=hold), SettlePartial(amount=amount) if is_short:
+            return sum_amounts(captured_amount, amount).flat_map(
+                lambda captured_total: _make_partial_settlement(captured_total, hold, amount)
+            )
         case PartiallySettled(captured_amount=captured_amount), SettlePartial(amount=amount):  # amount >= hold
-            return Ok(Settled(sum_amounts(captured_amount, amount)))
+            return sum_amounts(captured_amount, amount).map(Settled)
         case Settled() | Declined(), _:
             return Err(NoTransition())
         case _:
             assert_never(pair)
 
 
-def _compute_rest(hold: AnyAmount, taken_amount: AnyAmount) -> AnyAmount:
-    """The hold left after a partial capture, above zero as every hold is."""
-    match make_amount_of(compute_rest_of(hold, taken_amount)):
-        case Ok(rest):
-            return rest
-        case Err(fault):
-            raise ValueError(f"a hold is above zero, not {fault.text}")
+def _is_capture_below_hold(state: AuthorizationState, trigger: Trigger) -> Result[bool, CurrencyMismatch]:
+    """Whether the trigger's amount is below the hold the state keeps; no hold is kept once settled or declined."""
+    match state:
+        case Approved(hold=hold) | PartiallySettled(hold=hold):
+            return is_below(trigger.amount.money, hold)
+        case Settled() | Declined():
+            return Ok(False)
+        case _:
+            assert_never(state)
+
+
+def _make_partial_settlement(
+    captured_amount: AnyAmount, hold: AnyAmount, taken_amount: AnyAmount
+) -> Result[AuthorizationState, CurrencyMismatch]:
+    """Partially settled for the captures so far, keeping what a capture below the hold leaves of it."""
+    return _compute_rest(hold, taken_amount).map(lambda rest: PartiallySettled(captured_amount, rest))
+
+
+def _compute_rest(hold: AnyAmount, taken_amount: AnyAmount) -> Result[AnyAmount, CurrencyMismatch]:
+    """The hold left after a partial capture below it, above zero as every hold is."""
+    if isinstance(rest := compute_rest_of(hold, taken_amount), Err):
+        return rest
+    rest_amount = make_amount_of(rest.value)
+    assert isinstance(rest_amount, Ok)  # the capture is below the hold, so the rest is above zero
+    return rest_amount
 
 
 def derive_trigger(settlement: Settlement) -> Trigger:
@@ -135,9 +159,11 @@ class AuthorizationRecord:
     state: AuthorizationState
 
 
-def decide_authorization(available_balance: Money, amount: AnyAmount) -> Decision:
+def decide_authorization(available_balance: Money, amount: AnyAmount) -> Result[Decision, CurrencyMismatch]:
     """The decision on arrival, from the available balance before the hold (AMB-008, AMB-009)."""
-    return Decision.DECLINED if is_below(available_balance, amount) else Decision.APPROVED
+    return is_below(available_balance, amount).map(
+        lambda is_short: Decision.DECLINED if is_short else Decision.APPROVED
+    )
 
 
 def list_records(log: Log) -> tuple[AuthorizationRecord, ...]:
@@ -171,19 +197,19 @@ def _is_named_by(record: AuthorizationRecord, settlement: Settlement) -> bool:
     return authorization.authorization == settlement.authorization and authorization.account == settlement.account
 
 
-def sum_holds[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> M:
+def sum_holds[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> Result[M, CurrencyMismatch]:
     """The hold of every approved or partially settled authorization on the account whose value day is <= day
     (AMB-010, AMB-013)."""
-    total = type(account.opening).make_zero()
+    holds: list[Money] = []
     for record in list_records(log):
         authorization, state = record.authorization, record.state
         if authorization.account != account.id or authorization.value_day > day:
             continue
         match state:
             case Approved(hold=hold) | PartiallySettled(hold=hold):
-                total = total + narrow_currency(total, hold.money)
+                holds.append(hold.money)
             case Declined() | Settled():
                 pass  # a declined authorization holds nothing, and a final settlement released the hold
             case _:
                 assert_never(state)
-    return total
+    return sum_money(type(account.opening).make_zero(), holds)

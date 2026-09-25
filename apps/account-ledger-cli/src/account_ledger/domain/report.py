@@ -1,6 +1,6 @@
 """The day report: what one day's close shows, as data."""
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from enum import Enum, auto
 from types import MappingProxyType
@@ -32,7 +32,8 @@ from account_ledger.domain.model.events import (
     Settlement,
 )
 from account_ledger.domain.model.ids import AccountId, Day
-from account_ledger.domain.model.money import Money
+from account_ledger.domain.model.money import CurrencyMismatch, Money
+from account_ledger.domain.model.result import Err, Ok, Result
 
 
 @dataclass(frozen=True, slots=True)
@@ -114,28 +115,48 @@ class DayReport:
     end_of_day: tuple[Fired | Capitalized | NothingFired, ...]
 
 
-def build_report(log: Log, day: Day, config: LedgerConfig, reported_closings: ReportedClosings) -> DayReport:
+def build_report(
+    log: Log, day: Day, config: LedgerConfig, reported_closings: ReportedClosings
+) -> Result[DayReport, CurrencyMismatch]:
     """The report for ``day`` from the log as it stands at that day's close, restating each earlier closing that
     differs from the one last reported for it (AMB-022)."""
-    closing_balances: dict[AccountId, Money] = {
-        account.id: compute_closing_of(log, account, day) for account in config.accounts
-    }
-    available_balances: dict[AccountId, Money] = {
-        account.id: compute_available_of(log, account, day) for account in config.accounts
-    }
-    end_of_day_rows = (
-        _build_end_of_day_rows(log, day, config) if day >= config.first_day else ()
-    )  # Day 0 is the opening, never closed
-    return DayReport(
-        day,
-        _list_processed_events(log, day),
-        MappingProxyType(closing_balances),
-        MappingProxyType(available_balances),
-        _list_restatements(log, day, config, reported_closings),
-        list_records(log),  # every authorization known by the day's end, with its state then (AMB-019, AMB-025)
-        MappingProxyType({account.id: _list_errors(log, day, account.id) for account in config.accounts}),
-        end_of_day_rows,
+    if isinstance(closing_balances := _map_balances(log, day, config.accounts, compute_closing_of), Err):
+        return closing_balances
+    if isinstance(available_balances := _map_balances(log, day, config.accounts, compute_available_of), Err):
+        return available_balances
+    if isinstance(restatements := _list_restatements(log, day, config, reported_closings), Err):
+        return restatements
+    # Day 0 is the opening, never closed
+    end_of_day_rows = _build_end_of_day_rows(log, day, config) if day >= config.first_day else Ok(())
+    if isinstance(end_of_day_rows, Err):
+        return end_of_day_rows
+    return Ok(
+        DayReport(
+            day,
+            _list_processed_events(log, day),
+            closing_balances.value,
+            available_balances.value,
+            restatements.value,
+            list_records(log),  # every authorization known by the day's end, with its state then (AMB-019, AMB-025)
+            MappingProxyType({account.id: _list_errors(log, day, account.id) for account in config.accounts}),
+            end_of_day_rows.value,
+        )
     )
+
+
+def _map_balances(
+    log: Log,
+    day: Day,
+    accounts: tuple[AnyAccount, ...],
+    compute_balance: Callable[[Log, AnyAccount, Day], Result[Money, CurrencyMismatch]],
+) -> Result[Mapping[AccountId, Money], CurrencyMismatch]:
+    """Each account's balance on the day, by its ID, in the configured order."""
+    balances: dict[AccountId, Money] = {}
+    for account in accounts:
+        if isinstance(balance := compute_balance(log, account, day), Err):
+            return balance
+        balances[account.id] = balance.value
+    return Ok(MappingProxyType(balances))
 
 
 def _list_processed_events(log: Log, day: Day) -> tuple[Processed, ...]:
@@ -158,14 +179,18 @@ def _select_incoming_event(entry: LogEntry) -> IncomingEvent | None:
             return None
 
 
-def _build_end_of_day_rows(log: Log, day: Day, config: LedgerConfig) -> tuple[Fired | Capitalized | NothingFired, ...]:
+def _build_end_of_day_rows(
+    log: Log, day: Day, config: LedgerConfig
+) -> Result[tuple[Fired | Capitalized | NothingFired, ...], CurrencyMismatch]:
     """Each step's events in the order fired, with a row for a step that fired nothing of its kind (tech-docs 002)."""
     fired_events = [entry.event for entry in log if isinstance(entry, Accepted) and entry.processed_day == day]
     everyone = tuple(account.id for account in config.accounts)
     rows = _build_fee_rows(fired_events, everyone) + _build_interest_rows(fired_events, everyone)
-    if day in config.capitalization_days:  # step 3 has no row on any other day
-        rows += _build_capitalization_rows(log, fired_events, config.accounts)
-    return tuple(rows)
+    if day not in config.capitalization_days:  # step 3 has no row on any other day
+        return Ok(tuple(rows))
+    if isinstance(capitalization_rows := _build_capitalization_rows(log, fired_events, config.accounts), Err):
+        return capitalization_rows
+    return Ok(tuple(rows + capitalization_rows.value))
 
 
 def _build_fee_rows(
@@ -198,17 +223,20 @@ def _build_interest_rows(
 
 def _build_capitalization_rows(
     log: Log, fired_events: Sequence[LoggedEvent], accounts: tuple[AnyAccount, ...]
-) -> list[Fired | Capitalized | NothingFired]:
+) -> Result[list[Fired | Capitalized | NothingFired], CurrencyMismatch]:
     """Step 3: each account's capitalization with the days it gathers, or a note when none was paid."""
     rows: list[Fired | Capitalized | NothingFired] = []
     for account in accounts:
         capitalizations = [
             event for event in fired_events if isinstance(event, Capitalization) and event.account == account.id
         ]
-        rows.extend(Capitalized(event, list_accrued_days_of(log, account, event.id)) for event in capitalizations)
+        for event in capitalizations:
+            if isinstance(accrued_days := list_accrued_days_of(log, account, event.id), Err):
+                return accrued_days
+            rows.append(Capitalized(event, accrued_days.value))
         if not capitalizations:
             rows.append(NothingFired(Step.CAPITALIZATION, (account.id,), Note.NO_CAPITALIZATION))
-    return rows
+    return Ok(rows)
 
 
 def _list_errors(log: Log, day: Day, account_id: AccountId) -> tuple[Rejected, ...]:
@@ -222,19 +250,20 @@ def _list_errors(log: Log, day: Day, account_id: AccountId) -> tuple[Rejected, .
 
 def _list_restatements(
     log: Log, day: Day, config: LedgerConfig, reported_closings: ReportedClosings
-) -> tuple[Restatement, ...]:
+) -> Result[tuple[Restatement, ...], CurrencyMismatch]:
     """Each earlier closing that now differs from the one last reported, oldest first (AMB-022)."""
     restatements: list[Restatement] = []
     for earlier_day in sorted(reported_day for reported_day in reported_closings if reported_day < day):
-        changes: dict[AccountId, Money | None] = {}
-        for account in config.accounts:
-            current_closing = compute_closing_of(log, account, earlier_day)
-            changes[account.id] = (
-                None if current_closing == reported_closings[earlier_day][account.id] else current_closing
-            )
+        if isinstance(current_closings := _map_balances(log, earlier_day, config.accounts, compute_closing_of), Err):
+            return current_closings
+        reported_day_closings = reported_closings[earlier_day]
+        changes: dict[AccountId, Money | None] = {
+            account_id: None if closing == reported_day_closings[account_id] else closing
+            for account_id, closing in current_closings.value.items()
+        }
         if any(money is not None for money in changes.values()):
             restatements.append(Restatement(earlier_day, MappingProxyType(changes)))
-    return tuple(restatements)
+    return Ok(tuple(restatements))
 
 
 def update_reported(reported_closings: ReportedClosings, day_report: DayReport) -> ReportedClosings:

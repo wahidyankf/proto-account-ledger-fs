@@ -147,7 +147,7 @@ The types each component exposes and how they refer to one another. Every type i
 or an enum, and each constructor refuses an illegal value, so none can be built.
 
 ```text
-result    Result[T, E] = Ok[T] | Err[E]      every parse, make, or check that can fail returns one
+result    Result[T, E] = Ok[T] | Err[E]      every parse, make, check, or sum that can fail returns one
 money     Aed | Bhd = Money             Amount[M: (Aed, Bhd)], above zero      Direction: UP | DOWN
 ids       Day   AccountId   AuthorizationId   IncomingId   InstalmentCount
           EventId = IncomingId | InstalmentId | FeeId | RefundId | InterestId | CapitalizationId
@@ -167,6 +167,7 @@ report    DayReport = day, processed_events: Processed..., closing_balances, ava
                       restatements: Restatement..., authorizations: AuthorizationRecord..., errors,
                       end_of_day: (Fired | Capitalized | NothingFired)...
 replay    Replay = reports: DayReport..., logs: Log...     find_report(day), find_log(day)
+          replay_stream(stream, config) -> Result[Replay, CurrencyMismatch]
 stream    parse_stream(text, config) -> Result[tuple[IncomingEvent, ...], StreamError(line, message)]
 ```
 
@@ -214,7 +215,9 @@ cli, after the last day
 ```
 
 Every balance is recomputed from the log whenever it is asked for (D7), so a late event value-dated in the past changes
-every later closing without any stored balance being updated.
+every later closing without any stored balance being updated. Each sum of money returns a `CurrencyMismatch` rather than
+a wrong total when it meets two currencies. The reader keeps every effect in its account's currency, so only a bug
+brings one; it ends the replay, and `run_cli` prints `error: internal: ` and exits 2.
 
 ## Reading the Code
 

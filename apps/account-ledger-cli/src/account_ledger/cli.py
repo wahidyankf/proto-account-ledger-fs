@@ -46,7 +46,12 @@ def _replay_file(argv: Sequence[str], read_text: Callable[[str], str], out: Text
     if isinstance(events, Err):
         err.write(f"error: {events.error.message}\n")
         return 2
-    out.write(render_reports(replay_stream(events.value, CHALLENGE).reports))
+    replay = replay_stream(events.value, CHALLENGE)
+    if isinstance(replay, Err):
+        mismatch = replay.error
+        err.write(f"error: internal: {mismatch.found_currency} met where {mismatch.expected_currency} was required\n")
+        return 2
+    out.write(render_reports(replay.value.reports))
     out.flush()  # a closed pipe surfaces here, inside the handlers, not at the exit-time flush
     return 0
 

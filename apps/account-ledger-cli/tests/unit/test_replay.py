@@ -4,6 +4,7 @@ from account_ledger.domain.model.config import CHALLENGE
 from account_ledger.domain.model.ids import AccountId, Day, IncomingId
 from account_ledger.domain.replay import replay_stream
 from support.brief_stream import build_brief_stream
+from support.results import unwrap_ok
 from support.states import list_entries
 from support.streams import list_interest_amounts, make_credit
 from support.values import make_aed, make_bhd
@@ -11,7 +12,7 @@ from support.values import make_aed, make_bhd
 
 def test_an_empty_stream_reports_the_opening_balances_for_day_0_to_6() -> None:
     """An empty stream still reports Day 0 to Day 6, each closing at the opening balances, with an empty log."""
-    result = replay_stream((), CHALLENGE)
+    result = unwrap_ok(replay_stream((), CHALLENGE))
 
     assert [report.day for report in result.reports] == [Day(number) for number in range(7)]
     for report in result.reports:
@@ -24,7 +25,7 @@ def test_an_empty_stream_reports_the_opening_balances_for_day_0_to_6() -> None:
 
 def test_amb_015_a_late_event_is_processed_on_the_open_day() -> None:
     """AMB-015: E10, booked Day 5 but listed after E9, arrives once Day 5 has closed and is processed on Day 6."""
-    result = replay_stream(build_brief_stream(), CHALLENGE)
+    result = unwrap_ok(replay_stream(build_brief_stream(), CHALLENGE))
 
     assert IncomingId("E10") not in [entry.event.id for entry in result.find_log(Day(5))]
     e10 = [entry for entry in result.find_log(Day(6)) if entry.event.id == IncomingId("E10")]
@@ -34,7 +35,7 @@ def test_amb_015_a_late_event_is_processed_on_the_open_day() -> None:
 def test_amb_001_a_day_without_events_still_closes() -> None:
     """AMB-001: an event booked on a later day closes every day before it, those with no events of their own
     included, so each still accrues its interest; the event is processed on its own booked day."""
-    result = replay_stream((make_credit("E1", 1, "1000.00"), make_credit("E2", 4, "10.00")), CHALLENGE)
+    result = unwrap_ok(replay_stream((make_credit("E1", 1, "1000.00"), make_credit("E2", 4, "10.00")), CHALLENGE))
 
     assert [marker for marker, _ in list_interest_amounts(result.find_log(Day(3)))] == [
         "INT-001-D1@D1",
@@ -47,7 +48,7 @@ def test_amb_001_a_day_without_events_still_closes() -> None:
 def test_amb_001_an_event_booked_after_the_window_reaches_no_day() -> None:
     """AMB-001: no day closes after the window's last, so an event booked after it reaches no day's log or report;
     the stream reader refuses such a day before it gets here."""
-    result = replay_stream((make_credit("E1", 1, "100.00"), make_credit("E2", 9, "50.00")), CHALLENGE)
+    result = unwrap_ok(replay_stream((make_credit("E1", 1, "100.00"), make_credit("E2", 9, "50.00")), CHALLENGE))
 
     assert [report.day for report in result.reports] == [Day(number) for number in range(7)]
     assert list_entries(result.find_log(Day(6)), "E2") == []

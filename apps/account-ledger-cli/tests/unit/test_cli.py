@@ -8,8 +8,11 @@ from account_ledger import cli
 from account_ledger.adapters.render import render_reports
 from account_ledger.cli import run_cli
 from account_ledger.domain.model.config import CHALLENGE
+from account_ledger.domain.model.money import CurrencyMismatch
+from account_ledger.domain.model.result import Err
 from account_ledger.domain.replay import replay_stream
 from support.brief_stream import BRIEF_CSV, build_brief_stream
+from support.results import unwrap_ok
 
 
 def test_a_stream_file_prints_its_report_and_exits_0() -> None:
@@ -20,7 +23,7 @@ def test_a_stream_file_prints_its_report_and_exits_0() -> None:
     exit_code = run_cli(["streams/challenge.csv"], {"streams/challenge.csv": BRIEF_CSV}.__getitem__, out, err)
 
     assert (out.getvalue(), err.getvalue(), exit_code) == (
-        render_reports(replay_stream(build_brief_stream(), CHALLENGE).reports),
+        render_reports(unwrap_ok(replay_stream(build_brief_stream(), CHALLENGE)).reports),
         "",
         0,
     )
@@ -77,6 +80,22 @@ def test_a_malformed_stream_exits_2_naming_the_line() -> None:
         "error: line 3: amount '950.00x' is not a decimal number\n",
         2,
     )
+
+
+def test_a_currency_mismatch_exits_2_naming_both_currencies(monkeypatch: pytest.MonkeyPatch) -> None:
+    """AC-36: a replay that returns a currency mismatch, which only a bug brings, prints `error: internal: ` with the
+    currency met and the one required, prints no report, and exits 2."""
+    out, err = io.StringIO(), io.StringIO()
+
+    def replay_with_mismatch(*_: object) -> Err[CurrencyMismatch]:
+        """A replay that meets BHD money on an AED account."""
+        return Err(CurrencyMismatch(expected_currency="AED", found_currency="BHD"))
+
+    monkeypatch.setattr(cli, "replay_stream", replay_with_mismatch)
+
+    exit_code = run_cli(["streams/challenge.csv"], read_brief, out, err)
+
+    assert (out.getvalue(), err.getvalue(), exit_code) == ("", "error: internal: BHD met where AED was required\n", 2)
 
 
 def test_an_internal_failure_exits_2_without_a_traceback(monkeypatch: pytest.MonkeyPatch) -> None:

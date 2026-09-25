@@ -6,23 +6,26 @@ from account_ledger.domain.model.config import Account, AnyAccount, is_aed
 from account_ledger.domain.model.event_log import Accepted, Log, append_entry
 from account_ledger.domain.model.events import Fee, FeeRefund, Reversal
 from account_ledger.domain.model.ids import AccountId, Day, FeeId, RefundId
-from account_ledger.domain.model.money import Aed, Bhd, compute_overdraft_fee_of
+from account_ledger.domain.model.money import Aed, Bhd, CurrencyMismatch, compute_overdraft_fee_of
+from account_ledger.domain.model.result import Err, Ok, Result
 
 
-def assess_fees(log: Log, account: AnyAccount, today: Day, first_day: Day) -> Log:
+def assess_fees(log: Log, account: AnyAccount, today: Day, first_day: Day) -> Result[Log, CurrencyMismatch]:
     """For each day so far, in order: a fee, value-dated today, for a day that closes negative with no fee in force,
     and a refund of the fee in force for a day that closes at or above zero (AMB-002, AMB-004). Each closing is read
     from the log as it grows, so a fee fired for an earlier day counts in the days after it (AMB-011)."""
     amount = compute_overdraft_fee_of(account.opening)
     for day in first_day.span_to(today):
         fee = _map_fees_in_force(log, account.id).get(day)
-        if _is_closing_negative(log, account, day):
+        if isinstance(negative_closing := _is_closing_negative(log, account, day), Err):
+            return negative_closing
+        if negative_closing.value:
             if fee is None:
                 log = append_entry(log, Accepted(Fee(FeeId(account.id, day, today), account.id, today, amount), today))
         elif fee is not None:
             refund = FeeRefund(RefundId(account.id, day, today), account.id, today, fee.id, fee.amount)
             log = append_entry(log, Accepted(refund, today))
-    return log
+    return Ok(log)
 
 
 def _map_fees_in_force(log: Log, account_id: AccountId) -> dict[Day, Fee]:
@@ -50,7 +53,7 @@ def _map_fees_in_force(log: Log, account_id: AccountId) -> dict[Day, Fee]:
     return fees
 
 
-def _is_closing_negative(log: Log, account: AnyAccount, day: Day) -> bool:
+def _is_closing_negative(log: Log, account: AnyAccount, day: Day) -> Result[bool, CurrencyMismatch]:
     """Whether the account's closing on the day is below zero."""
     # Both branches read alike; each narrows the account to one currency for the generic call.
     if is_aed(account):
@@ -58,6 +61,6 @@ def _is_closing_negative(log: Log, account: AnyAccount, day: Day) -> bool:
     return _is_closing_below_zero(log, account, day)
 
 
-def _is_closing_below_zero[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> bool:
+def _is_closing_below_zero[M: (Aed, Bhd)](log: Log, account: Account[M], day: Day) -> Result[bool, CurrencyMismatch]:
     """Whether the account's closing on the day is below zero, in its own currency."""
-    return compute_closing(log, account, day) < type(account.opening).make_zero()
+    return compute_closing(log, account, day).map(lambda closing: closing < type(account.opening).make_zero())
