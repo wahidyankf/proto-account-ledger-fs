@@ -64,6 +64,10 @@ method-rgx = "^(__[a-z0-9_]+__|_?(accrue|add|advance|append|apply|assess|build|c
 # `main` is Python's entry-point name, as `__main__.py` calls it; `flat_map` and `flat_map_err` are the Result
 # combinators' conventional names.
 good-names = ["main", "_", "flat_map", "flat_map_err"]
+# A class or type alias never starts with `Any`, which reads as `typing.Any`; a union over the currencies takes the plain
+# noun, as `Money` does.
+class-rgx = '^(?!_?Any[A-Z])_?[^\W\da-z][^\W_]*$'
+typealias-rgx = '^(?!_?Any[A-Z])_?[A-Z][A-Za-z0-9]*$'
 
 [tool.pylint.reports]
 score = false

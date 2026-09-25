@@ -260,9 +260,10 @@ type in `domain/` belongs to it, and none outside `domain/` holds a ledger rule.
 | interest, and its capitalization   | `InterestAccrual`, `InterestAdjustment`, and `Capitalization`                 |
 | a credit paid in instalments       | `Instalment`, one per `InstalmentCount`, recorded as `InstalmentPosted`       |
 
-A type generic over the currency ends in `In`, as in `AccountIn[Aed]`, an account in AED; the plain noun is the union of
-its currencies, as `Money` is `Aed | Bhd`, so `Account` is `AccountIn[Aed] | AccountIn[Bhd]`. Each rule inside the
-aggregate is generic, and is reached from outside through a function ending in `_of` that takes the plain noun, such as
+A type generic over the currency ends in `In`, and the union over its currencies takes the plain noun, per the Python
+[naming](../../../../repo-governance/development/quality/stacks/python-standards/001-naming.md) rule: `AccountIn[Aed]`
+is an account in AED, and `Account` is either. Each rule inside the aggregate is generic, and is reached from outside
+through a function ending in `_of` that takes the plain noun, such as
 `compute_closing_of(history: AccountHistory, day)`.
 
 **The Account aggregate** is one account and its own entries in the log, `AccountHistoryIn[M]`. Every rule in

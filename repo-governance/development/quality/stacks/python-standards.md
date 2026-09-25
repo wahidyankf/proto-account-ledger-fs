@@ -36,7 +36,8 @@ applies. It implements [Explicit Over Implicit](../../../principles/explicit-ove
 
 ## Naming
 
-Functions are named by a verb and its object, and variables by nouns, as [Naming](python-standards/001-naming.md) holds.
+Functions are named by a verb and its object, variables by nouns, and a type generic over the currency by its noun and
+`In`, with the plain noun for the union, as [Naming](python-standards/001-naming.md) holds.
 
 ## Functional Core
 
