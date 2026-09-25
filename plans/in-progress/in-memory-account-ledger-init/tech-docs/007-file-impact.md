@@ -10,7 +10,7 @@ labels [File Impact](../../../../repo-governance/conventions/structure/plans/013
 ├── AGENTS.md                              [E] R1, R2
 ├── AMBIGUITIES.md                         [E] each built rule names its test; the intro no longer says no code exists
 ├── MOVEMENT.md                            [E] each criterion names its test; no link to the feature file
-├── NUMBERS.md                             [E] the 30-day hold time frame and Day 32; rate and precision in place
+├── NUMBERS.md                             [E] hold time frame, Day 32, report rule width, spelled counts; rate in place
 ├── README.md                              [E] how to run the suite and read the output; R1; no feature-file row
 ├── REJECTED.md                            [E] each refusal names its test
 ├── WORKLOG.md                             [E] an entry for each section of work, newest first
@@ -100,11 +100,11 @@ labels [File Impact](../../../../repo-governance/conventions/structure/plans/013
 │   │   ├── specification-tree/001-adopter-bindings.md [N] only if the binding passes the word cap
 │   │   └── plans/011-phase-boundaries-and-delivery-choices.md [E] R3
 │   ├── development/
-│   │   ├── quality/stacks/python-standards.md [E] R2
+│   │   ├── quality/stacks/python-standards.md [E] R2; L1's Mutation Proofs
 │   │   ├── quality/testing/README.md      [E] R1
-│   │   ├── quality/testing/behaviour-driven-development.md [E] R1
+│   │   ├── quality/testing/behaviour-driven-development.md [E] R1; L7's clause rule
 │   │   ├── quality/testing/behaviour-driven-development/002-layers-and-adapters.md [E] R1
-│   │   └── workflow/nx-workspace-policy.md [E] R1
+│   │   └── workflow/nx-workspace-policy.md [E] R1; Phase 6's test inputs
 │   └── workflows/plan/plan-execution.md   [E] R3, D11
 └── specs/
     ├── README.md                          [E] the corpus is architecture only

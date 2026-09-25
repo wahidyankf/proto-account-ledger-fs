@@ -115,6 +115,22 @@ first.
 - Fresh gate after the repairs, 07:16–07:19, `--skip-nx-cache`: test:quick 0 after one ruff import-order fix (113
   passed, 1 xfailed; coverage 95%, the unreachable `assert_never` lines the difference); test:integration 0 (2 passed);
   test:e2e 0 (6 passed); check:hygiene 0; check-md 0; internal-link, heading-hierarchy, naming 0; word-budget 0.
+- Repair commits `1c35c40`, `6450362`, `7093838`, `58b818e`, and `53a8229` (07:20), pushed as `ea45d71..53a8229`; the
+  pre-push hook ran test:quick, test:integration, and test:e2e. Every confirming run in the repairs went through
+  `local-tmp/run.sh`, which deletes each `__pycache__` under `src` and `tests` first, as the Mutation Proofs rule
+  requires.
+- Execution Check, second run (07:21 to 07:27): PERMITS ARCHIVAL; S1 and R1 to R3 resolved in the files. Its
+  non-blocking leftovers were fixed before archival, 07:27 to 07:29: the capitalization render test renders only Day 6;
+  `_step`, `records`, and the test helper `rows` end in `assert_never`;
+  `test_amb_034_a_repeated_reversal_or_settlement_is_a_duplicate` (AMB-028, AMB-029) and
+  `test_amb_034_the_same_event_booked_another_day_is_refused` added and named in AMBIGUITIES, each passing on arrival
+  and failing on its assertion under a mutation (the ID check skipped for reversals and settlements; the booked day
+  ignored in the equality), restored; the L2 diagram gained its prose and lost its non-ASCII minus; 007's four
+  annotations as built. The Phase 6 records the repairs superseded stay as written, superseded by the repair line above.
+  Exit statuses stay out of NUMBERS: the command-line convention fixes them, and the application README publishes them.
+- Fresh gate after the leftovers, 07:29–07:31, `--skip-nx-cache`, every command exit 0 (logs `local-tmp/py-1.log` to
+  `py-7.log`): test:quick 116 passed, 1 xfailed, coverage 95%; test:integration 2 passed; test:e2e 6 passed;
+  check:hygiene, check-md, internal-link, heading-hierarchy, naming, and word-budget 0.
 
 ## Execution Checkout
 
@@ -2658,6 +2674,8 @@ grep -rniE 'gherkin|pytest-bdd|\.feature' AGENTS.md README.md repo-governance sp
       AC-30.
   - 96% line coverage (`TOTAL 1252 55 96%` in `local-tmp/p10-1.log`, the `test:unit` step of `test:quick`), above the
     80% gate.
+  - Superseded after the execution check's repairs: 95% (`TOTAL 1264 67 95%` in `local-tmp/py-1.log`), still above 80%;
+    the new unreachable `assert_never` lines are the difference.
 - [x] [AI] Add a new `WORKLOG.md` entry for the phase at the top, stamped with its real start and end `date` times.
       Path: `WORKLOG.md`. Proof: the entry. Acceptance: AC-24.
   - Added at the top with the Phase 10 commit (`7f75045`): `2026-09-25 06:38–06:47`, "Plan execution, Phase 10: the
@@ -2726,10 +2744,12 @@ execution check alone (D11).
     entry reads "Not yet routed".
   - Both rules passed word-budget 0 (229 files, no findings), internal-link 0, heading-hierarchy 0, and `check:hygiene`
     0; neither needs a harness adapter regenerated.
-- [ ] [AI] Run [Execution Check](../../../repo-governance/workflows/plan/plan-execution-check.md) and record its
+- [x] [AI] Run [Execution Check](../../../repo-governance/workflows/plan/plan-execution-check.md) and record its
       terminal verdict; archival needs a permitting one. Proof: the verdict. Acceptance: AC-30.
   - First run, started 06:56 and reported by 07:06: BLOCKS ARCHIVAL, on S1 and R1 to R3; each finding and its repair is
     in the Execution Record. Rerun pending after the repairs are committed.
+  - Second run, started 07:21 and reported by 07:27: PERMITS ARCHIVAL, no blocking finding; its non-blocking leftovers
+    were fixed before archival, as the Execution Record records.
 - [ ] [AI] Run [Dev Artifact Clean-Up](../../../repo-governance/workflows/maintenance/dev-artifact-clean-up.md) and
       record what it removed. Proof: the record.
 - [ ] [AI] Move the plan to `plans/done/YYYY-MM-DD__in-memory-account-ledger-init/` with the completion date; update
