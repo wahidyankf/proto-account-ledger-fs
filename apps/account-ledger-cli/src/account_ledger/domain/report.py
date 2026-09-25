@@ -11,11 +11,11 @@ from account_ledger.domain.balances import compute_available_of, compute_closing
 from account_ledger.domain.interest import list_accrued_days_of
 from account_ledger.domain.model.config import AnyAccount, LedgerConfig
 from account_ledger.domain.model.event_log import (
-    Accepted,
+    CreditPosted,
+    EventRejected,
     Log,
     LogEntry,
     LoggedEvent,
-    Rejected,
     list_instalments,
 )
 from account_ledger.domain.model.events import (
@@ -111,7 +111,7 @@ class DayReport:
     available_balances: Mapping[AccountId, Money]
     restatements: tuple[Restatement, ...]
     authorizations: tuple[AuthorizationRecord, ...]
-    errors: Mapping[AccountId, tuple[Rejected, ...]]
+    errors: Mapping[AccountId, tuple[EventRejected, ...]]
     end_of_day: tuple[Generated | Capitalized | NothingGenerated, ...]
 
 
@@ -165,7 +165,7 @@ def _list_processed_events(log: Log, day: Day) -> tuple[Processed, ...]:
     for entry in log:
         event = _select_incoming_event(entry)
         if event is not None and entry.processed_day == day:
-            instalments = list_instalments(log, event.id) if isinstance(entry, Accepted) else ()
+            instalments = list_instalments(log, event.id) if isinstance(entry, CreditPosted) else ()
             processed_events.append(Processed(event, entry, instalments))
     return tuple(processed_events)
 
@@ -184,7 +184,7 @@ def _build_end_of_day_rows(
 ) -> Result[tuple[Generated | Capitalized | NothingGenerated, ...], CurrencyMismatch]:
     """Each step's events in the order generated, with a row for a step that generated nothing of its kind
     (tech-docs 002)."""
-    generated_events = [entry.event for entry in log if isinstance(entry, Accepted) and entry.processed_day == day]
+    generated_events = [entry.event for entry in log if entry.processed_day == day and _is_generated(entry)]
     account_ids = tuple(account.id for account in config.accounts)
     rows = _build_fee_rows(generated_events, account_ids) + _build_interest_rows(generated_events, account_ids)
     if day not in config.capitalization_days:  # step 3 has no row on any other day
@@ -192,6 +192,11 @@ def _build_end_of_day_rows(
     if isinstance(capitalization_rows := _build_capitalization_rows(log, generated_events, config.accounts), Err):
         return capitalization_rows
     return Ok(tuple(rows + capitalization_rows.value))
+
+
+def _is_generated(entry: LogEntry) -> bool:
+    """Whether the ledger generated the entry's event, rather than taking it from the stream."""
+    return _select_incoming_event(entry) is None
 
 
 def _build_fee_rows(
@@ -240,12 +245,12 @@ def _build_capitalization_rows(
     return Ok(rows)
 
 
-def _list_errors(log: Log, day: Day, account_id: AccountId) -> tuple[Rejected, ...]:
+def _list_errors(log: Log, day: Day, account_id: AccountId) -> tuple[EventRejected, ...]:
     """Each event refused that day on the account, in log order (AMB-014); a duplicate is not an error."""
     return tuple(
         entry
         for entry in log
-        if isinstance(entry, Rejected) and entry.processed_day == day and entry.event.account == account_id
+        if isinstance(entry, EventRejected) and entry.processed_day == day and entry.event.account == account_id
     )
 
 

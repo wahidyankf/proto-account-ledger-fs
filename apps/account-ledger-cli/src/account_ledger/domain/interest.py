@@ -6,7 +6,14 @@ from typing import assert_never
 from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.balances import compute_closing
 from account_ledger.domain.model.config import Account, AnyAccount, is_aed
-from account_ledger.domain.model.event_log import Accepted, Log, append_entry, list_counted_events
+from account_ledger.domain.model.event_log import (
+    InterestAccrued,
+    InterestAdjusted,
+    InterestCapitalized,
+    Log,
+    append_entry,
+    list_counted_events,
+)
 from account_ledger.domain.model.events import Capitalization, InterestAccrual, InterestAdjustment
 from account_ledger.domain.model.ids import AccountId, CapitalizationId, Day, InterestId
 from account_ledger.domain.model.money import (
@@ -28,7 +35,7 @@ def accrue_interest(log: Log, account: AnyAccount, today: Day, first_day: Day) -
     if isinstance(changes := _list_interest_changes(log, account, today, first_day), Err):
         return changes
     for day, change in changes.value:
-        log = append_entry(log, Accepted(_make_interest_event(account.id, day, today, change), today))
+        log = append_entry(log, _record_interest_change(account.id, day, today, change))
     return Ok(log)
 
 
@@ -64,10 +71,10 @@ def _compute_interest_change[M: (Aed, Bhd)](log: Log, account: Account[M], day: 
     )
 
 
-def _make_interest_event(
+def _record_interest_change(
     account: AccountId, day: Day, today: Day, change: Money
-) -> InterestAccrual | InterestAdjustment:
-    """The event that generates a day's interest change: an accrual for today, an adjustment for an earlier day."""
+) -> InterestAccrued | InterestAdjusted:
+    """A day's interest change as it is recorded today: an accrual for today, an adjustment for an earlier day."""
     direction = Direction.UP if change.value > 0 else Direction.DOWN
     made_amount = make_amount_of(change if direction is Direction.UP else -change)
     assert isinstance(made_amount, Ok)  # a change is never zero
@@ -76,8 +83,8 @@ def _make_interest_event(
     if (
         day == today
     ):  # nothing is generated for today before its close, so today's change is its first, positive accrual
-        return InterestAccrual(interest_id, account, today, amount)
-    return InterestAdjustment(interest_id, account, today, direction, amount)
+        return InterestAccrued(InterestAccrual(interest_id, account, today, amount), today)
+    return InterestAdjusted(InterestAdjustment(interest_id, account, today, direction, amount), today)
 
 
 def capitalize_interest(log: Log, account: AnyAccount, today: Day) -> Result[Log, CurrencyMismatch]:
@@ -87,7 +94,7 @@ def capitalize_interest(log: Log, account: AnyAccount, today: Day) -> Result[Log
     match make_amount_of(accrued.value):
         case Ok(amount):
             capitalization = Capitalization(CapitalizationId(account.id, today), account.id, today, amount)
-            return Ok(append_entry(log, Accepted(capitalization, today)))
+            return Ok(append_entry(log, InterestCapitalized(capitalization, today)))
         case Err():
             return Ok(log)
 

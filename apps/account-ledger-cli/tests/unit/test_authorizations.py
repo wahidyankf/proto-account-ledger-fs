@@ -18,7 +18,9 @@ from account_ledger.domain.authorizations import (
 )
 from account_ledger.domain.balances import compute_closing
 from account_ledger.domain.model.config import CHALLENGE
-from account_ledger.domain.model.event_log import ForcePosted, SettlementAccepted
+from account_ledger.domain.model.event_log import (
+    SettlementForcePosted,
+)
 from account_ledger.domain.model.events import SettlementKind
 from account_ledger.domain.model.ids import Day
 from account_ledger.domain.model.money import Aed, Amount
@@ -70,7 +72,7 @@ def test_amb_029_a_settlement_against_a_declined_authorization_is_force_posted()
 
     log = unwrap_ok(process_stream(stream, CHALLENGE)).find_log(Day(3))
 
-    assert list_settlements(log, "E3") == [SettlementAccepted(later_settlement, Day(3), ForcePosted())]
+    assert list_settlements(log, "E3") == [SettlementForcePosted(later_settlement, Day(3))]
     assert list_states(log, "Auth-A") == [Declined(Amount(make_aed("50.00")))]
     assert unwrap_ok(compute_closing(log, ACC_001, Day(3))) == make_aed("10.00")
 
@@ -88,7 +90,7 @@ def test_amb_029_a_settlement_after_a_final_one_is_force_posted() -> None:
 
     log = unwrap_ok(process_stream(stream, CHALLENGE)).find_log(Day(4))
 
-    assert list_settlements(log, "E4") == [SettlementAccepted(second_settlement, Day(4), ForcePosted())]
+    assert list_settlements(log, "E4") == [SettlementForcePosted(second_settlement, Day(4))]
     assert list_states(log, "Auth-A") == [Settled(Amount(make_aed("40.00")))]
     assert unwrap_ok(compute_closing(log, ACC_001, Day(4))) == make_aed("40.00")
 

@@ -1,15 +1,19 @@
 """Builders for the short streams the rule tests process, and readers that turn log entries into plain values."""
 
 from account_ledger.domain.model.config import Account
-from account_ledger.domain.model.event_log import Accepted, Log
+from account_ledger.domain.model.event_log import (
+    FeeCharged,
+    FeeRefunded,
+    InterestAccrued,
+    InterestAdjusted,
+    InterestCapitalized,
+    Log,
+)
 from account_ledger.domain.model.events import (
     AnyAmount,
     Authorization,
-    Capitalization,
     Credit,
     Debit,
-    Fee,
-    FeeRefund,
     IncomingEvent,
     Instalments,
     InterestAccrual,
@@ -113,14 +117,12 @@ def make_reversal(event: str, day: int, reverses: str, value: int | None = None,
 
 def list_fee_ids(log: Log) -> list[str]:
     """The generated ID of every fee in the log, in the order generated."""
-    return [format_id(entry.event.id) for entry in log if isinstance(entry, Accepted) and isinstance(entry.event, Fee)]
+    return [format_id(entry.event.id) for entry in log if isinstance(entry, FeeCharged)]
 
 
 def list_refund_ids(log: Log) -> list[str]:
     """The generated ID of every fee refund in the log, in the order generated."""
-    return [
-        format_id(entry.event.id) for entry in log if isinstance(entry, Accepted) and isinstance(entry.event, FeeRefund)
-    ]
+    return [format_id(entry.event.id) for entry in log if isinstance(entry, FeeRefunded)]
 
 
 def list_interest_amounts(log: Log) -> list[tuple[str, Money]]:
@@ -128,9 +130,9 @@ def list_interest_amounts(log: Log) -> list[tuple[str, Money]]:
     amounts: list[tuple[str, Money]] = []
     for entry in log:
         match entry:
-            case Accepted(event=InterestAccrual(id=interest_id, amount=amount)):
+            case InterestAccrued(event=InterestAccrual(id=interest_id, amount=amount)):
                 amounts.append((format_id(interest_id), amount.money))
-            case Accepted(event=InterestAdjustment(id=interest_id, direction=direction, amount=amount)):
+            case InterestAdjusted(event=InterestAdjustment(id=interest_id, direction=direction, amount=amount)):
                 amounts.append((format_id(interest_id), amount.money if direction is Direction.UP else -amount.money))
             case _:
                 pass
@@ -140,9 +142,7 @@ def list_interest_amounts(log: Log) -> list[tuple[str, Money]]:
 def list_capitalization_amounts(log: Log) -> list[tuple[str, Money]]:
     """The generated ID and amount of every capitalization in the log, in the order generated."""
     return [
-        (format_id(entry.event.id), entry.event.amount.money)
-        for entry in log
-        if isinstance(entry, Accepted) and isinstance(entry.event, Capitalization)
+        (format_id(entry.event.id), entry.event.amount.money) for entry in log if isinstance(entry, InterestCapitalized)
     ]
 
 

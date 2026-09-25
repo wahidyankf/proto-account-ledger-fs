@@ -139,7 +139,7 @@ refuses any import of the other three.
 | `balances`          | closing and available, each recomputed over the log                                            |
 | `authorizations`    | states, `decide_authorization`, `apply_settlement`, holds, and records rebuilt from the log    |
 | `reversals`         | why a reversal is refused, in tech-docs 002's order, and which events the accepted ones undid  |
-| `event_log`         | the append-only tuple of entries, each kind holding only its outcome, and every `Rejection`    |
+| `event_log`         | the append-only tuple of domain events, one kind per fact it records, and every `Rejection`    |
 | `events`            | incoming event kinds, joined in `IncomingEvent`, and generated kinds, in `GeneratedEvent`      |
 | `config`            | the accounts, each typed by its currency, the window of days, and the capitalization days      |
 | `money`             | `Aed` and `Bhd`, one type per currency; `Amount` above zero; split, fee, and daily interest    |
@@ -162,10 +162,14 @@ ids       Day   AccountId   AuthorizationId   IncomingId   InstalmentCount
 events    IncomingEvent = Credit | Debit | Authorization | Settlement | Reversal     each holds an Amount
           GeneratedEvent = Instalment | Fee | FeeRefund | InterestAccrual | InterestAdjustment | Capitalization
 config    Account[M] = id + opening M     LedgerConfig = accounts, first_day, last_day, capitalization_days
-event_log LogEntry = Accepted | AuthorizationDecided | SettlementAccepted | Rejected | Duplicate
-          SettlementAccepted.effect = AppliedToHold(state_before, state_after) | ForcePosted
-          Rejected.reason: Rejection = IdReused | AlreadyReversed | ReversesAReversal | UnknownTarget
-                                       | TargetOnAnotherAccount | MovedNoMoney | AlreadyUndone
+event_log LogEntry = the domain events, one kind per fact, each holding its event and processed_day:
+            CreditPosted | DebitPosted | ReversalPosted | InstalmentPosted | FeeCharged | FeeRefunded
+            | InterestAccrued | InterestAdjusted | InterestCapitalized
+            | AuthorizationApproved | AuthorizationDeclined
+            | SettlementApplied(+ state_before, state_after) | SettlementForcePosted
+            | EventRejected(+ reason) | DuplicateIgnored
+          EventRejected.reason: Rejection = IdReused | AlreadyReversed | ReversesAReversal | UnknownTarget
+                                            | TargetOnAnotherAccount | MovedNoMoney | AlreadyUndone
           Log = tuple[LogEntry, ...]
 auth      AuthorizationState = Approved(hold) | PartiallySettled(settled_amount, hold)
                                  | Declined(requested_amount) | Settled(settled_amount)
@@ -199,7 +203,7 @@ ending in `assert_never`. A settlement whose `final` cell is `no` becomes `Parti
 
 A final settlement releases the whole remaining hold and settles for the settlements' sum; a partial one below the hold
 keeps the rest. `Settled` and `Declined` have no transition for any settlement, so a settlement against either, or
-against an authorization the log does not know, is accepted as a force-post: it debits its amount and releases no hold.
+against an authorization the log does not know, is force-posted: it debits its amount and releases no hold.
 
 ## Dynamic View — One Day
 

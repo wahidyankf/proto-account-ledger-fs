@@ -6,8 +6,13 @@ A refused criterion is proven by a test of what the ledger does instead (REJECTE
 from account_ledger.domain.authorizations import Approved, Declined, Settled, list_records
 from account_ledger.domain.balances import compute_closing
 from account_ledger.domain.model.config import CHALLENGE
-from account_ledger.domain.model.event_log import Accepted, AppliedToHold, ForcePosted, SettlementAccepted
-from account_ledger.domain.model.events import Fee, Instalment, Settlement
+from account_ledger.domain.model.event_log import (
+    FeeCharged,
+    InstalmentPosted,
+    SettlementApplied,
+    SettlementForcePosted,
+)
+from account_ledger.domain.model.events import Settlement
 from account_ledger.domain.model.ids import AuthorizationId, Day, IncomingId, InstalmentId
 from account_ledger.domain.model.money import Aed, Amount, Bhd
 from account_ledger.domain.stream_processing import process_stream
@@ -65,8 +70,10 @@ def test_c3_auth_a_settlement_is_accepted_and_releases_the_hold() -> None:
     assert day_4.available_balances[ACC_001.id] == day_4.closing_balances[ACC_001.id]
     settlement = next(event for event in build_brief_stream() if event.id == IncomingId("E5"))
     assert isinstance(settlement, Settlement)
-    applied_effect = AppliedToHold(Approved(Amount(make_aed("200.00"))), Settled(Amount(make_aed("185.00"))))
-    assert list_settlements(log, settlement.id.value) == [SettlementAccepted(settlement, Day(4), applied_effect)]
+    applied = SettlementApplied(
+        settlement, Day(4), Approved(Amount(make_aed("200.00"))), Settled(Amount(make_aed("185.00")))
+    )
+    assert list_settlements(log, settlement.id.value) == [applied]
 
 
 def test_c4_e6_is_force_posted_for_180() -> None:
@@ -77,7 +84,7 @@ def test_c4_e6_is_force_posted_for_180() -> None:
 
     settlement = next(event for event in build_brief_stream() if event.id == IncomingId("E6"))
     assert isinstance(settlement, Settlement)
-    assert list_settlements(log, settlement.id.value) == [SettlementAccepted(settlement, Day(4), ForcePosted())]
+    assert list_settlements(log, settlement.id.value) == [SettlementForcePosted(settlement, Day(4))]
     assert list_states(log, "Auth-Z") == []
     assert list_states(log, "Auth-A") == [Settled(Amount(make_aed("185.00")))]
     assert unwrap_ok(compute_closing(log, ACC_001, Day(4))) == make_aed("285.00")
@@ -88,7 +95,7 @@ def test_c7_e10_posts_3_333_3_333_3_334() -> None:
     10.002, so E10 posts 3.333, 3.333, and 3.334, each value-dated Day 5, summing to the 10.000 sent."""
     log = unwrap_ok(process_stream(build_brief_stream(), CHALLENGE)).find_log(Day(6))
 
-    parts = [entry.event for entry in log if isinstance(entry, Accepted) and isinstance(entry.event, Instalment)]
+    parts = [entry.event for entry in log if isinstance(entry, InstalmentPosted)]
     assert [(part.id, part.amount, part.value_date) for part in parts] == [
         (InstalmentId(IncomingId("E10"), number), Amount(make_bhd(text)), Day(5))
         for number, text in ((1, "3.333"), (2, "3.333"), (3, "3.334"))
@@ -102,7 +109,7 @@ def test_c2_e7_causes_three_fees_all_value_dated_day_5() -> None:
     log = unwrap_ok(process_stream(build_brief_stream(), CHALLENGE)).find_log(Day(5))
 
     assert list_fee_ids(log) == ["FEE-001-D2@D5", "FEE-001-D4@D5", "FEE-001-D5@D5"]
-    fees = [entry.event for entry in log if isinstance(entry, Accepted) and isinstance(entry.event, Fee)]
+    fees = [entry.event for entry in log if isinstance(entry, FeeCharged)]
     assert [(fee.amount, fee.value_date) for fee in fees] == [(Amount(make_aed("25.00")), Day(5))] * 3
 
 

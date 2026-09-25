@@ -2,16 +2,20 @@
 
 from collections.abc import Iterator
 from dataclasses import dataclass
-from enum import Enum
 from typing import TYPE_CHECKING
 
 from account_ledger.domain.model.events import (
     Authorization,
+    Capitalization,
     Credit,
     Debit,
+    Fee,
+    FeeRefund,
     GeneratedEvent,
     IncomingEvent,
     Instalment,
+    InterestAccrual,
+    InterestAdjustment,
     Reversal,
     Settlement,
 )
@@ -22,54 +26,114 @@ if TYPE_CHECKING:  # authorizations reads the log, so the states are imported fo
 
 
 @dataclass(frozen=True, slots=True)
-class Accepted:
-    """An event the ledger accepted; it counts in every aggregation. A generated event is always accepted."""
+class CreditPosted:
+    """A credit the ledger posted; one in instalments posts through the instalments it generates (AMB-017)."""
 
-    event: Credit | Debit | Reversal | GeneratedEvent
+    event: Credit
     processed_day: Day
 
 
-class Decision(Enum):
-    """How an authorization was decided on arrival; the decision is final (AMB-009)."""
+@dataclass(frozen=True, slots=True)
+class DebitPosted:
+    """A debit the ledger posted."""
 
-    APPROVED = "approved"
-    DECLINED = "declined"
+    event: Debit
+    processed_day: Day
 
 
 @dataclass(frozen=True, slots=True)
-class AuthorizationDecided:
-    """An authorization and its decision; only an approved one holds funds."""
+class ReversalPosted:
+    """A reversal the ledger posted: it undoes what its target moved, from its own value date (AMB-035)."""
+
+    event: Reversal
+    processed_day: Day
+
+
+@dataclass(frozen=True, slots=True)
+class InstalmentPosted:
+    """An instalment of a credit, posted when the credit is processed (AMB-017, AMB-020)."""
+
+    event: Instalment
+    processed_day: Day
+
+
+@dataclass(frozen=True, slots=True)
+class FeeCharged:
+    """An overdraft fee charged at a close (AMB-002)."""
+
+    event: Fee
+    processed_day: Day
+
+
+@dataclass(frozen=True, slots=True)
+class FeeRefunded:
+    """A fee refunded at a close, once its day closes at or above zero again (AMB-004)."""
+
+    event: FeeRefund
+    processed_day: Day
+
+
+@dataclass(frozen=True, slots=True)
+class InterestAccrued:
+    """A day's interest, accrued at its own close (AMB-005)."""
+
+    event: InterestAccrual
+    processed_day: Day
+
+
+@dataclass(frozen=True, slots=True)
+class InterestAdjusted:
+    """An earlier day's interest, adjusted at a close once its closing changed (AMB-005)."""
+
+    event: InterestAdjustment
+    processed_day: Day
+
+
+@dataclass(frozen=True, slots=True)
+class InterestCapitalized:
+    """The accrued interest, capitalized into the ledger balance on a capitalization day (AMB-007)."""
+
+    event: Capitalization
+    processed_day: Day
+
+
+@dataclass(frozen=True, slots=True)
+class AuthorizationApproved:
+    """An authorization approved on arrival; it holds its amount (AMB-008, AMB-009)."""
 
     event: Authorization
     processed_day: Day
-    decision: Decision
 
 
 @dataclass(frozen=True, slots=True)
-class AppliedToHold:
-    """The transition a settlement completed on its authorization: the past-tense event and its audit record."""
+class AuthorizationDeclined:
+    """An authorization declined on arrival; the decision is final, and it holds nothing (AMB-009)."""
 
+    event: Authorization
+    processed_day: Day
+
+
+@dataclass(frozen=True, slots=True)
+class SettlementApplied:
+    """A settlement applied to its authorization's hold, with the states it moved the authorization between."""
+
+    event: Settlement
+    processed_day: Day
     state_before: AuthorizationState
     state_after: AuthorizationState
 
 
 @dataclass(frozen=True, slots=True)
-class ForcePosted:
-    """A settlement with no transition to complete: it debits its amount and releases no hold (AMB-012)."""
-
-
-@dataclass(frozen=True, slots=True)
-class SettlementAccepted:
-    """A settlement, always accepted: it was applied to its hold, or it was force-posted (AMB-012)."""
+class SettlementForcePosted:
+    """A settlement with no transition to apply: it debits its amount and releases no hold (AMB-012, AMB-029)."""
 
     event: Settlement
     processed_day: Day
-    effect: AppliedToHold | ForcePosted
 
 
 @dataclass(frozen=True, slots=True)
 class AlreadyReversed:
-    """The target is already reversed by an accepted reversal (AMB-028)."""
+    """The target is already reversed by a posted reversal (AMB-028)."""
 
     target: EventId
     undoing_id: IncomingId
@@ -129,8 +193,8 @@ type Rejection = (
 
 
 @dataclass(frozen=True, slots=True)
-class Rejected:
-    """An event the ledger refused, with the reason; it moves no balance."""
+class EventRejected:
+    """An event the ledger refused, with the reason; it moves no balance (AMB-014)."""
 
     event: IncomingEvent
     processed_day: Day
@@ -138,14 +202,30 @@ class Rejected:
 
 
 @dataclass(frozen=True, slots=True)
-class Duplicate:
+class DuplicateIgnored:
     """An event delivered again, equal to the first with its ID; a retry, not an error, with no effect (AMB-034)."""
 
     event: IncomingEvent
     processed_day: Day
 
 
-type LogEntry = Accepted | AuthorizationDecided | SettlementAccepted | Rejected | Duplicate
+type LogEntry = (
+    CreditPosted
+    | DebitPosted
+    | ReversalPosted
+    | InstalmentPosted
+    | FeeCharged
+    | FeeRefunded
+    | InterestAccrued
+    | InterestAdjusted
+    | InterestCapitalized
+    | AuthorizationApproved
+    | AuthorizationDeclined
+    | SettlementApplied
+    | SettlementForcePosted
+    | EventRejected
+    | DuplicateIgnored
+)
 type Log = tuple[LogEntry, ...]
 type LoggedEvent = Credit | Debit | Reversal | GeneratedEvent | Authorization | Settlement  # any entry's event
 
@@ -163,17 +243,17 @@ def find_first_entry(log: Log, event_id: EventId) -> LogEntry | None:
 def list_instalments(log: Log, credit: IncomingId) -> tuple[Instalment, ...]:
     """The instalments a credit generated, in order (AMB-017)."""
     return tuple(
-        entry.event
-        for entry in log
-        if isinstance(entry, Accepted) and isinstance(entry.event, Instalment) and entry.event.id.parent == credit
+        entry.event for entry in log if isinstance(entry, InstalmentPosted) and entry.event.id.parent == credit
     )
 
 
 def list_counted_events(log: Log, account_id: AccountId) -> Iterator[LoggedEvent]:
-    """The events of the account's accepted entries; a hold is read by ``sum_holds``, and a refusal moves nothing."""
+    """The events of the account's postings; a hold is read by ``sum_holds``, and a refusal or a retry moves nothing."""
     for entry in log:
         match entry:
-            case Accepted(event=event) | SettlementAccepted(event=event) if event.account == account_id:
-                yield event
+            case AuthorizationApproved() | AuthorizationDeclined() | EventRejected() | DuplicateIgnored():
+                pass
+            case _ if entry.event.account == account_id:
+                yield entry.event
             case _:
                 pass

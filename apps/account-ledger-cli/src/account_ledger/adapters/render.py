@@ -7,16 +7,15 @@ from account_ledger.domain.authorizations import Approved, AuthorizationRecord, 
 from account_ledger.domain.model.event_log import (
     AlreadyReversed,
     AlreadyUndone,
-    AppliedToHold,
-    Duplicate,
-    ForcePosted,
+    DuplicateIgnored,
+    EventRejected,
     IdReused,
     LogEntry,
     MovedNoMoney,
-    Rejected,
     Rejection,
     ReversesAReversal,
-    SettlementAccepted,
+    SettlementApplied,
+    SettlementForcePosted,
     TargetOnAnotherAccount,
     UnknownTarget,
 )
@@ -142,7 +141,7 @@ def _format_type(event: IncomingEvent) -> str:
 def _format_detail(processed_event: Processed) -> str:
     """OUTPUT_TARGET's Detail text for an incoming event (tech-docs 003); a duplicate names what it repeats (D22)."""
     event = processed_event.event
-    if isinstance(processed_event.entry, Duplicate):
+    if isinstance(processed_event.entry, DuplicateIgnored):
         return f"duplicate of {format_id(event.id)}, no effect"
     match event:
         case Credit(amount=amount, posting=posting):
@@ -186,14 +185,14 @@ def _format_count(count: int) -> str:
 
 def _format_settlement(entry: LogEntry) -> str:
     """A settlement the table could not apply force-posts (AMB-012); any other settles for its amount."""
-    is_force_post = isinstance(entry, SettlementAccepted) and isinstance(entry.effect, ForcePosted)
+    is_force_post = isinstance(entry, SettlementForcePosted)
     return "force-posts" if is_force_post else "settles for"
 
 
 def _format_kept_hold(entry: LogEntry) -> str:
     """A partial settlement that leaves part of the hold says so (D22)."""
     match entry:
-        case SettlementAccepted(effect=AppliedToHold(state_after=PartiallySettled())):
+        case SettlementApplied(state_after=PartiallySettled()):
             return ", hold kept"
         case _:
             return ""
@@ -319,7 +318,7 @@ def _build_summary_rows(report: DayReport) -> list[Row]:
     ]
 
 
-def _format_errors(entries: tuple[Rejected, ...]) -> str:
+def _format_errors(entries: tuple[EventRejected, ...]) -> str:
     """The day's refusals for one account, joined by `; `, or `none` (AMB-014)."""
     return "; ".join(_format_refusal(entry) for entry in entries) or "none"
 
@@ -330,7 +329,7 @@ def _format_authorizations(records: Sequence[AuthorizationRecord], account: Acco
     return "; ".join(states) or "none"
 
 
-def _format_refusal(entry: Rejected) -> str:
+def _format_refusal(entry: EventRejected) -> str:
     """A refusal's error text (tech-docs 001, D22)."""
     return f"{format_id(entry.event.id)} refused: {_format_reason(entry.reason, entry.event.account)}"
 

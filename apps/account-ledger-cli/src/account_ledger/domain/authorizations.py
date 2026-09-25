@@ -6,14 +6,22 @@ from typing import assert_never
 from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.model.config import Account
 from account_ledger.domain.model.event_log import (
-    Accepted,
-    AppliedToHold,
-    AuthorizationDecided,
-    Decision,
-    Duplicate,
+    AuthorizationApproved,
+    AuthorizationDeclined,
+    CreditPosted,
+    DebitPosted,
+    DuplicateIgnored,
+    EventRejected,
+    FeeCharged,
+    FeeRefunded,
+    InstalmentPosted,
+    InterestAccrued,
+    InterestAdjusted,
+    InterestCapitalized,
     Log,
-    Rejected,
-    SettlementAccepted,
+    ReversalPosted,
+    SettlementApplied,
+    SettlementForcePosted,
 )
 from account_ledger.domain.model.events import AnyAmount, Authorization, Settlement, SettlementKind
 from account_ledger.domain.model.ids import Day
@@ -46,7 +54,7 @@ class Declined:
 
 @dataclass(frozen=True, slots=True)
 class PartiallySettled:
-    """AppliedToHold in part, still holding the rest."""
+    """Settled in part, still holding the rest."""
 
     settled_amount: AnyAmount
     hold: AnyAmount
@@ -162,10 +170,14 @@ class AuthorizationRecord:
     state: AuthorizationState
 
 
-def decide_authorization(available_balance: Money, amount: AnyAmount) -> Result[Decision, CurrencyMismatch]:
+def decide_authorization(
+    available_balance: Money, authorization: Authorization, today: Day
+) -> Result[AuthorizationApproved | AuthorizationDeclined, CurrencyMismatch]:
     """The decision on arrival, from the available balance before the hold (AMB-008, AMB-009)."""
-    return is_below(available_balance, amount).map(
-        lambda is_short: Decision.DECLINED if is_short else Decision.APPROVED
+    return is_below(available_balance, authorization.amount).map(
+        lambda is_short: (
+            AuthorizationDeclined(authorization, today) if is_short else AuthorizationApproved(authorization, today)
+        )
     )
 
 
@@ -174,17 +186,31 @@ def list_records(log: Log) -> tuple[AuthorizationRecord, ...]:
     records: list[AuthorizationRecord] = []
     for entry in log:
         match entry:
-            case AuthorizationDecided(event=event, decision=decision):
-                state = Approved(event.amount) if decision is Decision.APPROVED else Declined(event.amount)
-                records.append(AuthorizationRecord(event, state))
-            case SettlementAccepted(event=event, effect=AppliedToHold(state_after=state_after)):
+            case AuthorizationApproved(event=event):
+                records.append(AuthorizationRecord(event, Approved(event.amount)))
+            case AuthorizationDeclined(event=event):
+                records.append(AuthorizationRecord(event, Declined(event.amount)))
+            case SettlementApplied(event=event, state_after=state_after):
                 records = [
                     AuthorizationRecord(record.authorization, state_after)
                     if _is_referenced_by(record, event)
                     else record
                     for record in records
                 ]
-            case Accepted() | SettlementAccepted() | Rejected() | Duplicate():
+            case (
+                CreditPosted()
+                | DebitPosted()
+                | ReversalPosted()
+                | InstalmentPosted()
+                | FeeCharged()
+                | FeeRefunded()
+                | InterestAccrued()
+                | InterestAdjusted()
+                | InterestCapitalized()
+                | SettlementForcePosted()
+                | EventRejected()
+                | DuplicateIgnored()
+            ):
                 pass  # a posting, a force-post, a refusal, or a retry moves no authorization
             case _:
                 assert_never(entry)

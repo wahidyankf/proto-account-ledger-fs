@@ -14,15 +14,18 @@ from account_ledger.domain.authorizations import (
 from account_ledger.domain.balances import compute_available_of
 from account_ledger.domain.model.config import LedgerConfig
 from account_ledger.domain.model.event_log import (
-    Accepted,
-    AppliedToHold,
-    AuthorizationDecided,
-    Duplicate,
-    ForcePosted,
+    AuthorizationApproved,
+    AuthorizationDeclined,
+    CreditPosted,
+    DebitPosted,
+    DuplicateIgnored,
+    EventRejected,
     IdReused,
+    InstalmentPosted,
     Log,
-    Rejected,
-    SettlementAccepted,
+    ReversalPosted,
+    SettlementApplied,
+    SettlementForcePosted,
     append_entry,
     find_first_entry,
 )
@@ -46,13 +49,15 @@ def process_event(log: Log, event: IncomingEvent, today: Day, config: LedgerConf
     known_entry = find_first_entry(log, event.id)  # the event ID is the idempotency key (AMB-034)
     if known_entry is not None:
         if known_entry.event == event:
-            return Ok(append_entry(log, Duplicate(event, today)))
-        return Ok(append_entry(log, Rejected(event, today, IdReused())))
+            return Ok(append_entry(log, DuplicateIgnored(event, today)))
+        return Ok(append_entry(log, EventRejected(event, today, IdReused())))
     match event:
         case Credit(posting=Instalments(count=count)):
-            return Ok(append_entry(log, Accepted(event, today)) + _generate_instalments(event, count, today))
-        case Credit() | Debit():
-            return Ok(append_entry(log, Accepted(event, today)))
+            return Ok(append_entry(log, CreditPosted(event, today)) + _generate_instalments(event, count, today))
+        case Credit():
+            return Ok(append_entry(log, CreditPosted(event, today)))
+        case Debit():
+            return Ok(append_entry(log, DebitPosted(event, today)))
         case Reversal():
             return Ok(append_entry(log, _decide_reversal(log, event, today)))
         case Authorization():
@@ -65,53 +70,51 @@ def process_event(log: Log, event: IncomingEvent, today: Day, config: LedgerConf
 
 def _decide_authorization_entry(
     log: Log, authorization: Authorization, today: Day, config: LedgerConfig
-) -> Result[AuthorizationDecided, CurrencyMismatch]:
+) -> Result[AuthorizationApproved | AuthorizationDeclined, CurrencyMismatch]:
     """The authorization's decision, from the account's available balance when it arrives (AMB-008, AMB-009)."""
     account = config.find_account(authorization.account)
     assert account is not None  # the stream reader refuses an account the ledger does not hold
-    return (
-        compute_available_of(log, account, today)
-        .flat_map(lambda available_balance: decide_authorization(available_balance, authorization.amount))
-        .map(lambda decision: AuthorizationDecided(authorization, today, decision))
+    return compute_available_of(log, account, today).flat_map(
+        lambda available_balance: decide_authorization(available_balance, authorization, today)
     )
 
 
 def _decide_settlement_entry(
     log: Log, settlement: Settlement, today: Day
-) -> Result[SettlementAccepted, CurrencyMismatch]:
+) -> Result[SettlementApplied | SettlementForcePosted, CurrencyMismatch]:
     """The settlement, settling against the authorization it names, or force-posted when there is none (AMB-012)."""
     record = find_record(log, settlement)
     if record is None:  # an unknown authorization has no transition either (AMB-012)
-        return Ok(SettlementAccepted(settlement, today, ForcePosted()))
-    return _decide_effect(record.state, settlement).map(lambda effect: SettlementAccepted(settlement, today, effect))
+        return Ok(SettlementForcePosted(settlement, today))
+    return _decide_effect(record.state, settlement, today)
 
 
 def _decide_effect(
-    state_before: AuthorizationState, settlement: Settlement
-) -> Result[AppliedToHold | ForcePosted, CurrencyMismatch]:
-    """What a settlement does to its authorization, or a force-post when the table has no transition for it
+    state_before: AuthorizationState, settlement: Settlement, today: Day
+) -> Result[SettlementApplied | SettlementForcePosted, CurrencyMismatch]:
+    """The settlement applied to its authorization, or force-posted when the table has no transition for it
     (AMB-029)."""
     match apply_settlement(state_before, derive_settlement_input(settlement)):
         case Ok(state_after):
-            return Ok(AppliedToHold(state_before, state_after))
+            return Ok(SettlementApplied(settlement, today, state_before, state_after))
         case Err(fault):
-            return Ok(ForcePosted()) if isinstance(fault, CannotSettle) else Err(fault)
+            return Ok(SettlementForcePosted(settlement, today)) if isinstance(fault, CannotSettle) else Err(fault)
 
 
-def _generate_instalments(credit: Credit, count: InstalmentCount, today: Day) -> tuple[Accepted, ...]:
-    """The instalments a credit generates, in order, each accepted with the credit's value date (AMB-017, AMB-020)."""
+def _generate_instalments(credit: Credit, count: InstalmentCount, today: Day) -> tuple[InstalmentPosted, ...]:
+    """The instalments a credit generates, in order, each posted with the credit's value date (AMB-017, AMB-020)."""
     parts = split_amount_of(credit.amount, count)
     assert isinstance(parts, Ok)  # the stream reader refuses a credit it cannot split
     return tuple(
-        Accepted(Instalment(InstalmentId(credit.id, number), credit.account, credit.value_date, part), today)
+        InstalmentPosted(Instalment(InstalmentId(credit.id, number), credit.account, credit.value_date, part), today)
         for number, part in enumerate(parts.value, start=1)
     )
 
 
-def _decide_reversal(log: Log, reversal: Reversal, today: Day) -> Accepted | Rejected:
-    """A reversal, accepted unless a check refuses it."""
+def _decide_reversal(log: Log, reversal: Reversal, today: Day) -> ReversalPosted | EventRejected:
+    """A reversal, posted unless a check refuses it."""
     match check_reversal(log, reversal.target, reversal.account):
         case Ok():
-            return Accepted(reversal, today)
+            return ReversalPosted(reversal, today)
         case Err(rejection):
-            return Rejected(reversal, today, rejection)
+            return EventRejected(reversal, today, rejection)

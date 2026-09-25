@@ -1,16 +1,18 @@
-"""Reversals: when one is refused, and which events the accepted ones undid (AMB-028, AMB-035)."""
+"""Reversals: when one is refused, and which events the posted ones undid (AMB-028, AMB-035)."""
 
 from account_ledger.common.result import Err, Ok, Result
 from account_ledger.domain.model.event_log import (
-    Accepted,
     AlreadyReversed,
     AlreadyUndone,
-    AuthorizationDecided,
+    AuthorizationApproved,
+    AuthorizationDeclined,
+    EventRejected,
+    FeeRefunded,
     Log,
     LoggedEvent,
     MovedNoMoney,
-    Rejected,
     Rejection,
+    ReversalPosted,
     ReversesAReversal,
     TargetOnAnotherAccount,
     UnknownTarget,
@@ -32,7 +34,7 @@ def check_reversal(log: Log, target_id: EventId, account: AccountId) -> Result[N
         return Err(TargetOnAnotherAccount(target_id, target.event.account))
     if isinstance(target.event, Reversal):
         return Err(ReversesAReversal(target_id))
-    if isinstance(target, AuthorizationDecided | Rejected):
+    if isinstance(target, AuthorizationApproved | AuthorizationDeclined | EventRejected):
         return Err(MovedNoMoney(target_id))
     reversal_id = find_reversal_id(log, target_id)
     if reversal_id is not None:
@@ -41,10 +43,10 @@ def check_reversal(log: Log, target_id: EventId, account: AccountId) -> Result[N
 
 
 def find_reversal_id(log: Log, target_id: EventId) -> IncomingId | None:
-    """The accepted reversal of the target, if there is one."""
+    """The posted reversal of the target, if there is one."""
     for entry in log:
         match entry:
-            case Accepted(event=Reversal(id=reversal_id, target=target)) if target == target_id:
+            case ReversalPosted(event=Reversal(id=reversal_id, target=target)) if target == target_id:
                 return reversal_id
             case _:
                 pass
@@ -52,7 +54,7 @@ def find_reversal_id(log: Log, target_id: EventId) -> IncomingId | None:
 
 
 def list_reversed_targets(log: Log, account_id: AccountId, cutoff_day: Day | None = None) -> frozenset[EventId]:
-    """The events an accepted reversal on the account undid (AMB-035); with ``cutoff_day``, only reversals
+    """The events a posted reversal on the account undid (AMB-035); with ``cutoff_day``, only reversals
     value-dated by then."""
     return frozenset(
         event.target
@@ -85,7 +87,7 @@ def _find_refund(log: Log, fee: FeeId) -> RefundId | None:
     """The refund in effect for the fee: one that names it and is not itself reversed (AMB-004, AMB-035)."""
     for entry in log:
         match entry:
-            case Accepted(event=FeeRefund(id=refund, fee=refunded_fee)) if refunded_fee == fee:
+            case FeeRefunded(event=FeeRefund(id=refund, fee=refunded_fee)) if refunded_fee == fee:
                 if find_reversal_id(log, refund) is None:
                     return refund
             case _:

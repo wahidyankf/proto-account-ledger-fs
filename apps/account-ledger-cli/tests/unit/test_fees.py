@@ -4,8 +4,9 @@ from dataclasses import replace
 
 from account_ledger.domain.balances import compute_closing
 from account_ledger.domain.model.config import CHALLENGE
-from account_ledger.domain.model.event_log import Accepted
-from account_ledger.domain.model.events import Fee
+from account_ledger.domain.model.event_log import (
+    FeeCharged,
+)
 from account_ledger.domain.model.ids import Day
 from account_ledger.domain.model.money import Amount
 from account_ledger.domain.stream_processing import process_stream
@@ -38,7 +39,7 @@ def test_amb_027_a_bhd_account_is_charged_bhd_2_560() -> None:
     ACC-002 is charged FEE-002-D1@D1 and closes Day 1 at −3.560."""
     log = unwrap_ok(process_stream((make_debit("E1", 1, "1.000", account="ACC-002"),), CHALLENGE)).find_log(Day(1))
 
-    fees = [entry.event for entry in log if isinstance(entry, Accepted) and isinstance(entry.event, Fee)]
+    fees = [entry.event for entry in log if isinstance(entry, FeeCharged)]
     assert [fee.amount for fee in fees] == [Amount(make_bhd("2.560"))]
     assert list_fee_ids(log) == ["FEE-002-D1@D1"]
     assert unwrap_ok(compute_closing(log, ACC_002, Day(1))) == make_bhd("-3.560")

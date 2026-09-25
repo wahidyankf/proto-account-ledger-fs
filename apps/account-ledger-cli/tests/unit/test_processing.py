@@ -5,7 +5,12 @@ import pytest
 from account_ledger.domain.authorizations import sum_holds
 from account_ledger.domain.balances import compute_closing
 from account_ledger.domain.model.config import CHALLENGE
-from account_ledger.domain.model.event_log import Accepted, Duplicate, IdReused, Rejected
+from account_ledger.domain.model.event_log import (
+    CreditPosted,
+    DuplicateIgnored,
+    EventRejected,
+    IdReused,
+)
 from account_ledger.domain.model.ids import Day
 from account_ledger.domain.stream_processing import process_stream
 from support.results import unwrap_ok
@@ -30,7 +35,7 @@ def test_amb_034_a_repeated_event_is_logged_as_a_duplicate_with_no_effect() -> N
     result = unwrap_ok(process_stream((e1, e1), CHALLENGE))
     log = result.find_log(Day(1))
 
-    assert list_entries(log, "E1") == [Accepted(e1, Day(1)), Duplicate(e1, Day(1))]
+    assert list_entries(log, "E1") == [CreditPosted(e1, Day(1)), DuplicateIgnored(e1, Day(1))]
     assert unwrap_ok(compute_closing(log, ACC_001, Day(1))) == make_aed("100.00")
     assert dict(result.find_report(Day(1)).errors) == {ACC_001.id: (), ACC_002.id: ()}
 
@@ -53,7 +58,7 @@ def test_amb_034_a_repeated_reversal_or_settlement_is_a_duplicate(kind: str) -> 
     single_log = unwrap_ok(process_stream((*opening, repeated_event), CHALLENGE)).find_log(Day(1))
     log = result.find_log(Day(1))
 
-    assert list_entries(log, "E4")[1:] == [Duplicate(repeated_event, Day(1))]
+    assert list_entries(log, "E4")[1:] == [DuplicateIgnored(repeated_event, Day(1))]
     assert (unwrap_ok(compute_closing(log, ACC_001, Day(1))), unwrap_ok(sum_holds(log, ACC_001, Day(1)))) == (
         unwrap_ok(compute_closing(single_log, ACC_001, Day(1))),
         unwrap_ok(sum_holds(single_log, ACC_001, Day(1))),
@@ -68,7 +73,10 @@ def test_amb_034_the_same_event_booked_another_day_is_refused() -> None:
 
     log = unwrap_ok(process_stream((first_credit, retried_credit), CHALLENGE)).find_log(Day(2))
 
-    assert list_entries(log, "E1") == [Accepted(first_credit, Day(1)), Rejected(retried_credit, Day(2), IdReused())]
+    assert list_entries(log, "E1") == [
+        CreditPosted(first_credit, Day(1)),
+        EventRejected(retried_credit, Day(2), IdReused()),
+    ]
     assert unwrap_ok(compute_closing(log, ACC_001, Day(2))) == make_aed("100.00")
 
 
@@ -78,5 +86,8 @@ def test_amb_034_a_reused_id_with_different_content_is_refused() -> None:
 
     log = unwrap_ok(process_stream((first_credit, reused_credit), CHALLENGE)).find_log(Day(1))
 
-    assert list_entries(log, "E1") == [Accepted(first_credit, Day(1)), Rejected(reused_credit, Day(1), IdReused())]
+    assert list_entries(log, "E1") == [
+        CreditPosted(first_credit, Day(1)),
+        EventRejected(reused_credit, Day(1), IdReused()),
+    ]
     assert unwrap_ok(compute_closing(log, ACC_001, Day(1))) == make_aed("100.00")
