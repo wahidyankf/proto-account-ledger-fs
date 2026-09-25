@@ -10,3 +10,5 @@ Do not casually rewrite an archived plan. If a defect surfaces later, reopen it:
 
 - [2026-09-25\_\_in-memory-account-ledger-init](2026-09-25__in-memory-account-ledger-init/README.md) — the ledger core
   and its assessment deliverables.
+- [2026-09-25\_\_restructure-around-the-domain](2026-09-25__restructure-around-the-domain/README.md) — every operation
+  on its type, in DDD and hexagonal layers, without inheritance, with nothing observable changed.

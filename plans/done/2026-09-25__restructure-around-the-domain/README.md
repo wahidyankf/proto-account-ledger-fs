@@ -6,17 +6,21 @@ doc's figure stay exactly as they are.
 
 ## Status
 
-In progress. The owner asked for this plan on 2026-09-25 as "the last big push before our submission", settled R1 to R14
-one question each at the pre-write gate, and then set the goal: finish the plan, commit and push it, run its quality
-gate, commit and push, execute every phase with a commit and push each, and check the result instead of running the
-quality gate again. That goal is the execution authorization; the [Execution Record](delivery.md) logs each step.
+Done on 2026-09-25. Every phase was executed, gated, committed, and pushed to `origin/main`; the execution check's first
+run blocked archival, its findings were repaired, and its second run permitted it, as the
+[Execution Record](delivery.md#execution-record) records. The owner asked for this plan on 2026-09-25 as "the last big
+push before our submission", settled R1 to R14 one question each at the pre-write gate, and then set the goal: finish
+the plan, commit and push it, run its quality gate, commit and push, execute every phase with a commit and push each,
+and check the result instead of running the quality gate again. That goal is the execution authorization; the
+[Execution Record](delivery.md) logs each step.
 
 ## Context
 
-The ledger is built and every figure is proven. The code grew by topic: the rules about one account sit in nine modules
-reached through forwarding methods, seven base classes share fields, the stream processing and the report sit in the
-domain, and five `assert`s carry proofs. The owner's example of the scatter: `list_records` takes only an account's
-history but lives in `authorizations.py`. [The business case](brd.md) states why that matters for the live defense.
+Before the restructure the ledger was built and every figure proven, but the code had grown by topic: the rules about
+one account sat in nine modules reached through forwarding methods, seven base classes shared fields, the stream
+processing and the report sat in the domain, and five `assert`s carried proofs. The owner's example of the scatter:
+`list_records` took only an account's history but lived in `authorizations.py`. [The business case](brd.md) states why
+that matters for the live defense.
 
 ## Scope
 

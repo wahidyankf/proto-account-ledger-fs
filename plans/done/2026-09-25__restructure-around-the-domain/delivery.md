@@ -87,6 +87,10 @@ first, above all [the target layout](tech-docs/001-target-layout.md) and
   this plan; the hit is recorded in Phase 7 and Phase 8, and AC-14 is met in substance. F6: the triage and cleanup
   times, first written as 21:18 to 21:21, are corrected to 21:15 to 21:17 from the session's command times, before
   40bf7b5 at 21:17. Last gate passed: Phase 8. Next item: Archival, the execution check again. No budget partly spent.
+- **2026-09-25 21:33, archival.** The repairs are fc85054, 1a26bdb, and 7065bb8; the first push of them failed the
+  pre-push `harness-adapters` gate on an uncommitted Part 2 edit, so RC4 fired and is executed. The second Execution
+  Check returned PASS. The plan moves to `plans/done/2026-09-25__restructure-around-the-domain/`. Last gate passed: the
+  execution check. Next item: none; the archive commit closes the plan.
 
 ## Execution Checkout
 
@@ -1015,24 +1019,33 @@ Each stays dormant until its trigger fires, and closes with one terminal disposi
   > Not triggered — 2026-09-25 21:15: No pushed phase proved wrong; the Phase 8 record line left out of 26f2e12 was a
   > forward fix, 9305a7b, not a defect in a phase's work, so nothing was reverted. The bullets Phase 7 joined in the
   > trade-offs document, which the execution check found, were split again as a forward fix too.
-- [ ] [AI] RC4 — a hook fails a commit or a push. Trigger: the pre-commit or pre-push hook exits non-zero. Owner: the
+- [x] [AI] RC4 — a hook fails a commit or a push. Trigger: the pre-commit or pre-push hook exits non-zero. Owner: the
       executor. Procedure: read its output, fix the cause, and commit again; never `--no-verify`. Proof: the hook
       passes. Acceptance: AC-16.
-  > Not triggered — 2026-09-25 21:15: Every pre-commit and pre-push hook passed on the first run, and none was bypassed.
+  > Not triggered as of 2026-09-25 21:15: every hook had passed on its first run. Executed — 2026-09-25 21:31: the
+  > pre-push hook for fc85054..7065bb8 failed `harness-adapters`, since the working tree held an uncommitted `AGENTS.md`
+  > edit for the Part 2 work, which the adapter catalogs hash. The cause was fixed by stashing that edit, which is not
+  > this plan's, and the push was run again, never with `--no-verify`. Proof: every gate passed, pushed as
+  > 40bf7b5..7065bb8.
 
 ## Archival
 
 After every substantive phase is terminal. The completion gate is the execution check alone.
 
 - [x] [AI] Give each dormant recovery item its dated disposition. Proof: every item carries one. Acceptance: AC-16. -
-      Done 21:15: RC1 to RC4 each not triggered, with the reason under it.
+      Done 21:15: RC1 to RC4 each not triggered, with the reason under it. - Correction, 21:31: RC4 fired on the repair
+      push and is executed, as recorded under it.
 - [x] [AI] Triage `learnings.md`: route each entry to one owner or discard it with a reason, or record that the log is
       empty. Proof: no entry unresolved. Acceptance: AC-16. - Done 21:16: four entries, each failing the keep test and
       discarded with its reason under it: the evidence README, which the directory-map gate already catches; two
       scratch-script faults, which no durable rule owns; and the Phase 8 record line, closed in 9305a7b and audited by
       the execution check. None held a secret or belonged to another repository.
-- [ ] [AI] Run [Execution Check](../../../repo-governance/workflows/plan/plan-execution-check.md) and record its
-      terminal verdict; archival needs a permitting one. Proof: the verdict. Acceptance: AC-16.
+- [x] [AI] Run [Execution Check](../../../repo-governance/workflows/plan/plan-execution-check.md) and record its
+      terminal verdict; archival needs a permitting one. Proof: the verdict. Acceptance: AC-16. - Done 21:33: run 1
+      BLOCKED on F1, recovery items ticked though none had fired, with F2 to F7 non-blocking; repaired in fc85054,
+      1a26bdb, and 7065bb8, as the Execution Record's 21:29 entry lists. Run 2 PASS: every repair holds against the
+      files, AC-01 to AC-16 are met, and archival may proceed. Its one note, that RC4's disposition predates the repair
+      pushes, is answered by RC4's executed disposition.
 - [x] [AI] Run [Dev Artifact Clean-Up](../../../repo-governance/workflows/maintenance/dev-artifact-clean-up.md) over
       this task's scratch in `local-tmp/`, including `local-tmp/restructure/baseline/`. Proof: the record of what it
       removed. Acceptance: AC-16. - Done 21:17, integration `local-main`, outcome `pass`, before the execution check,
@@ -1044,11 +1057,19 @@ After every substantive phase is terminal. The completion gate is the execution 
       task list, still in use. No worktree or task branch was made. - Proof: each removed path re-listed and absent;
       `local-tmp/` holds only `.gitkeep`, `pdf/`, and the task list; after `git fetch --prune`, `main...origin/main`
       diverges `0 0`. Result: `retained`, for the two items above.
-- [ ] [AI] Move the plan to `plans/done/YYYY-MM-DD__restructure-around-the-domain/` with `/usr/bin/git mv`; update
+- [x] [AI] Move the plan to `plans/done/YYYY-MM-DD__restructure-around-the-domain/` with `/usr/bin/git mv`; update
       `plans/in-progress/README.md`, `plans/done/README.md`, and every live link to the old path; run the full
       validation from the archived state; add the WORKLOG entry; commit as `docs(plan): archive the restructure plan`
       and push. Proof: the pushed range, and
       `grep -rln "plans/in-progress/restructure-around-the-domain" --exclude-dir=.git --exclude-dir=local-tmp .` finding
-      only history. Acceptance: AC-16.
+      only history. Acceptance: AC-16. - Done 21:37: moved at 21:33 with `/usr/bin/git mv` to
+      `plans/done/2026-09-25__restructure-around-the-domain/`, 2026-09-25 being the day its final commit lands.
+      `plans/in-progress/README.md` reads "No plans in progress.", `plans/done/README.md` lists the plan, and the plan
+      README's Status says it is done and its Context speaks of the old code in the past. No live link used the old
+      path: the grep, run with `.nx`, `node_modules`, and `.venv` excluded as well, finds only this item, the Execution
+      Checkout's `EV` export, and the commands in 004 and the tree in 008, each history. - Full validation from the
+      archived state, 21:33–21:36, `--skip-nx-cache`, every command exit 0: test:quick (152 passed, 1 xfailed; coverage
+      94.95%), test:integration (3 passed), test:e2e (6 passed), `check:hygiene`, and internal-link. The archive commit
+      and its push are recorded in the commit after it, which cannot name itself.
 
 [cycle]: ../../../repo-governance/development/quality/testing/test-driven-development/001-cycle-and-evidence.md

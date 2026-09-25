@@ -8,6 +8,7 @@ earlier work is claimed.
 
 | When                   | What                                                                                        |
 | ---------------------- | ------------------------------------------------------------------------------------------- |
+| 2026-09-25 21:15–21:37 | Restructure archival: execution check BLOCKED, repaired, then PASS; RC4 fired; archived     |
 | 2026-09-25 21:04–21:14 | Restructure Phase 8: every criterion verified; corpus, mutations, and timings recorded      |
 | 2026-09-25 20:55–21:03 | Restructure Phase 7: architecture, READMEs, and trade-offs as built; timings re-measured    |
 | 2026-09-25 20:46–20:54 | Restructure Phase 6: every module combed; test support split into builders and readers      |
