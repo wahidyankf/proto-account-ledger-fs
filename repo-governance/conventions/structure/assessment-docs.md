@@ -60,14 +60,13 @@ Reason: the brief requires a timestamped, real worklog; a reconstructed one is n
 
 **The worklog is newest first, one entry per section of work.** A new `WORKLOG.md` entry goes at the top, under its
 header, stamped with the real local times its section began and ended. Committed entries may be merged into one for
-their section, spanning their times and saying only what they said, in the words then true; no committed entry is
-otherwise edited or removed. Followed: every committed entry survives unchanged or inside a merged entry covering its
-times, and none sits above a newer one. Violated: an edit or drop outside a merge, a merge adding a claim or leaving its
-times, or an entry above a newer one.
+their section, spanning their times and saying only what they said, in the words then true, and a time its commit
+disproves is corrected; no committed entry is otherwise edited or removed. Followed: every committed entry survives
+unchanged, corrected, or merged, covering its times, and none sits above a newer one. Violated: any other edit or drop,
+a merge adding a claim or leaving its times, or an entry above a newer one.
 
 Reason: an entry records what was true when the work happened, and rewriting it turns a log into a story; a merged entry
-keeps that truth, and the git history keeps the finer entries. The newest comes first, as the latest work is checked
-most.
+keeps that truth, and the git history keeps the finer entries. The newest comes first, as the latest is checked most.
 
 ## Enforcement
 
