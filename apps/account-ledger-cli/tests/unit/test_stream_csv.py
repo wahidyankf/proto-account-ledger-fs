@@ -153,7 +153,7 @@ def test_an_amount_that_is_not_a_valid_amount_is_refused() -> None:
     )
     assert find_fault(amount="0.00") == StreamError(2, "line 2: amount '0.00' must be above zero")
     assert find_fault(amount="-400.00") == StreamError(2, "line 2: amount '-400.00' must be above zero")
-    assert find_fault(amount="1e30") == StreamError(2, "line 2: amount '1e30' has more than 28 digits")
+    assert find_fault(amount="1e30") == StreamError(2, "line 2: amount '1e30' must be below 1000000000000")
 
 
 def test_a_cell_past_the_csv_field_limit_is_refused() -> None:

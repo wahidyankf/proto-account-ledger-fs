@@ -6,7 +6,7 @@ happens here.
 
 from collections.abc import Iterable
 from dataclasses import dataclass
-from decimal import ROUND_DOWN, ROUND_HALF_EVEN, Decimal, InvalidOperation, getcontext
+from decimal import ROUND_DOWN, ROUND_HALF_EVEN, Decimal, InvalidOperation
 from enum import Enum
 
 from account_ledger.domain.model.ids import InstalmentCount
@@ -29,15 +29,17 @@ class TooManyPlaces:
     currency: str
 
 
+AMOUNT_LIMIT = Decimal(10) ** 12  # money read from the stream stays below it, so no sum outgrows 28 digits (NUMBERS.md)
+
+
 @dataclass(frozen=True, slots=True)
-class TooManyDigits:
-    """The value needs more digits at its currency's places than the working precision holds (NUMBERS.md)."""
+class AboveLimit:
+    """The value is not below the amount limit in either direction."""
 
     text: str
-    digits: int
 
 
-type MoneyFault = NotADecimal | TooManyPlaces | TooManyDigits
+type MoneyFault = NotADecimal | TooManyPlaces | AboveLimit
 
 
 def _read_decimal(text: str) -> Result[Decimal, NotADecimal]:
@@ -50,14 +52,15 @@ def _read_decimal(text: str) -> Result[Decimal, NotADecimal]:
 
 
 def _make_scaled_value(value: Decimal, places: int, currency: str) -> Result[Decimal, MoneyFault]:
-    """The value at exactly the currency's places, or a fault for a non-finite value or one with more places."""
+    """The value at exactly the currency's places, or a fault for a non-finite value, one with more places, or one not
+    below the amount limit."""
     if not value.is_finite():
         return Err(NotADecimal(str(value)))
     exponent = value.as_tuple().exponent
     if isinstance(exponent, int) and exponent < -places:
         return Err(TooManyPlaces(str(value), places=places, currency=currency))
-    if value.adjusted() + 1 + places > (precision := getcontext().prec):  # quantize would refuse it by raising
-        return Err(TooManyDigits(str(value), precision))
+    if abs(value) >= AMOUNT_LIMIT:
+        return Err(AboveLimit(str(value)))
     return Ok(value.quantize(Decimal(1).scaleb(-places)))
 
 

@@ -8,6 +8,7 @@ earlier work is claimed.
 
 | When                   | What                                                                                        |
 | ---------------------- | ------------------------------------------------------------------------------------------- |
+| 2026-09-25 12:32–12:45 | Amount limit: stream amounts below 10¹², so no sum outgrows 28 digits; NUMBERS, AMB-014     |
 | 2026-09-25 09:31–09:50 | Replay made event-driven, AMB-001 given two tests; AMB-001 and AMB-014 cite current tests   |
 | 2026-09-25 08:10–09:25 | Package split into cli, adapters, and domain; domain grouped by topic; render owns all text |
 | 2026-09-25 07:44–08:02 | Pre-commit formats staged Python with ruff; the unused lint-staged dropped                  |

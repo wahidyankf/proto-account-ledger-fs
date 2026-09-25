@@ -32,6 +32,8 @@ from account_ledger.domain.model.ids import (
     parse_event_id,
 )
 from account_ledger.domain.model.money import (
+    AMOUNT_LIMIT,
+    AboveLimit,
     Aed,
     Amount,
     Bhd,
@@ -39,7 +41,6 @@ from account_ledger.domain.model.money import (
     MoneyFault,
     NotADecimal,
     NotPositive,
-    TooManyDigits,
     TooManyPlaces,
     format_digits,
     split_amount_of,
@@ -102,8 +103,8 @@ def _describe_amount_fault(text: str, fault: MoneyFault | NotPositive) -> str:
             return f"amount '{text}' is not a decimal number"
         case TooManyPlaces(places=places, currency=currency):
             return f"amount '{text}' has more than {places} places for {currency}"
-        case TooManyDigits(digits=digits):
-            return f"amount '{text}' has more than {digits} digits"
+        case AboveLimit():
+            return f"amount '{text}' must be below {AMOUNT_LIMIT}"
         case NotPositive():
             return f"amount '{text}' must be above zero"
 

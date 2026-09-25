@@ -31,6 +31,7 @@ Both are listed, as AMB-032 resolves.
 | --------------------------- | ------------------------------------ | ------------------ |
 | Rate literal                | `Decimal("0.0004")`                  | in place           |
 | Decimal working precision   | 28 significant digits                | in place           |
+| Amount limit                | below 10¹² in either direction       | in place           |
 | Rounding mode               | half-even                            | resolved, AMB-006  |
 | Instalment split            | 3.333, 3.333, 3.334                  | resolved, AMB-020  |
 | Hold released on settlement | the full hold, on a final settlement | resolved, AMB-013  |
@@ -54,6 +55,14 @@ choice here: this is the given rate, represented without error.
 Python's default context of 28 significant digits. A balance of 10¹² at three decimals is 16 digits, and multiplying it
 by a four-digit rate needs 20. At 14 digits (half), intermediate products for large balances would be rounded silently
 before the deliberate quantize step.
+
+### Amount limit
+
+Every amount the stream gives must be below 10¹² in either direction, AED 999,999,999,999.99 at most; one at or above it
+is a fault in the input (AMB-014). The limit keeps every sum inside the working precision: without it, two amounts of 28
+digits each could sum to 29, which no balance can hold, and the replay would fail; at this limit a sum could reach 28
+digits only after some 10¹³ events, far beyond any replay held in memory. It sits at the 10¹² scale the working
+precision is sized for; halving it to 5 × 10¹¹ would refuse more amounts and make no sum safer.
 
 ### Rounding mode
 
