@@ -4,7 +4,21 @@ from collections.abc import Sequence
 from typing import assert_never
 
 from account_ledger.domain.authorizations import Approved, AuthorizationRecord, Declined, PartiallySettled, Settled
-from account_ledger.domain.model.event_log import Captured, Duplicate, ForcePosted, LogEntry, SettlementAccepted
+from account_ledger.domain.model.event_log import (
+    AlreadyReversed,
+    AlreadyUndone,
+    Captured,
+    Duplicate,
+    ForcePosted,
+    IdReused,
+    LogEntry,
+    MovedNoMoney,
+    Rejected,
+    Rejection,
+    ReversesAReversal,
+    SettlementAccepted,
+    UnknownTarget,
+)
 from account_ledger.domain.model.events import (
     AnyAmount,
     Authorization,
@@ -24,7 +38,16 @@ from account_ledger.domain.model.events import (
 )
 from account_ledger.domain.model.ids import AccountId, Day, text
 from account_ledger.domain.model.money import Direction, Money, currency, digits
-from account_ledger.domain.report import Capitalized, DayReport, EndOfDayEvent, Fired, NothingFired, Processed, Step
+from account_ledger.domain.report import (
+    Capitalized,
+    DayReport,
+    EndOfDayEvent,
+    Fired,
+    Note,
+    NothingFired,
+    Processed,
+    Step,
+)
 
 RULE = "=" * 120
 
@@ -159,7 +182,7 @@ def _applied(row: Fired | Capitalized | NothingFired) -> Row:
             detail = f"{_money(event.amount)}, accrued {_days(days)}"
             return (str(step.value), text(event.id), kind, event.account.value, detail, _day_cell(event.value_day))
         case NothingFired(step=step, accounts=accounts, note=note):
-            return (str(step.value), "-", _step(step), ", ".join(each.value for each in accounts), note.value, "-")
+            return (str(step.value), "-", _step(step), ", ".join(each.value for each in accounts), _note(note), "-")
         case _:
             assert_never(row)
 
@@ -205,6 +228,21 @@ def _step(step: Step) -> str:
             assert_never(step)
 
 
+def _note(note: Note) -> str:
+    """The row a step prints when it fires nothing of its kind (tech-docs 002)."""
+    match note:
+        case Note.NO_FEE:
+            return "no fee assessed or refunded"
+        case Note.NO_NEW_FEE:
+            return "no new fee assessed"
+        case Note.NO_INTEREST:
+            return "no interest accrued"
+        case Note.NO_CAPITALIZATION:
+            return "no interest capitalized"
+        case _:
+            assert_never(note)
+
+
 def _summary_header(report: DayReport) -> Row:
     return ("Item", *(f"{account.value} ({currency(money)})" for account, money in report.closing.items()))
 
@@ -221,13 +259,36 @@ def _summary(report: DayReport) -> list[Row]:
         ("Closing ledger balance", *(_amount(report.closing[account]) for account in accounts)),
         ("Available balance", *(_amount(report.available[account]) for account in accounts)),
         ("Authorizations", *(_authorizations(report.authorizations, account) for account in accounts)),
-        ("Errors", *("; ".join(report.errors[account]) or "none" for account in accounts)),
+        ("Errors", *("; ".join(_refusal(entry) for entry in report.errors[account]) or "none" for account in accounts)),
     ]
 
 
 def _authorizations(known: Sequence[AuthorizationRecord], account: AccountId) -> str:
     states = [_state(record) for record in known if record.authorization.account == account]
     return "; ".join(states) or "none"
+
+
+def _refusal(rejected: Rejected) -> str:
+    """A refusal's error text (tech-docs 001, D22)."""
+    return f"{text(rejected.event.id)} refused: {_reason(rejected.reason)}"
+
+
+def _reason(reason: Rejection) -> str:
+    match reason:
+        case IdReused():
+            return "ID already used with different content"
+        case AlreadyReversed(target=target, by=by):
+            return f"{text(target)} is already reversed by {text(by)}"
+        case ReversesAReversal(target=target):
+            return f"{text(target)} is a reversal"
+        case UnknownTarget(target=target):
+            return f"{text(target)} is not in the log"
+        case MovedNoMoney(target=target):
+            return f"{text(target)} moved no money"
+        case AlreadyUndone(part=part, by=by):
+            return f"{text(part)} is already undone by {text(by)}"
+        case _:
+            assert_never(reason)
 
 
 def _state(record: AuthorizationRecord) -> str:

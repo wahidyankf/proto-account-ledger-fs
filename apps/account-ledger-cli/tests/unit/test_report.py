@@ -6,13 +6,15 @@ import pytest
 
 from account_ledger.domain.authorizations import Approved, AuthorizationState, Declined, Settled
 from account_ledger.domain.model.config import CHALLENGE
+from account_ledger.domain.model.event_log import Rejection
 from account_ledger.domain.model.events import IncomingEvent
 from account_ledger.domain.model.ids import AccountId, AuthorizationId, Day, text
 from account_ledger.domain.model.money import Amount
 from account_ledger.domain.replay import replay
-from account_ledger.domain.report import Capitalized, DayReport, Fired, NothingFired, Restatement, Step
+from account_ledger.domain.report import Capitalized, DayReport, Fired, Note, NothingFired, Restatement, Step
 from support.brief_stream import brief_stream
-from support.streams import ACC_001, ACC_002, authorization, credit, debit, reversal
+from support.refusals import REFUSALS
+from support.streams import ACC_001, ACC_002, credit
 from support.values import aed, bhd
 
 
@@ -50,58 +52,22 @@ def test_amb_019_every_known_authorization_is_listed_with_its_state() -> None:
     ]
 
 
-REFUSALS = {
-    "IdReused": (
-        (credit("E1", 1, "100.00"), credit("E1", 1, "90.00")),
-        ACC_001.id,
-        "E1 refused: ID already used with different content",
-    ),
-    "AlreadyReversed": (
-        (credit("E1", 1, "1000.00"), debit("E7", 1, "620.00"), reversal("E9", 1, "E7"), reversal("E12", 1, "E7")),
-        ACC_001.id,
-        "E12 refused: E7 is already reversed by E9",
-    ),
-    "ReversesAReversal": (
-        (credit("E1", 1, "1000.00"), debit("E7", 1, "620.00"), reversal("E9", 1, "E7"), reversal("E12", 1, "E9")),
-        ACC_001.id,
-        "E12 refused: E9 is a reversal",
-    ),
-    "UnknownTarget": (
-        (credit("E1", 1, "100.00"), reversal("E12", 1, "E99")),
-        ACC_001.id,
-        "E12 refused: E99 is not in the log",
-    ),
-    "MovedNoMoney": (
-        (credit("E1", 1, "100.00"), authorization("E8", 1, "Auth-B", "900.00"), reversal("E12", 1, "E8")),
-        ACC_001.id,
-        "E12 refused: E8 moved no money",
-    ),
-    "AlreadyUndone": (
-        (
-            credit("E10", 1, "10.000", account="ACC-002", instalments=3),
-            reversal("E11", 1, "E10", account="ACC-002"),
-            reversal("E12", 1, "E10-1", account="ACC-002"),
-        ),
-        ACC_002.id,
-        "E12 refused: E10-1 is already undone by E11",
-    ),
-}
-
-
-@pytest.mark.parametrize(("stream", "account", "text"), REFUSALS.values(), ids=REFUSALS.keys())
-def test_amb_014_a_rejected_event_prints_as_that_days_error(
-    stream: tuple[IncomingEvent, ...], account: AccountId, text: str
+@pytest.mark.parametrize(("stream", "account", "reason", "_text"), REFUSALS.values(), ids=REFUSALS.keys())
+def test_amb_014_a_rejected_event_is_that_days_error(
+    stream: tuple[IncomingEvent, ...], account: AccountId, reason: Rejection, _text: str
 ) -> None:
-    """AMB-014: every event is recorded with its outcome, and a refused one prints as that day's error, by account,
-    in the text tech-docs 001 fixes (D22)."""
+    """AMB-014: every event is recorded with its outcome, and a refused one is that day's error, by account, with the
+    reason it was refused; the renderer prints it in the text tech-docs 001 fixes (D22)."""
     errors = replay(stream, CHALLENGE).report(Day(1)).errors
 
-    assert errors == {each.id: (text,) if each.id == account else () for each in CHALLENGE.accounts}
+    assert {each: tuple(entry.reason for entry in entries) for each, entries in errors.items()} == {
+        each.id: (reason,) if each.id == account else () for each in CHALLENGE.accounts
+    }
 
 
-def rows(day_report: DayReport) -> list[tuple[int, str, tuple[str, ...]]]:
+def rows(day_report: DayReport) -> list[tuple[int, str | Note, tuple[str, ...]]]:
     """Each end-of-day row as its step, its marker or note, and its accounts."""
-    found: list[tuple[int, str, tuple[str, ...]]] = []
+    found: list[tuple[int, str | Note, tuple[str, ...]]] = []
     for row in day_report.end_of_day:
         match row:
             case Fired(step=step, event=event):
@@ -109,7 +75,7 @@ def rows(day_report: DayReport) -> list[tuple[int, str, tuple[str, ...]]]:
             case Capitalized(event=event):
                 found.append((Step.CAPITALIZATION.value, text(event.id), (event.account.value,)))
             case NothingFired(step=step, accounts=accounts, note=note):
-                found.append((step.value, note.value, tuple(account.value for account in accounts)))
+                found.append((step.value, note, tuple(account.value for account in accounts)))
             case _:
                 assert_never(row)
     return found
@@ -124,23 +90,23 @@ def test_amb_033_a_step_that_fires_nothing_reports_its_row() -> None:
     result = replay(brief_stream(), CHALLENGE)
 
     assert rows(result.report(Day(1))) == [
-        (1, "no fee assessed or refunded", BOTH),
+        (1, Note.NO_FEE, BOTH),
         (2, "INT-001-D1@D1", ("ACC-001",)),
-        (2, "no interest accrued", ("ACC-002",)),
+        (2, Note.NO_INTEREST, ("ACC-002",)),
     ]
     assert rows(result.report(Day(5)))[3:] == [
         (2, "INT-001-D2@D5", ("ACC-001",)),
         (2, "INT-001-D3@D5", ("ACC-001",)),
         (2, "INT-001-D4@D5", ("ACC-001",)),
-        (2, "no interest accrued", ("ACC-001",)),
-        (2, "no interest accrued", ("ACC-002",)),
+        (2, Note.NO_INTEREST, ("ACC-001",)),
+        (2, Note.NO_INTEREST, ("ACC-002",)),
     ]
     assert rows(result.report(Day(6)))[:4] == [
         (1, "REFUND-001-D2@D6", ("ACC-001",)),
         (1, "REFUND-001-D4@D6", ("ACC-001",)),
         (1, "REFUND-001-D5@D6", ("ACC-001",)),
-        (1, "no new fee assessed", BOTH),
+        (1, Note.NO_NEW_FEE, BOTH),
     ]
     assert rows(result.report(Day(6)))[-2:] == [(3, "CAP-001@D6", ("ACC-001",)), (3, "CAP-002@D6", ("ACC-002",))]
     only_aed = replay((credit("E1", 1, "100.00"),), CHALLENGE).report(Day(6))
-    assert rows(only_aed)[-2:] == [(3, "CAP-001@D6", ("ACC-001",)), (3, "no interest capitalized", ("ACC-002",))]
+    assert rows(only_aed)[-2:] == [(3, "CAP-001@D6", ("ACC-001",)), (3, Note.NO_CAPITALIZATION, ("ACC-002",))]

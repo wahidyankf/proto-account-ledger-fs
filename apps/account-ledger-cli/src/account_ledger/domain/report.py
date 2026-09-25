@@ -2,9 +2,8 @@
 
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
-from enum import Enum
+from enum import Enum, auto
 from types import MappingProxyType
-from typing import assert_never
 
 from account_ledger.domain.authorizations import AuthorizationRecord, records
 from account_ledger.domain.balances import available_of, closing_of
@@ -12,17 +11,10 @@ from account_ledger.domain.interest import accrued_days_of
 from account_ledger.domain.model.config import AnyAccount, LedgerConfig
 from account_ledger.domain.model.event_log import (
     Accepted,
-    AlreadyReversed,
-    AlreadyUndone,
-    IdReused,
     Log,
     LogEntry,
     LoggedEvent,
-    MovedNoMoney,
     Rejected,
-    Rejection,
-    ReversesAReversal,
-    UnknownTarget,
     instalments_of,
 )
 from account_ledger.domain.model.events import (
@@ -39,7 +31,7 @@ from account_ledger.domain.model.events import (
     Reversal,
     Settlement,
 )
-from account_ledger.domain.model.ids import AccountId, Day, text
+from account_ledger.domain.model.ids import AccountId, Day
 from account_ledger.domain.model.money import Money
 
 
@@ -63,12 +55,12 @@ class Step(Enum):
 
 
 class Note(Enum):
-    """The row a step prints when it fires nothing of its kind (tech-docs 002)."""
+    """Why a step's row shows nothing fired of its kind (tech-docs 002); the renderer prints its text."""
 
-    NO_FEE = "no fee assessed or refunded"
-    NO_NEW_FEE = "no new fee assessed"
-    NO_INTEREST = "no interest accrued"
-    NO_CAPITALIZATION = "no interest capitalized"
+    NO_FEE = auto()
+    NO_NEW_FEE = auto()
+    NO_INTEREST = auto()
+    NO_CAPITALIZATION = auto()
 
 
 type EndOfDayEvent = Fee | FeeRefund | InterestAccrual | InterestAdjustment
@@ -118,7 +110,7 @@ class DayReport:
     available: Mapping[AccountId, Money]
     restated: tuple[Restatement, ...]
     authorizations: tuple[AuthorizationRecord, ...]
-    errors: Mapping[AccountId, tuple[str, ...]]
+    errors: Mapping[AccountId, tuple[Rejected, ...]]
     end_of_day: tuple[Fired | Capitalized | NothingFired, ...]
 
 
@@ -202,36 +194,13 @@ def _capitalization_rows(
     return rows
 
 
-def _errors(log: Log, day: Day, account_id: AccountId) -> tuple[str, ...]:
+def _errors(log: Log, day: Day, account_id: AccountId) -> tuple[Rejected, ...]:
     """Each event refused that day on the account, in log order (AMB-014); a duplicate is not an error."""
     return tuple(
-        refusal(entry)
+        entry
         for entry in log
         if isinstance(entry, Rejected) and entry.processed_day == day and entry.event.account == account_id
     )
-
-
-def refusal(rejected: Rejected) -> str:
-    """A refusal's error text (tech-docs 001, D22)."""
-    return f"{text(rejected.event.id)} refused: {_reason(rejected.reason)}"
-
-
-def _reason(reason: Rejection) -> str:
-    match reason:
-        case IdReused():
-            return "ID already used with different content"
-        case AlreadyReversed(target=target, by=by):
-            return f"{text(target)} is already reversed by {text(by)}"
-        case ReversesAReversal(target=target):
-            return f"{text(target)} is a reversal"
-        case UnknownTarget(target=target):
-            return f"{text(target)} is not in the log"
-        case MovedNoMoney(target=target):
-            return f"{text(target)} moved no money"
-        case AlreadyUndone(part=part, by=by):
-            return f"{text(part)} is already undone by {text(by)}"
-        case _:
-            assert_never(reason)
 
 
 def _restated(log: Log, day: Day, config: LedgerConfig, reported: Reported) -> tuple[Restatement, ...]:

@@ -1,11 +1,17 @@
-"""The report as text: layout, tables, amounts, and every Type and Detail text (tech-docs 003)."""
+"""The report as text: layout, tables, amounts, and every Type, Detail, note, and error text (tech-docs 003)."""
+
+import re
+
+import pytest
 
 from account_ledger.adapters.render import render
 from account_ledger.domain.model.config import CHALLENGE
-from account_ledger.domain.model.events import Capture
-from account_ledger.domain.model.ids import Day
+from account_ledger.domain.model.event_log import Rejection
+from account_ledger.domain.model.events import Capture, IncomingEvent
+from account_ledger.domain.model.ids import AccountId, Day
 from account_ledger.domain.replay import replay
 from support.brief_stream import brief_stream
+from support.refusals import REFUSALS
 from support.streams import authorization, credit, debit, reversal, settlement
 
 RULE = "=" * 120
@@ -240,3 +246,37 @@ def test_a_partially_settled_authorization_prints_its_remaining_hold() -> None:
     assert cell(lines[:day_3], "| Authorizations", 1) == "Auth-A partially settled for 120.00, hold 80.00"
     assert cell(lines[day_3:], "| E4 ", 4) == "Auth-A settles for AED 40.00"
     assert cell(lines[day_3:], "| Authorizations", 1) == "Auth-A settled for 160.00"
+
+
+def test_a_step_that_fires_nothing_prints_its_note() -> None:
+    """AMB-033, tech-docs 002: a step that fires nothing of its kind prints the note for it in its Detail cell."""
+    brief = render(replay(brief_stream(), CHALLENGE).reports)
+    only_aed = render((replay((credit("E1", 1, "100.00"),), CHALLENGE).report(Day(6)),))
+
+    notes = {
+        line.split(" | ")[4].strip()
+        for text in (brief, only_aed)
+        for line in text.split("\n")
+        if re.match(r"\| [123] +\| - ", line)
+    }
+
+    assert notes == {
+        "no fee assessed or refunded",
+        "no new fee assessed",
+        "no interest accrued",
+        "no interest capitalized",
+    }
+
+
+@pytest.mark.parametrize(("stream", "account", "_reason", "error"), REFUSALS.values(), ids=REFUSALS.keys())
+def test_amb_014_a_rejected_event_prints_its_refusal(
+    stream: tuple[IncomingEvent, ...], account: AccountId, _reason: Rejection, error: str
+) -> None:
+    """AMB-014, D22: a refused event prints as that day's error in its account's column, in the text tech-docs 001
+    fixes; the other account's column reads none."""
+    lines = render((replay(stream, CHALLENGE).report(Day(1)),)).split("\n")
+
+    errors = next(line for line in lines if line.startswith("| Errors")).split(" | ")
+    columns = {each.id: errors[n].strip(" |") for n, each in enumerate(CHALLENGE.accounts, start=1)}
+
+    assert columns == {each.id: error if each.id == account else "none" for each in CHALLENGE.accounts}

@@ -118,25 +118,25 @@ nothing.
           +----------+  +----------+  +----------+  +----------+
 ```
 
-| Component        | Responsibility                                                                                  |
-| ---------------- | ----------------------------------------------------------------------------------------------- |
-| `cli`            | `run` checks the arguments, reads, parses, replays, renders, and maps every failure to a status |
-| `stream_csv`     | parsing the stream file into incoming events, or the first fault with its line                  |
-| `render`         | the report as text: banners, box tables, amounts with `−` and separators, and every Detail text |
-| `replay`         | the stream in listed order, closing each day on time, with the log and report of every day      |
-| `processing`     | one entry per incoming event: idempotency first, then by kind; `reversals` checks a reversal    |
-| `end_of_day`     | a day's close: `fees`, then `interest`'s accruals and adjustments, then its capitalization      |
-| `report`         | a day's processed events, end-of-day rows, closings, restated closings, holds, and errors       |
-| `fees`           | a fee for each day closing negative with none in force, refunded once the day recovers          |
-| `interest`       | a day's interest on a positive closing, adjusted when a closing changes, and its capitalization |
-| `balances`       | closing and available, each recomputed over the log                                             |
-| `authorizations` | the authorization states, `decide`, `transition`, holds, and the records replayed from the log  |
-| `reversals`      | why a reversal is refused, in tech-docs 002's order, and which events the accepted ones undid   |
-| `event_log`      | the append-only tuple of entries, each kind holding only its outcome, and every `Rejection`     |
-| `events`         | the incoming event kinds, joined in `IncomingEvent`, and the fired kinds, in `FiredEvent`       |
-| `config`         | the accounts, each typed by its currency, the window of days, and the capitalization days       |
-| `money`          | `Aed` and `Bhd`, one type per currency; `Amount` above zero; the split, fee, and daily interest |
-| `ids`            | days, account and hold IDs, incoming IDs, fired-event markers, and instalment counts            |
+| Component        | Responsibility                                                                                    |
+| ---------------- | ------------------------------------------------------------------------------------------------- |
+| `cli`            | `run` checks the arguments, reads, parses, replays, renders, and maps every failure to a status   |
+| `stream_csv`     | parsing the stream file into incoming events, or the first fault with its line                    |
+| `render`         | the report as text: banners, box tables, amounts with `−` and separators, every note and error    |
+| `replay`         | the stream in listed order, closing each day on time, with the log and report of every day        |
+| `processing`     | one entry per incoming event: idempotency first, then by kind; `reversals` checks a reversal      |
+| `end_of_day`     | a day's close: `fees`, then `interest`'s accruals and adjustments, then its capitalization        |
+| `report`         | a day as data, no text: processed events, end-of-day rows, closings, restated ones, holds, errors |
+| `fees`           | a fee for each day closing negative with none in force, refunded once the day recovers            |
+| `interest`       | a day's interest on a positive closing, adjusted when a closing changes, and its capitalization   |
+| `balances`       | closing and available, each recomputed over the log                                               |
+| `authorizations` | the authorization states, `decide`, `transition`, holds, and the records replayed from the log    |
+| `reversals`      | why a reversal is refused, in tech-docs 002's order, and which events the accepted ones undid     |
+| `event_log`      | the append-only tuple of entries, each kind holding only its outcome, and every `Rejection`       |
+| `events`         | the incoming event kinds, joined in `IncomingEvent`, and the fired kinds, in `FiredEvent`         |
+| `config`         | the accounts, each typed by its currency, the window of days, and the capitalization days         |
+| `money`          | `Aed` and `Bhd`, one type per currency; `Amount` above zero; the split, fee, and daily interest   |
+| `ids`            | days, account and hold IDs, incoming IDs, fired-event markers, and instalment counts              |
 
 `event_log` imports `AuthorizationState` for annotations only, so the log and the state machine do not import each other
 at run time.
