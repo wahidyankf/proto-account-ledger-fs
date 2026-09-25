@@ -23,13 +23,10 @@ applies. It implements [Explicit Over Implicit](../../../principles/explicit-ove
   `return` are deleted, not kept. Ruff and pyright read one module at a time and miss a public name no module uses.
 - **Complexity:** each function's McCabe complexity must stay at 10 or below (ruff `C901`) and its nesting at 3 blocks
   or below (`PLR1702`). This makes a function that gathers too many branches or nests too deep get split while it is
-  still small. `PLR1702` is a preview rule, so the configuration sets `explicit-preview-rules` to keep every other
-  preview rule off.
+  still small.
 - **Docstrings:** every module, class, method, and function must carry a docstring, private ones included, so a reader
   learns what each piece is for without reading its body. Magic methods are exempt, since Python fixes their meaning.
-  Ruff's `D1` rules, except `D105`, check public names, and pylint, running only `missing-module-docstring`,
-  `missing-class-docstring`, and `missing-function-docstring` with `no-docstring-rgx = "^__.+__$"`, checks private ones.
-  A function nested in another should carry one too; no gate checks it, since neither tool reads nested functions.
+  Ruff's `D1` checks public names and pylint private ones; neither reads a nested function, which should carry one too.
 - **Types:** pyright in `strict` mode reports zero errors and warnings; every signature is annotated.
 - **Suppressions:** `Any`, `cast()`, `# type: ignore`, and `# noqa` each take the narrowest scope and state their
   reason, as [Lint Strictness](../checks/lint-strictness.md) requires.
@@ -38,6 +35,11 @@ applies. It implements [Explicit Over Implicit](../../../principles/explicit-ove
 
 Functions are named by a verb and its object, variables by nouns, and a type generic over the currency by its noun and
 `In`, with the plain noun for the union, as [Naming](python-standards/001-naming.md) holds.
+
+## Operations
+
+Each operation is a method of its subject type, save six named cases, and kinds of one concept share a base when the
+code reads their common fields through their union, as [Operations](python-standards/003-operations.md) holds.
 
 ## Functional Core
 
@@ -76,10 +78,11 @@ CPython reuses bytecode whose source kept its size and modification second.
 ## Enforcement
 
 The `lint`, `typecheck`, and `test:*` Nx targets enforce the gates in hooks. Review applies the domain shapes, the
-failure rules, the variable names, and the mutation-proof step. Test levels and coverage follow
-[Test Boundaries and Gates](../testing/test-boundaries-and-gates.md).
+failure rules, the variable names, where each operation lives, and the mutation-proof step. Test levels and coverage
+follow [Test Boundaries and Gates](../testing/test-boundaries-and-gates.md).
 
 ## Modules
 
 1. [Naming](python-standards/001-naming.md)
 2. [Failures](python-standards/002-failures.md)
+3. [Operations](python-standards/003-operations.md)

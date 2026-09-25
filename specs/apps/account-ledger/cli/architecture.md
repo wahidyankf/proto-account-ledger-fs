@@ -275,7 +275,9 @@ A type generic over the currency ends in `In`, and the union over its currencies
 is an account in AED, and `Account` is either. A caller outside the aggregate asks it by method, such as
 `history.compute_closing(day)`; a method call works on the `AccountAggregate` union, so no caller needs to know the
 currency. Each method passes the history to the generic rule in its topic's module; a rule the modules share stays a
-function there, and one only its own module uses is private.
+function there, and one only its own module uses is private. Where an operation lives, and when kinds of one concept
+share a base, follows the Python
+[operations](../../../../repo-governance/development/quality/stacks/python-standards/003-operations.md) rule.
 
 **The Account aggregate** is one account and its own entries in the log, `AccountAggregateIn[M]`: its history, with a
 method for each rule a caller outside it uses. Every rule in `domain/account/` takes one history and never the log, so
