@@ -13,6 +13,10 @@ A repository declares exactly one authoring rule for conceptual diagrams and app
 **This repository declares `plain-text`.** Its files are read mostly in a terminal editor, where Mermaid never renders.
 Draw every conceptual diagram as ASCII inside a fenced `text` block, with prose beside it, and never add Mermaid.
 
+Since 2026-09-25 the owner makes one named file `rendered`, so which rule applies stays predictable:
+`docs/explanation/architecture-trade-offs.md`, read as the Part 2 PDF. Its limits are 6 nodes per level and 30
+characters per label line, checked with each accessible title and description by `scripts/build-architecture-pdf.py`.
+
 ## The Two Rules
 
 | Rule       | Requires                                                                          |

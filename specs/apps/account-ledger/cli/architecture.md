@@ -363,4 +363,4 @@ reading them first.
 - Holds never expire (AMB-018), the ledger's known weakness.
 - No class derives from another, save `Protocol`, `Generic`, `Enum`, or an exception; pylint's `too-many-ancestors`
   gates it.
-- Every diagram is plain-text ASCII.
+- Every diagram here is plain-text ASCII.

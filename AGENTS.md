@@ -70,8 +70,8 @@ imperative shell, frozen dataclasses and unions for the domain, one type per cur
 returned as a `Result`, strict pyright, and ruff for lint and format. Prettier is the source of truth for Markdown,
 JSON, and YAML; prose wraps at 120 columns, and outside `repo-governance/` and the harness directories every Markdown
 line, tables included, stays within 120; see
-[Markdown prose wrap](repo-governance/conventions/writing/markdown-prose-wrap.md). Diagrams are plain-text ASCII only,
-never Mermaid; see [diagrams](repo-governance/conventions/writing/diagrams.md).
+[Markdown prose wrap](repo-governance/conventions/writing/markdown-prose-wrap.md). Diagrams are plain-text ASCII, never
+Mermaid, save the one rendered file [diagrams](repo-governance/conventions/writing/diagrams.md) names.
 
 ## Testing
 
