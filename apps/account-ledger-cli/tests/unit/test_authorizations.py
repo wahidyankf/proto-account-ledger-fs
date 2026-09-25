@@ -9,10 +9,6 @@ from account_ledger.domain.account.authorizations import (
     PartialSettlement,
     SettlementInput,
     apply_settlement,
-    sum_holds,
-)
-from account_ledger.domain.account.balances import (
-    compute_closing,
 )
 from account_ledger.domain.account.domain_events import (
     SettlementForcePosted,
@@ -83,7 +79,7 @@ def test_amb_029_a_settlement_against_a_declined_authorization_is_force_posted()
 
     assert list_settlements(log, "E3") == [SettlementForcePosted(later_settlement, Day(3))]
     assert list_states(log, "Auth-A") == [Declined(AmountIn(make_aed("50.00")))]
-    assert unwrap_ok(compute_closing(find_history(log, ACC_001), Day(3))) == make_aed("10.00")
+    assert unwrap_ok(find_history(log, ACC_001).compute_closing(Day(3))) == make_aed("10.00")
 
 
 def test_amb_029_a_settlement_after_a_final_one_is_force_posted() -> None:
@@ -101,7 +97,7 @@ def test_amb_029_a_settlement_after_a_final_one_is_force_posted() -> None:
 
     assert list_settlements(log, "E4") == [SettlementForcePosted(second_settlement, Day(4))]
     assert list_states(log, "Auth-A") == [Settled(AmountIn(make_aed("40.00")))]
-    assert unwrap_ok(compute_closing(find_history(log, ACC_001), Day(4))) == make_aed("40.00")
+    assert unwrap_ok(find_history(log, ACC_001).compute_closing(Day(4))) == make_aed("40.00")
 
 
 def test_amb_013_a_non_final_settlement_keeps_the_rest_of_the_hold() -> None:
@@ -219,6 +215,6 @@ def test_amb_030_a_settlement_above_its_hold_debits_in_full() -> None:
     log = unwrap_ok(process_stream(stream, CHALLENGE)).find_log(Day(2))
 
     assert list_states(log, "Auth-A") == [Settled(AmountIn(make_aed("120.00")))]
-    assert unwrap_ok(sum_holds(find_history(log, ACC_001), Day(2))) == make_aed("0.00")
+    assert unwrap_ok(find_history(log, ACC_001).sum_holds(Day(2))) == make_aed("0.00")
     assert list_fee_ids(log) == ["FEE-001-D2@D2"]
-    assert unwrap_ok(compute_closing(find_history(log, ACC_001), Day(2))) == make_aed("-45.00")
+    assert unwrap_ok(find_history(log, ACC_001).compute_closing(Day(2))) == make_aed("-45.00")

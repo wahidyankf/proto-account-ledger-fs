@@ -10,9 +10,7 @@ from account_ledger.domain.account.domain_events import (
     LoggedEvent,
 )
 from account_ledger.domain.account.history import (
-    AccountHistory,
     AccountHistoryIn,
-    is_aed_history,
 )
 from account_ledger.domain.model.events import (
     Authorization,
@@ -91,18 +89,3 @@ def compute_available[M: (Aed, Bhd)](history: AccountHistoryIn[M], day: Day) -> 
     if isinstance(closing := compute_closing(history, day), Err):
         return closing
     return sum_holds(history, day).map(lambda holds: closing.value - holds)
-
-
-def compute_available_of(history: AccountHistory, day: Day) -> Result[Money, CurrencyMismatch]:
-    """``compute_available`` for an account whose currency is known only at run time."""
-    if is_aed_history(history):
-        return compute_available(history, day)
-    return compute_available(history, day)
-
-
-def compute_closing_of(history: AccountHistory, day: Day) -> Result[Money, CurrencyMismatch]:
-    """``compute_closing`` for an account whose currency is known only at run time."""
-    # The branches read alike, but pyright binds M to Aed in the first and to Bhd in the second.
-    if is_aed_history(history):
-        return compute_closing(history, day)
-    return compute_closing(history, day)

@@ -22,9 +22,7 @@ from account_ledger.domain.account.domain_events import (
     SettlementForcePosted,
 )
 from account_ledger.domain.account.history import (
-    AccountHistory,
     AccountHistoryIn,
-    is_aed_history,
 )
 from account_ledger.domain.account.states import Approved, AuthorizationState, Declined, PartiallySettled, Settled
 from account_ledger.domain.model.events import Authorization, Settlement, SettlementKind
@@ -188,13 +186,6 @@ def list_records[M: (Aed, Bhd)](history: AccountHistoryIn[M]) -> tuple[Authoriza
             case _:
                 assert_never(entry)
     return tuple(records)
-
-
-def list_records_of(history: AccountHistory) -> tuple[AuthorizationRecord, ...]:
-    """``list_records`` for an account whose currency is known only at run time."""
-    if is_aed_history(history):
-        return list_records(history)
-    return list_records(history)
 
 
 def find_record[M: (Aed, Bhd)](history: AccountHistoryIn[M], settlement: Settlement) -> AuthorizationRecord | None:

@@ -2,7 +2,6 @@
 
 from collections.abc import Iterator
 from dataclasses import dataclass
-from typing import TypeIs
 
 from account_ledger.domain.account.domain_events import (
     AuthorizationApproved,
@@ -54,14 +53,6 @@ class AccountHistoryIn[M: (Aed, Bhd)]:
                     pass
                 case _:
                     yield entry.event
-
-
-type AccountHistory = AccountHistoryIn[Aed] | AccountHistoryIn[Bhd]
-
-
-def is_aed_history(history: AccountHistory) -> TypeIs[AccountHistoryIn[Aed]]:
-    """Whether the history is an AED account's; when it is not, the type checker knows it is a BHD account's."""
-    return isinstance(history.account.opening, Aed)
 
 
 def find_first_entry(entries: tuple[LogEntry, ...], event_id: EventId) -> LogEntry | None:

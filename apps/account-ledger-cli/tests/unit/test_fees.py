@@ -2,9 +2,6 @@
 
 from dataclasses import replace
 
-from account_ledger.domain.account.balances import (
-    compute_closing,
-)
 from account_ledger.domain.account.domain_events import (
     FeeCharged,
 )
@@ -49,7 +46,7 @@ def test_amb_027_a_bhd_account_is_charged_bhd_2_560() -> None:
     fees = [entry.event for entry in log if isinstance(entry, FeeCharged)]
     assert [fee.amount for fee in fees] == [AmountIn(make_bhd("2.560"))]
     assert list_fee_ids(log) == ["FEE-002-D1@D1"]
-    assert unwrap_ok(compute_closing(find_history(log, ACC_002), Day(1))) == make_bhd("-3.560")
+    assert unwrap_ok(find_history(log, ACC_002).compute_closing(Day(1))) == make_bhd("-3.560")
 
 
 def test_amb_035_a_fee_reversed_on_a_negative_day_is_charged_again() -> None:

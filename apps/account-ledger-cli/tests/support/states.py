@@ -1,8 +1,5 @@
 """Reading entries and authorization states out of a log, for the tests."""
 
-from account_ledger.domain.account.authorizations import (
-    list_records_of,
-)
 from account_ledger.domain.account.domain_events import (
     LogEntry,
     SettlementApplied,
@@ -25,9 +22,7 @@ def list_states(log: Log, hold: str, account: Account = ACC_001) -> list[Authori
     first seen."""
     history = find_history_of(log, account)
     return [
-        record.state
-        for record in list_records_of(history)
-        if record.authorization.authorization == AuthorizationId(hold)
+        record.state for record in history.list_records() if record.authorization.authorization == AuthorizationId(hold)
     ]
 
 

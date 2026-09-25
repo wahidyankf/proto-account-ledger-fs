@@ -99,7 +99,8 @@ own `ruff.toml` refuses any import of the other three.
   ---------------------------------------------------------------------------------------------------
   aggregate                     v
   domain/account/  +-------------------------------------------------------------------------+
-                   | the Account aggregate; every rule reads one AccountHistory, never the log |
+                   | the Account aggregate, asked by method; every rule reads one history    |
+                   |   aggregate       AccountAggregateIn: each rule as a method, passed on  |
                    |   decisions       one incoming event on the account -> its entries      |
                    |   interest        accruals, adjustments, capitalization, accrued days   |
                    |   fees            a fee for each day closing negative, refunded after   |
@@ -139,7 +140,8 @@ own `ruff.toml` refuses any import of the other three.
 | `account/balances`       | closing and available, each recomputed over the account's history                         |
 | `account/authorizations` | `decide_authorization`, `apply_settlement`, holds, and records rebuilt from the history   |
 | `account/reversals`      | why a reversal is refused, in tech-docs 002's order, and which events one undid           |
-| `account/history`        | `AccountHistoryIn[M]`: one account and its own entries, all that an account rule may read |
+| `account/aggregate`      | `AccountAggregateIn[M]`: the history, with each rule a caller outside uses as a method    |
+| `account/history`        | `AccountHistoryIn[M]`: one account and its own entries, and the queries about them        |
 | `account/domain_events`  | the domain events, one kind per fact the ledger records, and every `Rejection`            |
 | `account/states`         | the authorization states, one frozen dataclass each                                       |
 | `model/events`           | incoming event kinds, in `IncomingEvent`, and generated kinds, in `GeneratedEvent`        |
@@ -176,9 +178,12 @@ account/domain_events
                                             | TargetOnAnotherAccount | MovedNoMoney | AlreadyUndone
 account/history
           AccountHistoryIn[M: (Aed, Bhd)] = account: AccountIn[M] + entries: LogEntry...   one account's own entries
-          every account rule takes one; a rule generic over M is reached through one dispatch, AccountHistory
+          every account rule takes one; find_entry, list_instalments, list_counted_events ask it
+account/aggregate
+          AccountAggregateIn[M] = AccountHistoryIn[M] + a method per rule a caller outside the aggregate uses
+          type AccountAggregate = AccountAggregateIn[Aed] | AccountAggregateIn[Bhd]; a method works on either
 ledger/event_log
-          Log = tuple[LogEntry, ...]     find_history(log, account) -> AccountHistoryIn[M]
+          Log = tuple[LogEntry, ...]     find_history(log, account) -> AccountAggregateIn[M]
 account/states, account/authorizations
           AuthorizationState = Approved(hold) | PartiallySettled(settled_amount, hold)
                                  | Declined(requested_amount) | Settled(settled_amount)
@@ -262,13 +267,14 @@ type in `domain/` belongs to it, and none outside `domain/` holds a ledger rule.
 
 A type generic over the currency ends in `In`, and the union over its currencies takes the plain noun, per the Python
 [naming](../../../../repo-governance/development/quality/stacks/python-standards/001-naming.md) rule: `AccountIn[Aed]`
-is an account in AED, and `Account` is either. Each rule inside the aggregate is generic, and is reached from outside
-through a function ending in `_of` that takes the plain noun, such as
-`compute_closing_of(history: AccountHistory, day)`.
+is an account in AED, and `Account` is either. A caller outside the aggregate asks it by method, such as
+`history.compute_closing(day)`; a method call works on the `AccountAggregate` union, so no caller needs to know the
+currency. Each method passes the history to the generic rule in its topic's module; a rule the modules share stays a
+function there, and one only its own module uses is private.
 
-**The Account aggregate** is one account and its own entries in the log, `AccountHistoryIn[M]`. Every rule in
-`domain/account/` takes one history and never the log, so pyright refuses a rule that reads another account. The
-aggregate guards the invariants that concern one account:
+**The Account aggregate** is one account and its own entries in the log, `AccountAggregateIn[M]`: its history, with a
+method for each rule a caller outside it uses. Every rule in `domain/account/` takes one history and never the log, so
+pyright refuses a rule that reads another account. The aggregate guards the invariants that concern one account:
 
 - an authorization is decided once, on arrival, and approved only while the available balance after its hold stays at or
   above zero (AMB-008, AMB-009);
@@ -298,7 +304,7 @@ To read the code for the first time, follow one day through it, in this order:
 2. `domain/stream_processing.py`: the loop over events, where a later day's event closes the current day first, as the
    dynamic view above draws.
 3. `domain/ledger/processing.py`, `process_event`: duplicates and cross-account reversals caught on the whole log.
-4. `domain/account/decisions.py`, `decide_event_of`: what one incoming event adds to its account's history.
+4. `domain/account/aggregate.py`, then `decisions.py`, `decide_event`: what one incoming event adds to its account.
 5. `domain/ledger/end_of_day.py`, `close_day`: the three steps of a day's close, each run on every account.
 6. `domain/account/fees.py`: when a day is charged an overdraft fee, and when that fee is refunded.
 7. `domain/account/interest.py`: each day's interest, its adjustment when a closing changes, and its capitalization.

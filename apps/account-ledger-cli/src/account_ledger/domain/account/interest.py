@@ -14,9 +14,7 @@ from account_ledger.domain.account.domain_events import (
     LogEntry,
 )
 from account_ledger.domain.account.history import (
-    AccountHistory,
     AccountHistoryIn,
-    is_aed_history,
 )
 from account_ledger.domain.account.reversals import (
     list_reversed_targets,
@@ -45,16 +43,6 @@ def accrue_interest[M: (Aed, Bhd)](
     return Ok(tuple(_record_interest_change(history.account.id, day, today, change) for day, change in changes.value))
 
 
-def accrue_interest_of(
-    history: AccountHistory, today: Day, first_day: Day
-) -> Result[tuple[LogEntry, ...], CurrencyMismatch]:
-    """``accrue_interest`` for an account whose currency is known only at run time."""
-    # Both branches read alike; each gives the generic call a history of one known currency.
-    if is_aed_history(history):
-        return accrue_interest(history, today, first_day)
-    return accrue_interest(history, today, first_day)
-
-
 def _find_interest_changes[M: (Aed, Bhd)](
     history: AccountHistoryIn[M], today: Day, first_day: Day
 ) -> Result[tuple[tuple[Day, M], ...], CurrencyMismatch]:
@@ -70,9 +58,9 @@ def _find_interest_changes[M: (Aed, Bhd)](
 
 def _compute_interest_change[M: (Aed, Bhd)](history: AccountHistoryIn[M], day: Day) -> Result[M, CurrencyMismatch]:
     """The day's interest on its base, less what was generated for it."""
-    if isinstance(base := compute_interest_base(history, day), Err):
+    if isinstance(base := _compute_interest_base(history, day), Err):
         return base
-    return sum_interest_generated(history, day).map(lambda generated: compute_daily_interest(base.value) - generated)
+    return _sum_interest_generated(history, day).map(lambda generated: compute_daily_interest(base.value) - generated)
 
 
 def _record_interest_change(
@@ -95,7 +83,7 @@ def capitalize_interest[M: (Aed, Bhd)](
     history: AccountHistoryIn[M], today: Day
 ) -> Result[tuple[LogEntry, ...], CurrencyMismatch]:
     """The account's accrued interest, credited value-dated today when it is above zero (AMB-007, AMB-023)."""
-    if isinstance(accrued := compute_accrued(history), Err):
+    if isinstance(accrued := _compute_accrued(history), Err):
         return accrued
     account_id = history.account.id
     match make_amount_of(accrued.value):
@@ -106,14 +94,7 @@ def capitalize_interest[M: (Aed, Bhd)](
             return Ok(())
 
 
-def capitalize_interest_of(history: AccountHistory, today: Day) -> Result[tuple[LogEntry, ...], CurrencyMismatch]:
-    """``capitalize_interest`` for an account whose currency is known only at run time."""
-    if is_aed_history(history):
-        return capitalize_interest(history, today)
-    return capitalize_interest(history, today)
-
-
-def compute_accrued[M: (Aed, Bhd)](history: AccountHistoryIn[M]) -> Result[M, CurrencyMismatch]:
+def _compute_accrued[M: (Aed, Bhd)](history: AccountHistoryIn[M]) -> Result[M, CurrencyMismatch]:
     """The account's interest events, net of their directions, less its capitalizations, each less its reversals
     (AMB-007, AMB-035)."""
     undone_ids = list_reversed_targets(history)
@@ -163,16 +144,7 @@ def _map_interest_since_capitalization[M: (Aed, Bhd)](
     return interest_by_day
 
 
-def list_accrued_days_of(
-    history: AccountHistory, capitalization: CapitalizationId
-) -> Result[tuple[Day, ...], CurrencyMismatch]:
-    """``list_accrued_days`` for an account whose currency is known only at run time."""
-    if is_aed_history(history):
-        return list_accrued_days(history, capitalization)
-    return list_accrued_days(history, capitalization)
-
-
-def compute_interest_base[M: (Aed, Bhd)](history: AccountHistoryIn[M], day: Day) -> Result[M, CurrencyMismatch]:
+def _compute_interest_base[M: (Aed, Bhd)](history: AccountHistoryIn[M], day: Day) -> Result[M, CurrencyMismatch]:
     """The closing less any capitalization value-dated that day, which posts after the day's interest (AMB-023); one
     whose reversal that closing already counts is out of it already (AMB-035)."""
     undone_ids = list_reversed_targets(history, cutoff_day=day)
@@ -188,7 +160,7 @@ def compute_interest_base[M: (Aed, Bhd)](history: AccountHistoryIn[M], day: Day)
     return compute_closing(history, day).flat_map(lambda closing: sum_money(closing, capitalized_values))
 
 
-def sum_interest_generated[M: (Aed, Bhd)](history: AccountHistoryIn[M], day: Day) -> Result[M, CurrencyMismatch]:
+def _sum_interest_generated[M: (Aed, Bhd)](history: AccountHistoryIn[M], day: Day) -> Result[M, CurrencyMismatch]:
     """The account's interest events for a day, net of their directions and reversals (tech-docs 002, step 2)."""
     undone_ids = list_reversed_targets(history)
     generated_values = [

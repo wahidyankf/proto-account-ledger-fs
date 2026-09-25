@@ -33,13 +33,13 @@ def check_reversal[M: (Aed, Bhd)](history: AccountHistoryIn[M], target_id: Event
         return Err(ReversesAReversal(target_id))
     if isinstance(target, AuthorizationApproved | AuthorizationDeclined | EventRejected):
         return Err(MovedNoMoney(target_id))
-    reversal_id = find_reversal_id(history, target_id)
+    reversal_id = _find_reversal_id(history, target_id)
     if reversal_id is not None:
         return Err(AlreadyReversed(target_id, reversal_id))
     return _check_undoing(history, target.event)
 
 
-def find_reversal_id[M: (Aed, Bhd)](history: AccountHistoryIn[M], target_id: EventId) -> IncomingId | None:
+def _find_reversal_id[M: (Aed, Bhd)](history: AccountHistoryIn[M], target_id: EventId) -> IncomingId | None:
     """The posted reversal of the target, if there is one."""
     for entry in history.entries:
         match entry:
@@ -67,14 +67,14 @@ def _check_undoing[M: (Aed, Bhd)](history: AccountHistoryIn[M], target: LoggedEv
     or one of its instalments reversed."""
     match target:
         case Instalment(id=part):
-            undoing_id = find_reversal_id(history, part.parent)
+            undoing_id = _find_reversal_id(history, part.parent)
             return Ok(None) if undoing_id is None else Err(AlreadyUndone(part, undoing_id))
         case Fee(id=fee):
             refund = _find_refund(history, fee)
             return Ok(None) if refund is None else Err(AlreadyUndone(fee, refund))
         case Credit(posting=Instalments()):
             for part in history.list_instalments(target.id):
-                undoing_id = find_reversal_id(history, part.id)
+                undoing_id = _find_reversal_id(history, part.id)
                 if undoing_id is not None:
                     return Err(AlreadyUndone(part.id, undoing_id))
             return Ok(None)
@@ -87,7 +87,7 @@ def _find_refund[M: (Aed, Bhd)](history: AccountHistoryIn[M], fee: FeeId) -> Ref
     for entry in history.entries:
         match entry:
             case FeeRefunded(event=FeeRefund(id=refund, fee=refunded_fee)) if refunded_fee == fee:
-                if find_reversal_id(history, refund) is None:
+                if _find_reversal_id(history, refund) is None:
                     return refund
             case _:
                 pass

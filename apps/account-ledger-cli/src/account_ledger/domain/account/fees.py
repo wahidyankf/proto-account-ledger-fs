@@ -12,9 +12,7 @@ from account_ledger.domain.account.domain_events import (
     ReversalPosted,
 )
 from account_ledger.domain.account.history import (
-    AccountHistory,
     AccountHistoryIn,
-    is_aed_history,
 )
 from account_ledger.domain.model.events import Fee, FeeRefund, Reversal
 from account_ledger.domain.model.ids import Day, FeeId, RefundId
@@ -46,16 +44,6 @@ def assess_fees[M: (Aed, Bhd)](
             history = history.append(entry)
             entries.append(entry)
     return Ok(tuple(entries))
-
-
-def assess_fees_of(
-    history: AccountHistory, today: Day, first_day: Day
-) -> Result[tuple[LogEntry, ...], CurrencyMismatch]:
-    """``assess_fees`` for an account whose currency is known only at run time."""
-    # Both branches read alike; each gives the generic call a history of one known currency.
-    if is_aed_history(history):
-        return assess_fees(history, today, first_day)
-    return assess_fees(history, today, first_day)
 
 
 def _map_fees_in_force[M: (Aed, Bhd)](history: AccountHistoryIn[M]) -> dict[Day, Fee]:

@@ -1,7 +1,6 @@
 """Processing one incoming event at the ledger level: what spans accounts first, then the account decides."""
 
 from account_ledger.common.result import Err, Ok, Result
-from account_ledger.domain.account.decisions import decide_event_of
 from account_ledger.domain.account.domain_events import (
     DuplicateIgnored,
     EventRejected,
@@ -38,7 +37,7 @@ def process_event(log: Log, event: IncomingEvent, today: Day, config: LedgerConf
         return Ok(append_entry(log, EventRejected(event, today, target_check.error)))
     account = config.find_account(event.account)
     assert account is not None  # the stream reader refuses an account the ledger does not hold
-    if isinstance(entries := decide_event_of(find_history_of(log, account), event, today), Err):
+    if isinstance(entries := find_history_of(log, account).decide_event(event, today), Err):
         return entries
     return Ok((*log, *entries.value))
 

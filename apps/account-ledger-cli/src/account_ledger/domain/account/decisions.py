@@ -26,9 +26,7 @@ from account_ledger.domain.account.domain_events import (
     SettlementForcePosted,
 )
 from account_ledger.domain.account.history import (
-    AccountHistory,
     AccountHistoryIn,
-    is_aed_history,
 )
 from account_ledger.domain.account.reversals import (
     check_reversal,
@@ -50,17 +48,7 @@ from account_ledger.domain.model.ids import Day, InstalmentCount, InstalmentId
 from account_ledger.domain.model.money import Aed, Bhd, CurrencyMismatch, split_amount_of
 
 
-def decide_event_of(
-    history: AccountHistory, event: IncomingEvent, today: Day
-) -> Result[tuple[LogEntry, ...], CurrencyMismatch]:
-    """``_decide_event`` for an account whose currency is known only at run time."""
-    # Both branches read alike; each gives the generic call a history of one known currency.
-    if is_aed_history(history):
-        return _decide_event(history, event, today)
-    return _decide_event(history, event, today)
-
-
-def _decide_event[M: (Aed, Bhd)](
+def decide_event[M: (Aed, Bhd)](
     history: AccountHistoryIn[M], event: IncomingEvent, today: Day
 ) -> Result[tuple[LogEntry, ...], CurrencyMismatch]:
     """The entries the event's account records for it, plus the instalments a credit generates."""
