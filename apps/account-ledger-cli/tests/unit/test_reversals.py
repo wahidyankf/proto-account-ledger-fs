@@ -13,6 +13,7 @@ from account_ledger.domain.model.event_log import (
     MovedNoMoney,
     Rejected,
     ReversesAReversal,
+    TargetOnAnotherAccount,
     UnknownTarget,
 )
 from account_ledger.domain.model.events import IncomingEvent
@@ -90,6 +91,27 @@ def test_amb_035_a_reversal_of_an_unknown_event_is_refused() -> None:
 
     assert list_entries(log, "E12") == [Rejected(stray_reversal, Day(2), UnknownTarget(IncomingId("E99")))]
     assert unwrap_ok(compute_closing(log, ACC_001, Day(2))) == make_aed("100.00")
+
+
+def test_amb_036_a_reversal_of_another_accounts_event_is_refused() -> None:
+    """AMB-036: a reversal undoes an event on its own account only, so ACC-002's reversal of ACC-001's E7 is refused,
+    moves neither balance, and leaves E7 for ACC-001 to reverse."""
+    misplaced_reversal = make_reversal("E12", 2, "E7", account="ACC-002")
+    stream = (
+        make_credit("E1", 1, "1000.00"),
+        make_debit("E7", 1, "620.00"),
+        make_credit("E2", 1, "100.000", account="ACC-002"),
+        misplaced_reversal,
+        make_reversal("E9", 2, "E7"),
+    )
+
+    log = unwrap_ok(process_stream(stream, CHALLENGE)).find_log(Day(2))
+
+    assert list_entries(log, "E12") == [
+        Rejected(misplaced_reversal, Day(2), TargetOnAnotherAccount(IncomingId("E7"), ACC_001.id))
+    ]
+    assert unwrap_ok(compute_closing(log, ACC_002, Day(2))) == make_bhd("100.000")
+    assert unwrap_ok(compute_closing(log, ACC_001, Day(2))) == make_aed("1000.00")
 
 
 @pytest.mark.parametrize("target", ["E8", "E3"])

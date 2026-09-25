@@ -12,6 +12,7 @@ from account_ledger.domain.model.event_log import (
     Rejected,
     Rejection,
     ReversesAReversal,
+    TargetOnAnotherAccount,
     UnknownTarget,
     find_first_entry,
     list_counted_events,
@@ -21,12 +22,14 @@ from account_ledger.domain.model.events import Credit, Fee, FeeRefund, Instalmen
 from account_ledger.domain.model.ids import AccountId, Day, EventId, FeeId, IncomingId, RefundId
 
 
-def check_reversal(log: Log, target_id: EventId) -> Result[None, Rejection]:
-    """Nothing when a reversal of the target may proceed, or why it is refused, checked in tech-docs 002's order
-    (AMB-028, AMB-035)."""
+def check_reversal(log: Log, target_id: EventId, account: AccountId) -> Result[None, Rejection]:
+    """Nothing when a reversal on the account of the target may proceed, or why it is refused, checked in tech-docs
+    002's order, a target on another account refused once it is found (AMB-028, AMB-035, AMB-036)."""
     target = find_first_entry(log, target_id)
     if target is None:
         return Err(UnknownTarget(target_id))
+    if target.event.account != account:
+        return Err(TargetOnAnotherAccount(target_id, target.event.account))
     if isinstance(target.event, Reversal):
         return Err(ReversesAReversal(target_id))
     if isinstance(target, AuthorizationDecided | Rejected):

@@ -165,7 +165,7 @@ config    Account[M] = id + opening M     LedgerConfig = accounts, first_day, la
 event_log LogEntry = Accepted | AuthorizationDecided | SettlementAccepted | Rejected | Duplicate
           SettlementAccepted.effect = AppliedToHold(state_before, state_after) | ForcePosted
           Rejected.reason: Rejection = IdReused | AlreadyReversed | ReversesAReversal | UnknownTarget
-                                       | MovedNoMoney | AlreadyUndone
+                                       | TargetOnAnotherAccount | MovedNoMoney | AlreadyUndone
           Log = tuple[LogEntry, ...]
 auth      AuthorizationState = Approved(hold) | PartiallySettled(settled_amount, hold)
                                  | Declined(requested_amount) | Settled(settled_amount)

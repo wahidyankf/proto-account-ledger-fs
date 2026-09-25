@@ -1094,17 +1094,17 @@ capitalization. Reversing a fee whose day is still negative also meets the fee r
 
 **Resolution.** Any accepted event, incoming or generated, may be reversed. A reversal of an unknown ID, or of an event
 that moved no money, declined or rejected, is refused, recorded with its outcome (AMB-014), and printed as that day's
-error; an authorization is approved, never accepted, so a reversal of one is refused the same way, and a reversal of a
-reversal stays refused (AMB-028). Each event's money is undone at most once, whichever event undoes it: a reversal is
-refused when its target is an instalment of a credit already reversed, a credit one of whose instalments is already
-reversed, or a fee already refunded. A refund may itself be reversed, which puts its fee back in force for the next
-close to judge again. A reversal undoes only what its target moved, so a reversed settlement leaves its authorization's
-state and hold as they are, and reversing a credit posted in instalments undoes every instalment. After a fee, an
-interest event, or a capitalization is reversed, the next close re-evaluates as always and generates again whatever the
-rules still require, under a new generated ID for that close: a fee reversed while its day is still negative is charged
-again. An instalment is generated when its credit is processed, not at a close, so a reversed instalment stays reversed.
-None of this occurs in this stream, so no figure moves. _Tests:_
-`test_amb_035_a_capitalization_reversed_on_its_own_day_leaves_that_days_interest`,
+error; an authorization is approved, never accepted, so a reversal of one is refused the same way, a reversal of a
+reversal stays refused (AMB-028), and so does one whose target is on another account (AMB-036). Each event's money is
+undone at most once, whichever event undoes it: a reversal is refused when its target is an instalment of a credit
+already reversed, a credit one of whose instalments is already reversed, or a fee already refunded. A refund may itself
+be reversed, which puts its fee back in force for the next close to judge again. A reversal undoes only what its target
+moved, so a reversed settlement leaves its authorization's state and hold as they are, and reversing a credit posted in
+instalments undoes every instalment. After a fee, an interest event, or a capitalization is reversed, the next close
+re-evaluates as always and generates again whatever the rules still require, under a new generated ID for that close: a
+fee reversed while its day is still negative is charged again. An instalment is generated when its credit is processed,
+not at a close, so a reversed instalment stays reversed. None of this occurs in this stream, so no figure moves.
+_Tests:_ `test_amb_035_a_capitalization_reversed_on_its_own_day_leaves_that_days_interest`,
 `test_amb_035_a_fee_reversed_on_a_negative_day_is_charged_again`,
 `test_amb_035_a_reversal_of_an_event_that_moved_no_money_is_refused`,
 `test_amb_035_a_reversal_of_an_unknown_event_is_refused`, `test_amb_035_a_reversal_undoes_what_its_target_moved`,
@@ -1121,3 +1121,33 @@ correction is an event that names what it undoes. Letting the end-of-day rules r
 only source of fees and interest, so no balance is left that the rules disagree with; waiving a fee for good is a
 separate decision the ledger does not model, and the architecture trade-offs record it as a simplification. Refusing a
 reversal of something that moved no money keeps a mistake visible instead of logging an undo of nothing.
+
+## AMB-036 — A reversal whose target is on another account
+
+**Where.** "E9 — Day 6 — REVERSAL — ACC-001 reverses E7 — value_date Day 2". Every event row names an account, a
+reversal's included, and E9 and its target E7 are both on ACC-001. Not otherwise in this stream.
+
+**Why it is problematic.** The brief does not say whether a reversal may name an event on another account. An event ID
+is unique across the ledger (AMB-034), so the target can be found wherever it is, but the reversal's own row names an
+account too. Undoing the money on the reversal's account moves a balance that never held it, and in another currency it
+cannot be summed at all; undoing it on the target's account overrides what the row says.
+
+**Options.**
+
+- Refuse it, with its own reason naming both accounts. **Recommended**: a correction belongs on the account that holds
+  the entry it corrects, and a row naming the wrong account is an input error best shown as one.
+- Refuse it as an unknown target, since the reversal's account does not hold the event.
+- Apply it to the target's account, whatever account the reversal's row names.
+
+**Status.** Resolved.
+
+**Resolution.** Refused with its own reason. A reversal whose target is in the log but on another account is refused
+once the target is found, before the other checks of AMB-028 and AMB-035; it is recorded with its outcome (AMB-014),
+moves neither account's balance, and prints as that day's error, `E12 refused: E7 is on ACC-001, not ACC-002`. The
+target stays reversible by a reversal on its own account. None of this occurs in this stream, so no figure moves.
+_Tests:_ `test_amb_036_a_reversal_of_another_accounts_event_is_refused`.
+
+**Rationale.** Each account's balance, holds, fees, and interest are its own, so an entry that undoes money has to sit
+on the account that holds that money, or the account's own history no longer explains its balance. Refusing as an
+unknown target would tell the operator that E7 is missing when it is not, and applying the reversal elsewhere would let
+a row's account column be wrong without anyone seeing it; a named refusal points at the one field to correct.

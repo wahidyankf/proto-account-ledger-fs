@@ -90,6 +90,14 @@ class UnknownTarget:
 
 
 @dataclass(frozen=True, slots=True)
+class TargetOnAnotherAccount:
+    """The target is on another account; a reversal undoes an event on its own account only (AMB-036)."""
+
+    target: EventId
+    target_account: AccountId
+
+
+@dataclass(frozen=True, slots=True)
 class MovedNoMoney:
     """The target moved no money: an authorization, approved or declined, or a refused event (AMB-035)."""
 
@@ -109,7 +117,15 @@ class IdReused:
     """The event's ID is already used by an event with different content (AMB-034); the event names the ID."""
 
 
-type Rejection = IdReused | AlreadyReversed | ReversesAReversal | UnknownTarget | MovedNoMoney | AlreadyUndone
+type Rejection = (
+    IdReused
+    | AlreadyReversed
+    | ReversesAReversal
+    | UnknownTarget
+    | TargetOnAnotherAccount
+    | MovedNoMoney
+    | AlreadyUndone
+)
 
 
 @dataclass(frozen=True, slots=True)

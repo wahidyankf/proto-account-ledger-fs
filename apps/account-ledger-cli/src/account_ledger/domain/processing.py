@@ -110,7 +110,7 @@ def _generate_instalments(credit: Credit, count: InstalmentCount, today: Day) ->
 
 def _decide_reversal(log: Log, reversal: Reversal, today: Day) -> Accepted | Rejected:
     """A reversal, accepted unless a check refuses it."""
-    match check_reversal(log, reversal.target):
+    match check_reversal(log, reversal.target, reversal.account):
         case Ok():
             return Accepted(reversal, today)
         case Err(rejection):

@@ -7,6 +7,7 @@ from account_ledger.domain.model.event_log import (
     MovedNoMoney,
     Rejection,
     ReversesAReversal,
+    TargetOnAnotherAccount,
     UnknownTarget,
 )
 from account_ledger.domain.model.events import IncomingEvent
@@ -49,6 +50,16 @@ REFUSALS: dict[str, Refusal] = {
         ACC_001.id,
         UnknownTarget(IncomingId("E99")),
         "E12 refused: E99 is not in the log",
+    ),
+    "TargetOnAnotherAccount": (
+        (
+            make_credit("E1", 1, "100.00"),
+            make_credit("E2", 1, "100.000", account="ACC-002"),
+            make_reversal("E12", 1, "E1", account="ACC-002"),
+        ),
+        ACC_002.id,
+        TargetOnAnotherAccount(IncomingId("E1"), ACC_001.id),
+        "E12 refused: E1 is on ACC-001, not ACC-002",
     ),
     "MovedNoMoney": (
         (

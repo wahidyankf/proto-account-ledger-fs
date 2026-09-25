@@ -17,6 +17,7 @@ from account_ledger.domain.model.event_log import (
     Rejection,
     ReversesAReversal,
     SettlementAccepted,
+    TargetOnAnotherAccount,
     UnknownTarget,
 )
 from account_ledger.domain.model.events import (
@@ -331,11 +332,11 @@ def _format_authorizations(records: Sequence[AuthorizationRecord], account: Acco
 
 def _format_refusal(entry: Rejected) -> str:
     """A refusal's error text (tech-docs 001, D22)."""
-    return f"{format_id(entry.event.id)} refused: {_format_reason(entry.reason)}"
+    return f"{format_id(entry.event.id)} refused: {_format_reason(entry.reason, entry.event.account)}"
 
 
-def _format_reason(reason: Rejection) -> str:
-    """Why the ledger refused an event, as the Errors row prints it."""
+def _format_reason(reason: Rejection, account: AccountId) -> str:
+    """Why the ledger refused an event on the account, as the Errors row prints it."""
     match reason:
         case IdReused():
             return "ID already used with different content"
@@ -345,6 +346,8 @@ def _format_reason(reason: Rejection) -> str:
             return f"{format_id(target)} is a reversal"
         case UnknownTarget(target=target):
             return f"{format_id(target)} is not in the log"
+        case TargetOnAnotherAccount(target=target, target_account=target_account):
+            return f"{format_id(target)} is on {target_account.value}, not {account.value}"
         case MovedNoMoney(target=target):
             return f"{format_id(target)} moved no money"
         case AlreadyUndone(part=part, undoing_id=undoing_id):
