@@ -192,7 +192,7 @@ ledger/event_log
 account/states, account/authorizations
           AuthorizationState = Approved(hold) | PartiallySettled(settled_amount, hold)
                                  | Declined(requested_amount) | Settled(settled_amount)
-          apply_settlement(state, FinalSettlement | PartialSettlement)
+          apply_settlement(state, FinalSettlement | PartialSettlement)   each a _SettlementInputBase (amount)
             -> Result[AuthorizationState, CannotSettle | CurrencyMismatch]
           AuthorizationRecord = the Authorization + its state now
 report    DayReport = day, processed_events: Processed..., closing_balances, available_balances,

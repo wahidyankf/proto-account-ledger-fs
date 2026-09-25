@@ -38,17 +38,20 @@ from account_ledger.domain.model.money import (
 
 
 @dataclass(frozen=True, slots=True)
-class FinalSettlement:
-    """A final settlement, as the state machine takes it, with its amount."""
+class _SettlementInputBase:
+    """What every settlement the state machine takes holds: its amount."""
 
     amount: Amount
 
 
 @dataclass(frozen=True, slots=True)
-class PartialSettlement:
-    """A settlement followed by more settlements, as the state machine takes it, with its amount."""
+class FinalSettlement(_SettlementInputBase):
+    """A final settlement, as the state machine takes it, with its amount."""
 
-    amount: Amount
+
+@dataclass(frozen=True, slots=True)
+class PartialSettlement(_SettlementInputBase):
+    """A settlement followed by more settlements, as the state machine takes it, with its amount."""
 
 
 type SettlementInput = FinalSettlement | PartialSettlement
